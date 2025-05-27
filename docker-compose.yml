@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+            args:
+                user: laravel
+                uid: 1000
+        image: laravel-api-template
+        container_name: laravel-api-app
+        restart: unless-stopped
+        tty: true
+        working_dir: /var/www
+        volumes:
+            - .:/var/www
+            - ./docker/php/php.ini:/usr/local/etc/php/conf.d/php.ini
+        networks:
+            - laravel-network
+        depends_on:
+            - mysql
+            - phpmyadmin
+
+    mysql:
+        image: mysql:8.0
+        container_name: laravel-api-mysql
+        restart: unless-stopped
+        tty: true
+        ports:
+            - "3306:3306"
+        environment:
+            MYSQL_DATABASE: laravel
+            MYSQL_USER: laravel
+            MYSQL_PASSWORD: laravel
+            MYSQL_ROOT_PASSWORD: root
+        volumes:
+            - ./docker/mysql:/var/lib/mysql
+        networks:
+            - laravel-network
+
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: laravel-api-phpmyadmin
+        restart: unless-stopped
+        tty: true
+        ports:
+            - "8081:80"
+        environment:
+            PMA_HOST: mysql
+            PMA_USER: root
+            PMA_PASSWORD: root
+        depends_on:
+            - mysql
+        networks:
+            - laravel-network
+    nginx:
+        image: nginx:stable-alpine
+        container_name: laravel-api-nginx
+        ports:
+            - "8000:80"
+        volumes:
+            - .:/var/www
+            - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+        depends_on:
+            - app
+        networks:
+            - laravel-network
+
+
+networks:
+    laravel-network:
+        driver: bridge
