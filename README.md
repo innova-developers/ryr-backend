@@ -46,8 +46,8 @@ Plantilla base para proyectos API en Laravel con arquitectura hexagonal y Docker
 - Clona tu repositorio forkeado:
 
 
-git clone https://github.com/tu-usuario/laravel-api-template.git
-cd laravel-api-template
+git clone https://github.com/innova-developers/laravelstack-innovadevelopers.git
+cd laravelstack-innovadevelopers
 
 ### 2. ⚙️ Configuración Inicial
 
@@ -78,8 +78,8 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install docker.io docker-compose git -y
 
 - Clona el repositorio:
-git clone https://github.com/tu-usuario/laravel-api-template.git
-cd laravel-api-template
+git clone [https://github.com/innova-developers/laravelstack-innovadevelopers.git](https://github.com/innova-developers/laravelstack-innovadevelopers.git)
+cd laravelstack-innovadevelopers
 
 - 📝 Configura el .env para producción:
 nano .env
