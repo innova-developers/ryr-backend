@@ -8,8 +8,8 @@ services:
             args:
                 user: laravel
                 uid: 1000
-        image: laravel-api-template
-        container_name: laravel-api-app
+        image: ryrtemplate
+        container_name: ryrapp
         restart: unless-stopped
         tty: true
         working_dir: /var/www
@@ -24,7 +24,7 @@ services:
 
     mysql:
         image: mysql:8.0
-        container_name: laravel-api-mysql
+        container_name: ryrmysql
         restart: unless-stopped
         tty: true
         ports:
@@ -41,7 +41,7 @@ services:
 
     phpmyadmin:
         image: phpmyadmin/phpmyadmin
-        container_name: laravel-api-phpmyadmin
+        container_name: ryrphpmyadmin
         restart: unless-stopped
         tty: true
         ports:
@@ -56,7 +56,7 @@ services:
             - laravel-network
     nginx:
         image: nginx:stable-alpine
-        container_name: laravel-api-nginx
+        container_name: ryrnginx
         ports:
             - "8000:80"
         volumes:
