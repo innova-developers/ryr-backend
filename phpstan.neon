@@ -9,4 +9,4 @@ parameters:
         - '#PHPDoc tag @var#'
     excludePaths:
         - ./*/*/FileToBeExcluded.php
-    checkMissingIterableValueType: false
+    # checkMissingIterableValueType: false

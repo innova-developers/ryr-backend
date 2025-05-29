@@ -1,10 +1,8 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
 
 echo "Running pre-push checks... - Innova Developers"
 
 # Run PHPStan and PHP-CS-Fixer
-npm run analyse || {
+composer analyse || {
   echo "Static analysis failed, please fix the issues before pushing."
   exit 1
 }
