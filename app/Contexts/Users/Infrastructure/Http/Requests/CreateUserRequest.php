@@ -14,7 +14,9 @@ class CreateUserRequest extends FormRequest
     {
         return true;
     }
-
+    /**
+     * @return array<string, array<int, mixed>>
+     */
     public function rules(): array
     {
         return [

@@ -24,7 +24,7 @@ services:
 
     mysql:
         image: mysql:8.0
-        container_name: ryrmysql
+        container_name: mysql
         restart: unless-stopped
         tty: true
         ports:

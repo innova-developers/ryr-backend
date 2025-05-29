@@ -8,7 +8,7 @@ use App\Shared\Models\User;
 
 class UserEloquentRepository implements UserRepository
 {
-    public function create(CreateUserDTO $dto)
+    public function create(CreateUserDTO $dto):User
     {
         return User::create([
             'name' => $dto->name,

@@ -6,7 +6,6 @@ use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Shared\Enums\UserRole;
-use Illuminate\Http\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class UserAdminMiddleware

@@ -6,7 +6,10 @@ use Illuminate\Support\Facades\Auth;
 
 class LogoutUseCase
 {
-    public function execute()
+    /**
+     * @return array<string, mixed>
+     */
+    public function execute():array
     {
         $user = Auth::user();
         if ($user) {

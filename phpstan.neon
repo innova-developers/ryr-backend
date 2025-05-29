@@ -6,7 +6,7 @@ parameters:
         - app
     level: 8
     ignoreErrors:
-        - '#PHPDoc tag @var#'
+        - '#Class App\\Shared\\Models\\User uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types: TFactory#'
     excludePaths:
         - ./*/*/FileToBeExcluded.php
     # checkMissingIterableValueType: false

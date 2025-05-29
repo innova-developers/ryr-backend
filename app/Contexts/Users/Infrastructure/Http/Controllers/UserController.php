@@ -4,6 +4,7 @@ namespace App\Contexts\Users\Infrastructure\Http\Controllers;
 
 use App\Contexts\Users\Application\CreateUserUseCase;
 use App\Contexts\Users\Application\DTO\CreateUserDTO;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
@@ -19,7 +20,7 @@ class UserController extends Controller
         $this->repository = app(UserRepository::class);
     }
 
-    public function store(CreateUserRequest $request)
+    public function store(CreateUserRequest $request):JsonResponse
     {
         $useCase = new CreateUserUseCase(
             $this->repository
