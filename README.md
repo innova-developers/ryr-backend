@@ -1,11 +1,10 @@
 
 <p align="center">
-  <img src="https://innovadevelopers.com/wp-content/uploads/2023/06/cropped-Logo-Full-Color.png" width="33%" style="background-color:white;padding:50px;border-radius:15px;" alt="Innova Logo" />
-</p>
+<img src="public/logo.jpeg" width="60%" style="padding:50px;border-radius:15px;" alt="Innova Logo" /></p>
 
 
 <p style="font-size:3em;" align="center">
-  🚀 Laravel Stack <br>
+  🚚 RyR Comisiones <br>
    <img src="https://img.shields.io/badge/Laravel-FF2D20?style=flat-square&logo=laravel&logoColor=white" alt="Laravel" />
   <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/PHP-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP" />
@@ -16,8 +15,6 @@
  
 </p>
 
-
-Plantilla base para proyectos API en Laravel con arquitectura hexagonal y Docker.
 
 ## 🌟 Características
 
@@ -39,15 +36,12 @@ Plantilla base para proyectos API en Laravel con arquitectura hexagonal y Docker
 
 ## 🛠️ Instalación
 
-### 1. Fork del Proyecto
+### 1. Clonar el Proyecto
 
-- Haz click en el botón "Fork" en la parte superior derecha de esta página para crear tu propia copia del repositorio.
+- Clona el repositorio:
 
-- Clona tu repositorio forkeado:
-
-
-git clone https://github.com/innova-developers/laravelstack-innovadevelopers.git
-cd laravelstack-innovadevelopers
+git clone https://github.com/innova-developers/ryr-back.git
+cd ryr-back
 
 ### 2. ⚙️ Configuración Inicial
 
@@ -58,74 +52,98 @@ cp .env.example .env
 docker-compose up -d --build
 
 - Instala las dependencias de Composer:
-docker-compose exec app composer install
+composer install
 
 - Genera la clave de aplicación:
-docker-compose exec app php artisan key:generate
+php artisan key:generate
 
 - Ejecuta las migraciones:
-docker-compose exec app php artisan migrate
+php artisan migrate
 
 - Ejecuta los tests para verificar que todo funciona:
+php artisan test
 
-docker-compose exec app php artisan test
+### 3.🔍 Análisis de Código
+#### PHPStan : composer analyse
+#### PHP-CS-Fixer composer format
 
-### 3. 🚀 Deploy a Producción
+# 📶 EndPoints 
+## 🔐 Autenticación
 
-🐳 Docker 
+### POST `/api/login`
+Inicia sesión y devuelve un token de acceso.
 
-sudo apt update && sudo apt upgrade -y
-sudo apt install docker.io docker-compose git -y
+**Parámetros:**
+- `email` (string, requerido)
+- `password` (string, requerido)
 
-- Clona el repositorio:
-git clone [https://github.com/innova-developers/laravelstack-innovadevelopers.git](https://github.com/innova-developers/laravelstack-innovadevelopers.git)
-cd laravelstack-innovadevelopers
+**Respuesta exitosa:**
+```json
+{
+  "success": true,
+  "token": "TOKEN_GENERADO",
+  "user": {
+    "id": 1,
+    "name": "Nombre",
+    "email": "usuario@ejemplo.com",
+    "role": "admin"
+  }
+}
+```
 
-- 📝 Configura el .env para producción:
-nano .env
+### POST `/api/logout`
+Cierra la sesión del usuario autenticado y revoca el token.
 
-- 📌 Ajusta los valores:
-APP_ENV=production
-APP_DEBUG=false
-DB_HOST=mysql
-DB_PASSWORD=your_strong_password
+**Respuesta exitosa:**
+```json
+{
+  "success": true,
+  "message": "Sesión cerrada correctamente"
+}
+```
 
-- ▶️ Inicia los servicios:
-docker-compose up -d --build
+## 👤 Usuarios
 
-- 🛡️ Configura el proxy inverso (Nginx):
-Crea un archivo de configuración para tu dominio:
+### POST `/api/users`
+Crea un nuevo usuario con los datos proporcionados.
 
-server {
-    listen 80;
-    server_name api.tudominio.com;
+### Payload de ejemplo
 
-    location / {
-        proxy_pass http://localhost:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
+```json
+{
+  "name": "Juan Pérez",
+  "email": "nuevo@ejemplo.com",
+  "password": "passwordseguro",
+  "role": "administrador"
+}
+```
+### Respuesta exitosa
+
+```json
+{
+  "success": true,
+  "message": "Usuario creado correctamente",
+  "user": {
+      "id": 1,
+      "name": "Juan Pérez",
+      "email": "nuevo@ejemplo.com",
+      "role": "administrador"
     }
 }
+```
 
-### 4.🧪 Ejecutando Tests
-- docker-compose exec app php artisan test
+### Respuesta Erronea 
 
-### 5.🔍 Análisis de Código
-# PHPStan
-docker-compose exec app composer analyse
+```json
+{
+  "success": false,
+    "message": "Datos inválidos: The name field is required., The email field must be a valid email address., The password field is required., The selected role is invalid."
+}
+```
 
-# PHP-CS-Fixer
-docker-compose exec app composer format
-- 🛑 Deteniendo los Servicios
-docker-compose down
+### Validaciones
 
-- 📌 Estructura del Proyecto
-- 📦 laravelstack-innovadevelopers
-- - 🏗️ app
-- - - 🏛️ Domain            # Capa de dominio
-- - - 🚀 Application       # Casos de uso
-- - - ⚙️ Infrastructure   # Implementaciones
-- -  📊 tests                # Pruebas automatizadas
-- 🐳 docker               # Configuración de Docker
-- 📝 .github              # GitHub Actions
-
+- **name**: requerido, string, máximo 255 caracteres
+- **email**: requerido, email válido, único, máximo 255 caracteres
+- **password**: requerido, string, mínimo 8 caracteres
+- **role**: requerido, string, uno de: `administrador`, `mostrador`

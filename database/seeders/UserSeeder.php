@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Shared\Enums\UserRole;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-use App\Domain\Enums\UserRole;
+use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
