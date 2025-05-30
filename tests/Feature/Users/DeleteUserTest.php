@@ -10,13 +10,16 @@ class DeleteUserTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_delete_a_user()
+    public function test_admin_can_soft_delete_a_user()
     {
         $admin = User::factory()->create(['role' => 'administrador']);
         $this->actingAs($admin, 'sanctum');
         $user = User::factory()->create();
+
         $response = $this->deleteJson("/api/users/{$user->id}");
+
         $response->assertStatus(200);
-        $this->assertDatabaseMissing('users', ['id' => $user->id]);
+
+        $this->assertSoftDeleted('users', ['id' => $user->id]);
     }
 }

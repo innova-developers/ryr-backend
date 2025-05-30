@@ -16,10 +16,11 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
-            $table->string('role'); // Enum lógico, validado en el modelo
+            $table->string('role');
             $table->rememberToken();
             $table->timestamp('email_verified_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

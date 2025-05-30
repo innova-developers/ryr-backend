@@ -46,7 +46,7 @@ class UserController extends Controller
     public function destroy(int $id):JsonResponse
     {
         $useCase = new DeleteUserUseCase($this->repository);
-        $useCase($id);
-        return response()->json([]);
+        $users = $useCase($id);
+        return response()->json($users);
     }
 }
