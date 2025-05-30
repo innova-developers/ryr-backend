@@ -24,9 +24,8 @@ class User extends Authenticatable
 
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'deleted_at' => 'datetime'
     ];
-
-    protected array $dates = ['deleted_at'];
 
 
     public static function newFactory(): \Database\Factories\UserFactory
