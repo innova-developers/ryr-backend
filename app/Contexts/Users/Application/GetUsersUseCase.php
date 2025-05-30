@@ -2,10 +2,8 @@
 
 namespace App\Contexts\Users\Application;
 
-use App\Contexts\Users\Application\DTO\CreateUserDTO;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
 use App\Shared\Models\User;
-use Illuminate\Support\Facades\Hash;
 
 class GetUsersUseCase
 {
@@ -16,6 +14,9 @@ class GetUsersUseCase
         $this->repository = $repository;
     }
 
+    /**
+     * @return User[]
+     */
     public function __invoke():array
     {
         return $this->repository->get();

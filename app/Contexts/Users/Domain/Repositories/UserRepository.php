@@ -9,5 +9,8 @@ use GuzzleHttp\Promise\Create;
 interface UserRepository
 {
     public function create(CreateUserDTO $dto):User;
-    public function get():array;
+    /**
+     * @return User[]
+     */
+    public function get(): array;
 }
