@@ -5,8 +5,8 @@ namespace App\Contexts\Users\Infrastructure\Http\Controllers;
 use App\Contexts\Users\Application\CreateUserUseCase;
 use App\Contexts\Users\Application\DTO\CreateUserDTO;
 use App\Contexts\Users\Application\GetUsersUseCase;
+use App\Contexts\Users\Application\DeleteUserUseCase;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
 use App\Contexts\Users\Infrastructure\Http\Requests\CreateUserRequest;
@@ -40,6 +40,13 @@ class UserController extends Controller
     {
         $useCase = new GetUsersUseCase($this->repository);
         $users = $useCase();
-        return response()->json($users, 200);
+        return response()->json($users);
+    }
+
+    public function destroy(int $id):JsonResponse
+    {
+        $useCase = new DeleteUserUseCase($this->repository);
+        $useCase($id);
+        return response()->json([]);
     }
 }

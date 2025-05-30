@@ -6,5 +6,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
-Route::middleware('auth:sanctum')->get('/users', [UserController::class, 'index']);
+Route::middleware(['auth:sanctum', 'isAdmin'])->get('/users', [UserController::class, 'index']);
 Route::middleware(['auth:sanctum', 'isAdmin'])->post('/users', [UserController::class, 'store']);
+Route::middleware(['auth:sanctum', 'isAdmin'])->delete('/users/{id}', [UserController::class, 'destroy']);

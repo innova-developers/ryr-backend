@@ -147,3 +147,38 @@ Crea un nuevo usuario con los datos proporcionados.
 - **email**: requerido, email válido, único, máximo 255 caracteres
 - **password**: requerido, string, mínimo 8 caracteres
 - **role**: requerido, string, uno de: `administrador`, `mostrador`,`cadete`,`cliente`
+
+### GET `/api/users`
+Devuelve la lista de usuarios registrados (requiere autenticación).
+
+##### Respuesta exitosa
+```json
+[
+  {
+    "id": 1,
+    "name": "Juan",
+    "email": "juan@example.com",
+    "role": "admin",
+  },
+  ...
+]
+```
+
+### DELETE `/api/users/{id}`
+Elimina un usuario por su ID (requiere autenticación y rol de administrador).
+
+#### Parámetros de ruta:
+- `id` (integer, requerido): ID del usuario a eliminar.
+
+##### Respuesta exitosa
+```json
+[
+    {
+        "id": 1,
+        "name": "Juan",
+        "email": "juan@example.com",
+        "role": "admin",
+    },
+    ...
+]
+```

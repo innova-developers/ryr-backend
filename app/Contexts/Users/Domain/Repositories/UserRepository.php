@@ -13,4 +13,6 @@ interface UserRepository
      * @return User[]
      */
     public function get(): array;
+
+    public function delete(int $id): array;
 }

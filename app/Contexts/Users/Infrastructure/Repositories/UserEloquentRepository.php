@@ -21,4 +21,10 @@ class UserEloquentRepository implements UserRepository
     {
         return User::all()->toArray();
     }
+    public function delete(int $id):array
+    {
+        $user = User::findOrFail($id);
+        $user->delete();
+        return User::all()->toArray();
+    }
 }
