@@ -4,6 +4,7 @@ namespace App\Contexts\Users\Infrastructure\Http\Controllers;
 
 use App\Contexts\Users\Application\CreateUserUseCase;
 use App\Contexts\Users\Application\DTO\CreateUserDTO;
+use App\Contexts\Users\Application\GetUsersUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -33,5 +34,12 @@ class UserController extends Controller
         );
         $newUser =  $useCase($dto);
         return response()->json($newUser, 201);
+    }
+
+    public function index(): JsonResponse
+    {
+        $useCase = new GetUsersUseCase($this->repository);
+        $users = $useCase();
+        return response()->json($users, 200);
     }
 }

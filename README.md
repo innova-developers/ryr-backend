@@ -146,4 +146,4 @@ Crea un nuevo usuario con los datos proporcionados.
 - **name**: requerido, string, máximo 255 caracteres
 - **email**: requerido, email válido, único, máximo 255 caracteres
 - **password**: requerido, string, mínimo 8 caracteres
-- **role**: requerido, string, uno de: `administrador`, `mostrador`
+- **role**: requerido, string, uno de: `administrador`, `mostrador`,`cadete`,`cliente`

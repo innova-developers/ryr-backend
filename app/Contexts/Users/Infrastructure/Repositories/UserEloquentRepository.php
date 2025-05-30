@@ -17,4 +17,8 @@ class UserEloquentRepository implements UserRepository
             'role' => $dto->role,
         ]);
     }
+    public function get():array
+    {
+        return User::all()->toArray();
+    }
 }
