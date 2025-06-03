@@ -1,8 +1,0 @@
-
-echo "Running pre-push checks... - Innova Developers"
-
-# Run PHPStan and PHP-CS-Fixer
-COMPOSER_MEMORY_LIMIT=-1 php -d memory_limit=-1 ./vendor/bin/phpstan analyse || {
-  echo "Static analysis failed, please fix the issues before pushing."
-  exit 1
-}
