@@ -17,7 +17,7 @@ class DeleteUserUseCase
     /**
      * @return User[]
      */
-    public function __invoke(int $id):array
+    public function __invoke(int $id): array
     {
         return $this->repository->delete($id);
     }

@@ -15,6 +15,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Contexts\Users\Domain\Repositories\UserRepository::class,
             \App\Contexts\Users\Infrastructure\Repositories\UserEloquentRepository::class
         );
+        $this->app->bind(
+            \App\Contexts\Branchs\Domain\Repositories\BranchRepository::class,
+            \App\Contexts\Branchs\Infrastructure\Repositories\BranchEloquentRepository::class
+        );
     }
 
     /**

@@ -13,15 +13,15 @@ class LoginUseCase
      */
     public function __invoke(array $credentials): array
     {
-        if (!Auth::attempt($credentials)) {
+        if (! Auth::attempt($credentials)) {
             throw new \InvalidArgumentException('Credenciales inválidas');
         }
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             throw new \RuntimeException('No se pudo obtener el usuario autenticado');
         }
         $token = $user->createToken('Personal Access Token')->plainTextToken;
+
         return LoginMapper::map($user, $token);
     }
 }
-

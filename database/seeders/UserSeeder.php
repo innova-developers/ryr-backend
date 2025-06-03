@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Shared\Enums\UserRole;
+use App\Shared\Models\Branch;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -11,12 +12,15 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
+        $branches = Branch::all();
+
         DB::table('users')->insert([
             [
                 'name' => 'Admin',
                 'email' => 'admin@example.com',
                 'password' => Hash::make('password'),
                 'role' => UserRole::ADMINISTRADOR->value,
+                'branch_id' => $branches->random()->id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -25,6 +29,7 @@ class UserSeeder extends Seeder
                 'email' => 'cadete@example.com',
                 'password' => Hash::make('password'),
                 'role' => UserRole::CADETE->value,
+                'branch_id' => $branches->random()->id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -33,6 +38,7 @@ class UserSeeder extends Seeder
                 'email' => 'mostrador@example.com',
                 'password' => Hash::make('password'),
                 'role' => UserRole::MOSTRADOR->value,
+                'branch_id' => $branches->random()->id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
@@ -41,10 +47,19 @@ class UserSeeder extends Seeder
                 'email' => 'cliente@example.com',
                 'password' => Hash::make('password'),
                 'role' => UserRole::CLIENTE->value,
+                'branch_id' => $branches->random()->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'name' => 'Cadete Externo',
+                'email' => 'cadeteexterno@example.com',
+                'password' => Hash::make('password'),
+                'role' => UserRole::CADETE_EXTERNO->value,
+                'branch_id' => $branches->random()->id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
         ]);
     }
 }
-

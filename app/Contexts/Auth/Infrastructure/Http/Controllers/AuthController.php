@@ -11,17 +11,18 @@ use Illuminate\Routing\Controller;
 
 class AuthController extends Controller
 {
-    public function login(AuthRequest $request, LoginUseCase $loginUseCase):JsonResponse
+    public function login(AuthRequest $request, LoginUseCase $loginUseCase): JsonResponse
     {
         $credentials = $request->only(['email', 'password']);
         $useCase = new LoginUseCase();
+
         return response()->json($useCase($credentials));
     }
 
-    public function logout(Request $request, LogoutUseCase $logoutUseCase):JsonResponse
+    public function logout(Request $request, LogoutUseCase $logoutUseCase): JsonResponse
     {
         $result = $logoutUseCase->execute();
+
         return response()->json($result);
     }
 }
-

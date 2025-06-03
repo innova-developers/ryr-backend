@@ -19,9 +19,10 @@ class LoginTest extends TestCase
     {
         return [
             'Administrador' => [UserRole::ADMINISTRADOR],
-            'Cadete'        => [UserRole::CADETE],
-            'Mostrador'     => [UserRole::MOSTRADOR],
-            'Cliente'       => [UserRole::CLIENTE],
+            'Cadete' => [UserRole::CADETE],
+            'Mostrador' => [UserRole::MOSTRADOR],
+            'Cliente' => [UserRole::CLIENTE],
+            'Cadete Externo' => [UserRole::CADETE_EXTERNO],
         ];
     }
 
@@ -30,7 +31,7 @@ class LoginTest extends TestCase
     {
         $user = User::factory()->create(['role' => $role]);
         $response = $this->postJson('/api/login', [
-            'email'    => $user->email,
+            'email' => $user->email,
             'password' => 'password',
         ]);
 

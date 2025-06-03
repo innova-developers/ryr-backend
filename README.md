@@ -182,3 +182,123 @@ Elimina un usuario por su ID (requiere autenticación y rol de administrador).
     ...
 ]
 ```
+
+### PUT `/api/users/{id}`
+Actualiza los datos de un usuario existente (requiere autenticación y rol de administrador).
+#### Payload de ejemplo
+
+```json
+{
+    "name": "Juan Editado",
+    "email": "editado@ejemplo.com",
+    "password": "nuevacontraseña",
+    "role": "mostrador"
+} 
+```
+
+#### Parámetros de ruta:
+- `id` (integer, requerido): ID del usuario a eliminar.
+
+##### Respuesta exitosa
+```json
+[
+    {
+        "id": 1,
+        "name": "Juan",
+        "email": "juan@example.com",
+        "role": "admin"
+    }
+]
+```
+
+
+## 👤 Sucursales
+
+### POST `/api/branches`
+Crea una nueva sucursal con los datos proporcionados.
+
+### Payload de ejemplo
+
+```json
+{
+  "name": "Sucursal Moreno",
+  "address": "Calle 1234",
+  "schedule": "8 a 21hs",
+  "phone": "2917493992"
+}
+```
+### Respuesta exitosa
+
+```json
+{
+  "success": true,
+  "message": "sucursal creada correctamente",
+}
+```
+
+### Respuesta Erronea
+
+```json
+{
+  "success": false,
+    "message": "Datos inválidos: The name field is required., The email field must be a valid email address., The password field is required., The selected role is invalid."
+}
+```
+### GET `/api/brenches`
+Devuelve la lista de sucursales (requiere autenticación).
+
+##### Respuesta exitosa
+```json
+[
+  {
+    "id": 1,
+    "name": "Sucursal Moreno",
+    "address": "Calle 1234",
+    "schedule": "8 a 21hs",
+      "phone": "2917493992",
+  },
+  ...
+]
+```
+
+### DELETE `/api/branches/{id}`
+Elimina una sucursal por su ID (requiere autenticación y rol de administrador).
+
+#### Parámetros de ruta:
+- `id` (integer, requerido): ID de la sucursal a eliminar.
+
+##### Respuesta exitosa
+```json
+[
+    "success" => "true"
+]
+```
+
+### PUT `/api/brranches/{id}`
+Actualiza los datos de una sucursal existente (requiere autenticación y rol de administrador).
+#### Payload de ejemplo
+
+```json
+{
+    "name": "Sucursal Moreno",
+    "address": "Calle 1234",
+    "schedule": "8 a 21hs",
+    "phone": "2917493992"
+} 
+```
+
+#### Parámetros de ruta:
+- `id` (integer, requerido): ID del usuario a eliminar.
+
+##### Respuesta exitosa
+```json
+[
+    {
+        "id": 1,
+        "name": "Sucursal Moreno",
+        "address": "Calle 1234",
+        "schedule": "8 a 21hs",
+        "phone": "2917493992",
+    }
+]
+```

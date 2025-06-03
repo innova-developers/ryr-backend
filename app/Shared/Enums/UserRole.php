@@ -8,5 +8,6 @@ enum UserRole: string
     case CADETE = 'cadete';
     case MOSTRADOR = 'mostrador';
     case CLIENTE = 'cliente';
-}
+    case CADETE_EXTERNO = 'cadete_externo';
 
+}

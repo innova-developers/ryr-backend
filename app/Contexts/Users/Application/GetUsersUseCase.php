@@ -17,7 +17,7 @@ class GetUsersUseCase
     /**
      * @return User[]
      */
-    public function __invoke():array
+    public function __invoke(): array
     {
         return $this->repository->get();
     }
