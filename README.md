@@ -302,3 +302,203 @@ Actualiza los datos de una sucursal existente (requiere autenticación y rol de 
     }
 ]
 ```
+
+## 👤 Clientes
+
+### POST `/api/customers`
+Crea un nuevo cliente con los datos proporcionados.
+
+#### Payload de ejemplo
+```json
+{
+  "dni": 12345678,
+  "name": "Juan",
+  "last_name": "Pérez",
+  "mobile": "2917493992",
+  "email": "cliente@ejemplo.com",
+  "address": "Calle 123",
+  "city": "Bahía Blanca",
+  "phone": "2917493992",
+  "maps_url": "https://maps.google.com",
+  "business_hours": "9 a 18hs",
+  "observations": "Cliente frecuente",
+  "is_premium": false,
+  "branch_id": 1
+}
+```
+
+#### Respuesta exitosa
+```json
+{
+  "id": 1,
+  "dni": 12345678,
+  "name": "Juan",
+  "last_name": "Pérez",
+  "mobile": "2917493992",
+  "email": "cliente@ejemplo.com",
+  "address": "Calle 123",
+  "city": "Bahía Blanca",
+  "phone": "2917493992",
+  "maps_url": "https://maps.google.com",
+  "business_hours": "9 a 18hs",
+  "observations": "Cliente frecuente",
+  "is_premium": false,
+  "user_id": 1,
+  "branch_id": 1,
+  "created_at": "2024-03-21T12:00:00.000000Z",
+  "updated_at": "2024-03-21T12:00:00.000000Z"
+}
+```
+
+#### Validaciones
+- **dni**: requerido, número entero, único
+- **name**: requerido, string, máximo 255 caracteres
+- **last_name**: requerido, string, máximo 255 caracteres
+- **mobile**: requerido, string, máximo 255 caracteres
+- **email**: requerido, email válido, único, máximo 255 caracteres
+- **address**: requerido, string, máximo 255 caracteres
+- **city**: requerido, string, máximo 255 caracteres
+- **phone**: requerido, string, máximo 255 caracteres
+- **maps_url**: opcional, string, máximo 255 caracteres
+- **business_hours**: opcional, string, máximo 255 caracteres
+- **observations**: opcional, string
+- **is_premium**: opcional, booleano
+- **branch_id**: requerido, número entero, debe existir en la tabla branches
+
+### GET `/api/customers`
+Devuelve la lista de clientes registrados (requiere autenticación).
+
+#### Respuesta exitosa
+```json
+[
+  {
+    "id": 1,
+    "dni": 12345678,
+    "name": "Juan",
+    "last_name": "Pérez",
+    "mobile": "2917493992",
+    "email": "cliente@ejemplo.com",
+    "address": "Calle 123",
+    "city": "Bahía Blanca",
+    "phone": "2917493992",
+    "maps_url": "https://maps.google.com",
+    "business_hours": "9 a 18hs",
+    "observations": "Cliente frecuente",
+    "is_premium": false,
+    "user_id": 1,
+    "branch_id": 1,
+    "created_at": "2024-03-21T12:00:00.000000Z",
+    "updated_at": "2024-03-21T12:00:00.000000Z"
+  }
+]
+```
+
+### GET `/api/customers/{id}`
+Obtiene los detalles de un cliente específico por su ID.
+
+#### Parámetros de ruta:
+- `id` (integer, requerido): ID del cliente a consultar.
+
+#### Respuesta exitosa
+```json
+{
+  "id": 1,
+  "dni": 12345678,
+  "name": "Juan",
+  "last_name": "Pérez",
+  "mobile": "2917493992",
+  "email": "cliente@ejemplo.com",
+  "address": "Calle 123",
+  "city": "Bahía Blanca",
+  "phone": "2917493992",
+  "maps_url": "https://maps.google.com",
+  "business_hours": "9 a 18hs",
+  "observations": "Cliente frecuente",
+  "is_premium": false,
+  "user_id": 1,
+  "branch_id": 1,
+  "created_at": "2024-03-21T12:00:00.000000Z",
+  "updated_at": "2024-03-21T12:00:00.000000Z"
+}
+```
+
+#### Respuesta de error (404)
+```json
+{
+  "message": "Customer not found"
+}
+```
+
+### PUT `/api/customers/{id}`
+Actualiza los datos de un cliente existente.
+
+#### Parámetros de ruta:
+- `id` (integer, requerido): ID del cliente a actualizar.
+
+#### Payload de ejemplo
+```json
+{
+  "dni": 12345678,
+  "name": "Juan",
+  "last_name": "Pérez",
+  "mobile": "2917493992",
+  "email": "cliente@ejemplo.com",
+  "address": "Calle 123",
+  "city": "Bahía Blanca",
+  "phone": "2917493992",
+  "maps_url": "https://maps.google.com",
+  "business_hours": "9 a 18hs",
+  "observations": "Cliente frecuente",
+  "is_premium": false,
+  "branch_id": 1
+}
+```
+
+#### Respuesta exitosa
+```json
+{
+  "id": 1,
+  "dni": 12345678,
+  "name": "Juan",
+  "last_name": "Pérez",
+  "mobile": "2917493992",
+  "email": "cliente@ejemplo.com",
+  "address": "Calle 123",
+  "city": "Bahía Blanca",
+  "phone": "2917493992",
+  "maps_url": "https://maps.google.com",
+  "business_hours": "9 a 18hs",
+  "observations": "Cliente frecuente",
+  "is_premium": false,
+  "user_id": 1,
+  "branch_id": 1,
+  "created_at": "2024-03-21T12:00:00.000000Z",
+  "updated_at": "2024-03-21T12:00:00.000000Z"
+}
+```
+
+#### Respuesta de error (404)
+```json
+{
+  "message": "Customer not found"
+}
+```
+
+### DELETE `/api/customers/{id}`
+Elimina un cliente por su ID.
+
+#### Parámetros de ruta:
+- `id` (integer, requerido): ID del cliente a eliminar.
+
+#### Respuesta exitosa
+```json
+null
+```
+Status: 204 No Content
+
+#### Respuesta de error (404)
+```json
+{
+  "message": "Customer not found"
+}
+```

@@ -5,7 +5,6 @@ namespace App\Shared\Models;
 use App\Shared\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -48,6 +47,7 @@ class User extends Authenticatable
     {
         /** @var \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Shared\Models\Branch, \App\Shared\Models\User> $relation */
         $relation = $this->belongsTo(Branch::class);
+
         return $relation;
     }
     public function isAdmin(): bool
