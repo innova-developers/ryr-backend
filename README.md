@@ -654,3 +654,33 @@ DELETE /api/destinations/{id}
     }
 }
 ```
+
+## 🚚 Comisiones Extraordinarias
+
+### Endpoints
+
+- `GET /api/extraordinary-commissions` - Listar todas las comisiones extraordinarias
+- `POST /api/extraordinary-commissions` - Crear una nueva comisión extraordinaria
+- `GET /api/extraordinary-commissions/{id}` - Obtener una comisión extraordinaria específica
+- `PUT /api/extraordinary-commissions/{id}` - Actualizar una comisión extraordinaria
+- `DELETE /api/extraordinary-commissions/{id}` - Eliminar una comisión extraordinaria
+
+### Estructura de Datos
+
+```json
+{
+    "origin": "string",
+    "destination": "string",
+    "detail": "string",
+    "price": "decimal",
+    "observations": "string (opcional)"
+}
+```
+
+### Validaciones
+
+- `origin`: Requerido, string
+- `destination`: Requerido, string
+- `detail`: Requerido, string
+- `price`: Requerido, numérico
+- `observations`: Opcional, string

@@ -3,6 +3,8 @@
 use App\Contexts\Auth\Infrastructure\Http\Controllers\AuthController;
 use App\Contexts\Branchs\Infrastructure\Http\Controllers\BranchController;
 use App\Contexts\Customers\Infrastructure\Http\Controllers\CustomerController;
+use App\Contexts\Destinations\Infrastructure\Http\Controllers\DestinationController;
+use App\Contexts\ExtraordinaryCommissions\Infrastructure\Http\Controllers\ExtraordinaryCommissionController;
 use App\Contexts\Users\Infrastructure\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,4 +18,5 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->apiResource('branches', BranchCo
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('customers', CustomerController::class);
 });
-Route::apiResource('destinations', \App\Contexts\Destinations\Infrastructure\Http\Controllers\DestinationController::class);
+Route::apiResource('destinations', DestinationController::class);
+Route::apiResource('extraordinary-commissions', ExtraordinaryCommissionController::class);
