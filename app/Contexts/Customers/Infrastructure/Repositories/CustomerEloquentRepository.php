@@ -7,12 +7,13 @@ use App\Contexts\Customers\Application\DTO\UpdateCustomerDTO;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Shared\Models\Customer;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Auth;
 
 class CustomerEloquentRepository implements CustomerRepository
 {
     public function get(): array
     {
-        return Customer::select('id', 'dni', 'name', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id')
+        return Customer::select('id', 'dni', 'name', 'email','last_name', 'address', 'city', 'phone', 'is_premium', 'user_id','created_at')
             ->with(['user:id,name'])
             ->get()
             ->map(function (Customer $customer) {
@@ -20,6 +21,7 @@ class CustomerEloquentRepository implements CustomerRepository
                     'id' => $customer->id,
                     'dni' => $customer->dni,
                     'name' => $customer->name,
+                    'email' => $customer->email,
                     'last_name' => $customer->last_name,
                     'address' => $customer->address,
                     'city' => $customer->city,
@@ -27,6 +29,7 @@ class CustomerEloquentRepository implements CustomerRepository
                     'is_premium' => $customer->is_premium,
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),
+                    'created_at' => $customer->created_at
                 ];
             })
             ->toArray();
@@ -49,7 +52,7 @@ class CustomerEloquentRepository implements CustomerRepository
             $customer->observations = $dto->observations;
             $customer->is_premium = $dto->isPremium;
             $customer->user_id = $dto->userId;
-            $customer->branch_id = $dto->branchId;
+            $customer->branch_id = Auth::user()->branch_id;
             $customer->save();
 
             return $customer;

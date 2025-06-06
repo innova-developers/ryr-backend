@@ -15,9 +15,11 @@ use App\Contexts\Customers\Infrastructure\Http\Requests\UpdateCustomerRequest;
 use App\Contexts\Users\Application\CreateUserUseCase;
 use App\Contexts\Users\Application\DTO\CreateUserDTO;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
+use App\Shared\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Auth;
 
 class CustomerController extends Controller
 {
@@ -34,7 +36,6 @@ class CustomerController extends Controller
     {
         $useCase = new GetCustomersUseCase($this->repository);
         $customers = $useCase();
-
         return response()->json($customers);
     }
 
@@ -46,7 +47,7 @@ class CustomerController extends Controller
             $request->input('email'),
             $request->input('dni'),
             'customer',
-            $request->input('branch_id', 0)
+            $request->input('branch_id', Auth::user()->branch_id)
         );
         $userCreated = $useCaseCreateUser($dtoCreateUser);
         $useCase = new CreateCustomerUseCase($this->repository);
@@ -64,7 +65,7 @@ class CustomerController extends Controller
             $request->input('observations'),
             $request->boolean('is_premium', false),
             $userCreated->id,
-            $request->input('branch_id')
+            Auth::user()->branch_id
         );
         $customer = $useCase($dto);
 
@@ -102,7 +103,7 @@ class CustomerController extends Controller
                 $request->input('observations'),
                 $request->boolean('is_premium', false),
                 $request->input('user_id', null),
-                $request->input('branch_id'),
+                Auth::user()->branch_id
             );
             $customer = $useCase($dto);
 
@@ -117,8 +118,7 @@ class CustomerController extends Controller
         try {
             $useCase = new DeleteCustomerUseCase($this->repository);
             $useCase($id);
-
-            return response()->json(null, 204);
+            return response()->json(null, 200);
         } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Customer not found'], 404);
         }
