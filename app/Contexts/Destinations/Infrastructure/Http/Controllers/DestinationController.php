@@ -7,14 +7,15 @@ use App\Contexts\Destinations\Application\CreateDestinationUseCase;
 use App\Contexts\Destinations\Application\DeleteDestinationUseCase;
 use App\Contexts\Destinations\Application\DTO\CreateDestinationDTO;
 use App\Contexts\Destinations\Application\DTO\UpdateDestinationDTO;
+use App\Contexts\Destinations\Application\GetDestinationsByOriginUseCase;
 use App\Contexts\Destinations\Application\GetDestinationsUseCase;
 use App\Contexts\Destinations\Application\GetDestinationUseCase;
+use App\Contexts\Destinations\Application\GetOriginsUseCase;
 use App\Contexts\Destinations\Application\UpdateDestinationUseCase;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
 use App\Contexts\Destinations\Infrastructure\Http\Requests\CreateDestinationRequest;
 use App\Contexts\Destinations\Infrastructure\Http\Requests\UpdateDestinationRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 class DestinationController extends Controller
@@ -72,5 +73,19 @@ class DestinationController extends Controller
         $useCase = new DeleteDestinationUseCase($this->repository);
         $useCase($id);
         return response()->json(null);
+    }
+
+    public function origins(): JsonResponse
+    {
+        $useCase = new GetOriginsUseCase($this->repository);
+        $origins = $useCase();
+        return response()->json($origins);
+    }
+
+    public function destinations(string $origin): JsonResponse
+    {
+        $useCase = new GetDestinationsByOriginUseCase($this->repository);
+        $destinations = $useCase($origin);
+        return response()->json($destinations);
     }
 }

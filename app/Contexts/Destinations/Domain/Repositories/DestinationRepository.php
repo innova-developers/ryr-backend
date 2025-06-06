@@ -14,4 +14,6 @@ interface DestinationRepository
     public function findById(int $id): Destination;
     public function update(UpdateDestinationDTO $dto):Destination;
     public function delete(int $id):void;
+    public function getOrigins():array;
+    public function getDestinationsByOrigin(string $origin):array;
 }

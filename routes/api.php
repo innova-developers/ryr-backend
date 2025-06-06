@@ -17,6 +17,14 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->put('/users/{id}', [UserControll
 Route::middleware(['auth:sanctum', 'isAdmin'])->apiResource('branches', BranchController::class);
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('customers', CustomerController::class);
+    Route::get('destinations', [DestinationController::class, 'index']);
+    Route::post('destinations', [DestinationController::class, 'store']);
+    Route::put('destinations/{id}', [DestinationController::class, 'update']);
+    Route::delete('destinations/{id}', [DestinationController::class, 'destroy']);
+    Route::apiResource('extraordinary-commissions', ExtraordinaryCommissionController::class);
 });
-Route::apiResource('destinations', DestinationController::class);
-Route::apiResource('extraordinary-commissions', ExtraordinaryCommissionController::class);
+Route::middleware(['auth:sanctum'])->get('/origins', [DestinationController::class, 'origins']);
+Route::middleware(['auth:sanctum'])->get('/destinations/{origin}', [DestinationController::class, 'destinations']);
+
+
+

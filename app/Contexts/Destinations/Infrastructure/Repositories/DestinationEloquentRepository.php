@@ -70,4 +70,23 @@ class DestinationEloquentRepository implements DestinationRepository
             throw new \RuntimeException('Error al eliminar Destino: ' . $exception->getMessage(), 0, $exception);
         }
     }
+
+    public function getOrigins(): array
+    {
+        return Destination::select('origin')
+            ->distinct()
+            ->orderBy('origin')
+            ->pluck('origin')
+            ->toArray();
+    }
+
+    public function getDestinationsByOrigin(string $origin): array
+    {
+        return Destination::select('destination')
+            ->where('origin', $origin)
+            ->distinct()
+            ->orderBy('destination')
+            ->pluck('destination')
+            ->toArray();
+    }
 }
