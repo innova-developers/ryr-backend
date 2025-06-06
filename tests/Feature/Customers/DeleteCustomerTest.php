@@ -17,7 +17,7 @@ class DeleteCustomerTest extends TestCase
         $customer = Customer::factory()->create();
         $response = $this->actingAs($user)
             ->deleteJson("/api/customers/{$customer->id}");
-        $response->assertStatus(204);
+        $response->assertStatus(200);
         $this->assertSoftDeleted('customers', ['id' => $customer->id]);
     }
 

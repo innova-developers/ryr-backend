@@ -16,8 +16,8 @@ class UserSeeder extends Seeder
 
         DB::table('users')->insert([
             [
-                'name' => 'Admin',
-                'email' => 'admin@example.com',
+                'name' => 'Juan Sepúlveda',
+                'email' => 'juan@innovadevelopers.com',
                 'password' => Hash::make('password'),
                 'role' => UserRole::ADMINISTRADOR->value,
                 'branch_id' => $branches->random()->id,

@@ -16,3 +16,4 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->apiResource('branches', BranchCo
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('customers', CustomerController::class);
 });
+Route::apiResource('destinations', \App\Contexts\Destinations\Infrastructure\Http\Controllers\DestinationController::class);

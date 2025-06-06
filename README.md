@@ -5,7 +5,7 @@
 
 <p style="font-size:3em;" align="center">
   🚚 RyR Comisiones <br>
-   <img src="https://img.shields.io/badge/Laravel-FF2D20?style=flat-square&logo=laravel&logoColor=white" alt="Laravel" />
+  <img src="https://img.shields.io/badge/Laravel-FF2D20?style=flat-square&logo=laravel&logoColor=white" alt="Laravel" />
   <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/PHP-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP" />
   <img src="https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white" alt="MySQL" />
@@ -500,5 +500,157 @@ Status: 204 No Content
 ```json
 {
   "message": "Customer not found"
+}
+```
+
+## 🚚 Destinos
+
+El módulo de destinos permite gestionar las rutas y precios de transporte entre diferentes ciudades.
+
+### Listar todos los destinos
+```http
+GET /api/destinations
+```
+
+#### Respuesta
+```json
+[
+    {
+        "id": 1,
+        "origin": "Buenos Aires",
+        "destination": "Córdoba",
+        "fixed_price": 1500.00,
+        "small_bulk_price": 1200.00,
+        "large_bulk_price": 900.00,
+        "created_at": "2024-03-21T10:00:00.000000Z",
+        "updated_at": "2024-03-21T10:00:00.000000Z"
+    }
+]
+```
+
+### Crear un nuevo destino
+```http
+POST /api/destinations
+```
+
+#### Parámetros
+| Parámetro | Tipo | Requerido | Descripción |
+|-----------|------|-----------|-------------|
+| origin | string | Sí | Ciudad de origen |
+| destination | string | Sí | Ciudad de destino |
+| fixed_price | float | Sí | Precio fijo del transporte |
+| small_bulk_price | float | Sí | Precio por bulto chico (aproximadamente 20% menos que el fijo) |
+| large_bulk_price | float | Sí | Precio por bulto grande (aproximadamente 40% menos que el fijo) |
+
+#### Ejemplo de solicitud
+```json
+{
+    "origin": "Buenos Aires",
+    "destination": "Córdoba",
+    "fixed_price": 1500.00,
+    "small_bulk_price": 1200.00,
+    "large_bulk_price": 900.00
+}
+```
+
+#### Respuesta
+```json
+{
+    "id": 1,
+    "origin": "Buenos Aires",
+    "destination": "Córdoba",
+    "fixed_price": 1500.00,
+    "small_bulk_price": 1200.00,
+    "large_bulk_price": 900.00,
+    "created_at": "2024-03-21T10:00:00.000000Z",
+    "updated_at": "2024-03-21T10:00:00.000000Z"
+}
+```
+
+### Obtener un destino específico
+```http
+GET /api/destinations/{id}
+```
+
+#### Respuesta
+```json
+{
+    "id": 1,
+    "origin": "Buenos Aires",
+    "destination": "Córdoba",
+    "fixed_price": 1500.00,
+    "small_bulk_price": 1200.00,
+    "large_bulk_price": 900.00,
+    "created_at": "2024-03-21T10:00:00.000000Z",
+    "updated_at": "2024-03-21T10:00:00.000000Z"
+}
+```
+
+### Actualizar un destino
+```http
+PUT /api/destinations/{id}
+```
+
+#### Parámetros
+| Parámetro | Tipo | Requerido | Descripción |
+|-----------|------|-----------|-------------|
+| origin | string | No | Ciudad de origen |
+| destination | string | No | Ciudad de destino |
+| fixed_price | float | No | Precio fijo del transporte |
+| small_bulk_price | float | No | Precio por bulto chico |
+| large_bulk_price | float | No | Precio por bulto grande |
+
+#### Ejemplo de solicitud
+```json
+{
+    "fixed_price": 1600.00,
+    "small_bulk_price": 1280.00,
+    "large_bulk_price": 960.00
+}
+```
+
+#### Respuesta
+```json
+{
+    "id": 1,
+    "origin": "Buenos Aires",
+    "destination": "Córdoba",
+    "fixed_price": 1600.00,
+    "small_bulk_price": 1280.00,
+    "large_bulk_price": 960.00,
+    "created_at": "2024-03-21T10:00:00.000000Z",
+    "updated_at": "2024-03-21T11:00:00.000000Z"
+}
+```
+
+### Eliminar un destino
+```http
+DELETE /api/destinations/{id}
+```
+
+#### Respuesta
+```json
+{
+    "message": "Destino eliminado correctamente"
+}
+```
+
+### Códigos de error
+| Código | Descripción |
+|--------|-------------|
+| 404 | Destino no encontrado |
+| 422 | Error de validación en los datos enviados |
+
+#### Ejemplo de error de validación
+```json
+{
+    "message": "The given data was invalid.",
+    "errors": {
+        "origin": ["El campo origen es obligatorio"],
+        "destination": ["El campo destino es obligatorio"],
+        "fixed_price": ["El campo precio fijo es obligatorio y debe ser un número"],
+        "small_bulk_price": ["El campo precio por bulto chico es obligatorio y debe ser un número"],
+        "large_bulk_price": ["El campo precio por bulto grande es obligatorio y debe ser un número"]
+    }
 }
 ```
