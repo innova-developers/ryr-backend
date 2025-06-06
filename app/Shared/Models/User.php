@@ -42,12 +42,13 @@ class User extends Authenticatable
     }
 
     /**
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Shared\Models\Branch, \App\Shared\Models\User>
+     * @return BelongsTo<\App\Shared\Models\Branch, \App\Shared\Models\User>
      */
-    public function branch(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function branch(): BelongsTo
     {
-        /** @var \Illuminate\Database\Eloquent\Relations\BelongsTo<\App\Shared\Models\Branch, \App\Shared\Models\User> $relation */
+        /** @var BelongsTo<\App\Shared\Models\Branch, \App\Shared\Models\User> $relation */
         $relation = $this->belongsTo(Branch::class);
+
         return $relation;
     }
     public function isAdmin(): bool

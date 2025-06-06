@@ -103,4 +103,4 @@ jobs:
       - name: Install Composer Dependencies
         run: composer install --prefer-dist --no-interaction
       - name: Run PHP-CS-Fixer and auto-fix
-        run: ./vendor/bin/php-cs-fixer fix --diff
+        run: PHP_CS_FIXER_IGNORE_ENV=1 ./vendor/bin/php-cs-fixer fix --diff

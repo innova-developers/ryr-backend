@@ -14,7 +14,7 @@ class Branch extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'address', 'schedule', 'phone'];
+    protected $fillable = ['id','name', 'address', 'schedule', 'phone'];
 
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Shared\Models\User, \App\Shared\Models\Branch>
@@ -23,6 +23,7 @@ class Branch extends Model
     {
         /** @var \Illuminate\Database\Eloquent\Relations\HasMany<\App\Shared\Models\User, \App\Shared\Models\Branch> $relation */
         $relation = $this->hasMany(User::class);
+
         return $relation;
     }
 
