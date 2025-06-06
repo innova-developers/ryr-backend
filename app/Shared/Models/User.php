@@ -3,6 +3,7 @@
 namespace App\Shared\Models;
 
 use App\Shared\Enums\UserRole;
+use Database\Factories\DestinationFactory;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -55,4 +56,6 @@ class User extends Authenticatable
     {
         return $this->role === UserRole::ADMINISTRADOR->value;
     }
+
+
 }

@@ -15,6 +15,7 @@ use App\Contexts\Customers\Infrastructure\Http\Requests\UpdateCustomerRequest;
 use App\Contexts\Users\Application\CreateUserUseCase;
 use App\Contexts\Users\Application\DTO\CreateUserDTO;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
+use App\Shared\Models\Branch;
 use App\Shared\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -65,7 +66,7 @@ class CustomerController extends Controller
             $request->input('observations'),
             $request->boolean('is_premium', false),
             $userCreated->id,
-            Auth::user()->branch_id
+            Auth::user()->branch_id ?? Branch::first()->id
         );
         $customer = $useCase($dto);
 
@@ -103,7 +104,7 @@ class CustomerController extends Controller
                 $request->input('observations'),
                 $request->boolean('is_premium', false),
                 $request->input('user_id', null),
-                Auth::user()->branch_id
+                Auth::user()->branch_id ?? Branch::first()->id
             );
             $customer = $useCase($dto);
 

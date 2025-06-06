@@ -6,6 +6,10 @@ use App\Contexts\Branchs\Domain\Repositories\BranchRepository;
 use App\Contexts\Branchs\Infrastructure\Repositories\BranchEloquentRepository;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Customers\Infrastructure\Repositories\CustomerEloquentRepository;
+use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
+use App\Contexts\Destinations\Infrastructure\Repositories\DestinationEloquentRepository;
+use App\Contexts\ExtraordinaryCommissions\Domain\Repositories\ExtraordinaryCommissionRepository;
+use App\Contexts\ExtraordinaryCommissions\Infrastructure\Repositories\ExtraordinaryCommissionEloquentRepository;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
 use App\Contexts\Users\Infrastructure\Repositories\UserEloquentRepository;
 use Illuminate\Support\ServiceProvider;
@@ -28,6 +32,14 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             CustomerRepository::class,
             CustomerEloquentRepository::class
+        );
+        $this->app->bind(
+            DestinationRepository::class,
+            DestinationEloquentRepository::class
+        );
+        $this->app->bind(
+            ExtraordinaryCommissionRepository::class,
+            ExtraordinaryCommissionEloquentRepository::class
         );
     }
 

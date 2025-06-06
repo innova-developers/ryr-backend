@@ -3,6 +3,8 @@
 use App\Contexts\Auth\Infrastructure\Http\Controllers\AuthController;
 use App\Contexts\Branchs\Infrastructure\Http\Controllers\BranchController;
 use App\Contexts\Customers\Infrastructure\Http\Controllers\CustomerController;
+use App\Contexts\Destinations\Infrastructure\Http\Controllers\DestinationController;
+use App\Contexts\ExtraordinaryCommissions\Infrastructure\Http\Controllers\ExtraordinaryCommissionController;
 use App\Contexts\Users\Infrastructure\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -15,4 +17,14 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->put('/users/{id}', [UserControll
 Route::middleware(['auth:sanctum', 'isAdmin'])->apiResource('branches', BranchController::class);
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('customers', CustomerController::class);
+    Route::get('destinations', [DestinationController::class, 'index']);
+    Route::post('destinations', [DestinationController::class, 'store']);
+    Route::put('destinations/{id}', [DestinationController::class, 'update']);
+    Route::delete('destinations/{id}', [DestinationController::class, 'destroy']);
+    Route::apiResource('extraordinary-commissions', ExtraordinaryCommissionController::class);
 });
+Route::middleware(['auth:sanctum'])->get('/origins', [DestinationController::class, 'origins']);
+Route::middleware(['auth:sanctum'])->get('/destinations/{origin}', [DestinationController::class, 'destinations']);
+
+
+
