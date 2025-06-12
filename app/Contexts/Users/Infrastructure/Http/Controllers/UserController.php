@@ -10,9 +10,9 @@ use App\Contexts\Users\Application\GetUsersUseCase;
 use App\Contexts\Users\Application\UpdateUserUseCase;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
 use App\Contexts\Users\Infrastructure\Http\Requests\CreateUserRequest;
-use App\Shared\Models\User;
+use App\Contexts\Users\Infrastructure\Http\Requests\EditUserRequest;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 class UserController extends Controller
@@ -57,23 +57,23 @@ class UserController extends Controller
         return response()->json($users);
     }
 
-    public function update(Request $request, int $id): JsonResponse
+    public function update(EditUserRequest $request, int $id): JsonResponse
     {
-        $user = User::find($id);
-        if (! $user) {
+        try {
+            $dto = new UpdateUserDTO(
+                $id,
+                $request->input('name'),
+                $request->input('email'),
+                $request->input('password'),
+                $request->input('role'),
+                $request->input('branch_id')
+            );
+            $useCase = new UpdateUserUseCase($this->repository);
+            $editedUser = $useCase($dto);
+
+            return response()->json($editedUser);
+        } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Usuario no encontrado'], 404);
         }
-        $dto = new UpdateUserDTO(
-            $id,
-            $request->input('name'),
-            $request->input('email'),
-            $request->input('password'),
-            $request->input('role'),
-            $request->input('branch_id')
-        );
-        $useCase = new UpdateUserUseCase($this->repository);
-        $editedUser = $useCase($dto);
-
-        return response()->json($editedUser);
     }
 }

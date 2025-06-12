@@ -31,6 +31,7 @@ class UserEloquentRepository implements UserRepository
                     'email' => $user->email,
                     'role' => $user->role,
                     'created_at' => $user->created_at,
+                    'branch_id' => $user->branch ? $user->branch->id : null,
                     'branch_name' => $user->branch ? $user->branch->name : null,
                 ];
             })
@@ -46,14 +47,18 @@ class UserEloquentRepository implements UserRepository
 
     public function update(UpdateUserDTO $dto): User
     {
-        $user = User::findOrFail($dto->id);
-        $user->name = $dto->name;
-        $user->email = $dto->email;
-        $user->password = $dto->password ? bcrypt($dto->password) : $user->password;
-        $user->role = $dto->role;
-        $user->branch_id = $dto->branch_id;
-        $user->save();
-
-        return $user;
+        try{
+            $user = User::find($dto->id);
+            $user->name = $dto->name;
+            $user->email = $dto->email;
+            $user->password = $dto->password ? bcrypt($dto->password) : $user->password;
+            $user->role = $dto->role;
+            $user->branch_id = $dto->branch_id;
+            $user->save();
+            return $user;
+        }catch(\Exception $e){
+            throw new \Exception('Usuario no encontrado',404);
+        }
+        
     }
 }

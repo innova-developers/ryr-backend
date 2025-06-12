@@ -3,12 +3,20 @@
 namespace Tests\Feature\Destinations;
 
 use App\Shared\Models\Destination;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class DestinationTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $user = User::factory()->create(['role' => 'administrador']);
+        $this->actingAs($user, 'sanctum');
+    }
 
     public function test_can_create_destination(): void
     {
@@ -23,15 +31,12 @@ class DestinationTest extends TestCase
         $response = $this->postJson('/api/destinations', $destinationData);
 
         $response->assertStatus(201)
-            ->assertJsonStructure([
-                'id',
-                'origin',
-                'destination',
-                'fixed_price',
-                'small_bulk_price',
-                'large_bulk_price',
-                'created_at',
-                'updated_at',
+            ->assertJson([
+                'origin' => 'Buenos Aires',
+                'destination' => 'Córdoba',
+                'fixed_price' => 1000.50,
+                'small_bulk_price' => 800.25,
+                'large_bulk_price' => 600.75,
             ]);
 
         $this->assertDatabaseHas('destinations', $destinationData);
@@ -47,14 +52,11 @@ class DestinationTest extends TestCase
             ->assertJsonCount(3)
             ->assertJsonStructure([
                 '*' => [
-                    'id',
                     'origin',
                     'destination',
                     'fixed_price',
                     'small_bulk_price',
                     'large_bulk_price',
-                    'created_at',
-                    'updated_at',
                 ],
             ]);
     }
@@ -66,16 +68,19 @@ class DestinationTest extends TestCase
         $response = $this->getJson("/api/destinations/{$destination->id}");
 
         $response->assertStatus(200)
-            ->assertJsonStructure([
-                'id',
-                'origin',
-                'destination',
-                'fixed_price',
-                'small_bulk_price',
-                'large_bulk_price',
-                'created_at',
-                'updated_at',
+            ->assertJson([
+                'origin' => $destination->origin,
+                'destination' => $destination->destination,
+                'fixed_price' => (float) $destination->fixed_price,
+                'small_bulk_price' => (float) $destination->small_bulk_price,
+                'large_bulk_price' => (float) $destination->large_bulk_price,
             ]);
+    }
+
+    public function test_returns_404_when_destination_not_found(): void
+    {
+        $response = $this->getJson('/api/destinations/999');
+        $response->assertStatus(404);
     }
 
     public function test_can_update_destination(): void
@@ -92,15 +97,12 @@ class DestinationTest extends TestCase
         $response = $this->putJson("/api/destinations/{$destination->id}", $updateData);
 
         $response->assertStatus(200)
-            ->assertJsonStructure([
-                'id',
-                'origin',
-                'destination',
-                'fixed_price',
-                'small_bulk_price',
-                'large_bulk_price',
-                'created_at',
-                'updated_at',
+            ->assertJson([
+                'origin' => 'Rosario',
+                'destination' => 'Mendoza',
+                'fixed_price' => 1200.00,
+                'small_bulk_price' => 900.00,
+                'large_bulk_price' => 700.00,
             ]);
 
         $this->assertDatabaseHas('destinations', $updateData);

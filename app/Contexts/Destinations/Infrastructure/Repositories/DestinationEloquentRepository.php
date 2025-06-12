@@ -3,6 +3,7 @@
 namespace App\Contexts\Destinations\Infrastructure\Repositories;
 
 use App\Contexts\Destinations\Application\DTO\CreateDestinationDTO;
+use App\Contexts\Destinations\Application\DTO\GetDestinationRatesDTO;
 use App\Contexts\Destinations\Application\DTO\UpdateDestinationDTO;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
 use App\Shared\Models\Destination;
@@ -88,5 +89,30 @@ class DestinationEloquentRepository implements DestinationRepository
             ->orderBy('destination')
             ->pluck('destination')
             ->toArray();
+    }
+
+    /**
+     * @throws \Exception
+     */
+    public function getRatesByOriginAndDestination(GetDestinationRatesDTO $dto): Destination
+    {
+        try {
+            return Destination::where('origin', $dto->origin)
+                ->where('destination', $dto->destination)
+                ->select('fixed_price', 'small_bulk_price', 'large_bulk_price')
+                ->first();
+        }catch (\Exception $exception){
+            throw new \Exception('Error al obtener tarifas: ' . $exception->getMessage());
+        }
+    }
+    public function findByOriginAndDestination(string $origin, string $destination): Destination
+    {
+        try {
+            return Destination::where('origin', $origin)
+                ->where('destination', $destination)
+                ->firstOrFail();
+        } catch (\Exception $exception) {
+            throw new \Exception('Destino no encontrado: ' . $exception->getMessage());
+        }
     }
 }

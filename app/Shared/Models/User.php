@@ -52,6 +52,13 @@ class User extends Authenticatable
 
         return $relation;
     }
+
+    public function commissions(): BelongsTo
+    {
+        /** @var BelongsTo<\App\Shared\Models\Commission, \App\Shared\Models\User> $relation */
+        $relation = $this->belongsTo(Commission::class);
+        return $relation;
+    }
     public function isAdmin(): bool
     {
         return $this->role === UserRole::ADMINISTRADOR->value;
