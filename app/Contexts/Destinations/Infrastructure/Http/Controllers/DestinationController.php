@@ -6,7 +6,9 @@ use App\Contexts\Customers\Application\GetCustomersUseCase;
 use App\Contexts\Destinations\Application\CreateDestinationUseCase;
 use App\Contexts\Destinations\Application\DeleteDestinationUseCase;
 use App\Contexts\Destinations\Application\DTO\CreateDestinationDTO;
+use App\Contexts\Destinations\Application\DTO\GetDestinationRatesDTO;
 use App\Contexts\Destinations\Application\DTO\UpdateDestinationDTO;
+use App\Contexts\Destinations\Application\GetDestinationRatesUseCase;
 use App\Contexts\Destinations\Application\GetDestinationsByOriginUseCase;
 use App\Contexts\Destinations\Application\GetDestinationsUseCase;
 use App\Contexts\Destinations\Application\GetDestinationUseCase;
@@ -64,7 +66,7 @@ class DestinationController extends Controller
             $request->input('small_bulk_price'),
             $request->input('large_bulk_price'),
         );
-        $updatedDestination = $useCase($dto);
+        $updatedDestination = $useCase($dto); 
         return response()->json($updatedDestination);
     }
 
@@ -87,5 +89,16 @@ class DestinationController extends Controller
         $useCase = new GetDestinationsByOriginUseCase($this->repository);
         $destinations = $useCase($origin);
         return response()->json($destinations);
+    }
+
+    public function rates(string $origin, string $destination): JsonResponse
+    {
+        $useCase = new GetDestinationRatesUseCase($this->repository);
+        $dto = new GetDestinationRatesDTO(
+            $origin,
+            $destination
+        ); 
+        $rates = $useCase($dto);
+        return response()->json($rates);
     }
 }

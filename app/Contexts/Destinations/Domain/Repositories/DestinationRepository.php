@@ -4,6 +4,7 @@ namespace App\Contexts\Destinations\Domain\Repositories;
 
 
 use App\Contexts\Destinations\Application\DTO\CreateDestinationDTO;
+use App\Contexts\Destinations\Application\DTO\GetDestinationRatesDTO;
 use App\Contexts\Destinations\Application\DTO\UpdateDestinationDTO;
 use App\Shared\Models\Destination;
 
@@ -16,4 +17,6 @@ interface DestinationRepository
     public function delete(int $id):void;
     public function getOrigins():array;
     public function getDestinationsByOrigin(string $origin):array;
+    public function getRatesByOriginAndDestination(GetDestinationRatesDTO $dto): Destination;
+    public function findByOriginAndDestination(string $origin,string $destination): Destination;
 }

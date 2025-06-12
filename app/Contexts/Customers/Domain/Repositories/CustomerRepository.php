@@ -13,5 +13,5 @@ interface CustomerRepository
     public function findById(int $id): ?Customer;
     public function update(UpdateCustomerDTO $dto): Customer;
     public function delete(int $id): void;
-
+    public function search(string $query): array;
 }

@@ -5,7 +5,9 @@ namespace App\Contexts\ExtraordinaryCommissions\Infrastructure\Http\Controllers;
 use App\Contexts\ExtraordinaryCommissions\Application\CreateExtraordinaryCommissionUseCase;
 use App\Contexts\ExtraordinaryCommissions\Application\DeleteExtraordinaryCommissionUseCase;
 use App\Contexts\ExtraordinaryCommissions\Application\DTO\CreateExtraordinaryCommissionDTO;
+use App\Contexts\ExtraordinaryCommissions\Application\DTO\GetExtraordinaryCommissionByOriginAndDestinationDTO;
 use App\Contexts\ExtraordinaryCommissions\Application\DTO\UpdateExtraordinaryCommissionDTO;
+use App\Contexts\ExtraordinaryCommissions\Application\GetExtraordinaryCommissionByOriginAndDestinationUseCase;
 use App\Contexts\ExtraordinaryCommissions\Application\GetExtraordinaryCommissionsUseCase;
 use App\Contexts\ExtraordinaryCommissions\Application\GetExtraordinaryCommissionUseCase;
 use App\Contexts\ExtraordinaryCommissions\Application\UpdateExtraordinaryCommissionUseCase;
@@ -71,5 +73,16 @@ class ExtraordinaryCommissionController
         $useCase = new DeleteExtraordinaryCommissionUseCase($this->repository);
         $useCase($id);
         return response()->json([], 204);
+    }
+
+    public function getByOriginAndDestination(string $origin, string $destination): JsonResponse
+    {
+        $useCase = new GetExtraordinaryCommissionByOriginAndDestinationUseCase($this->repository);
+        $dto = new GetExtraordinaryCommissionByOriginAndDestinationDTO(
+            $origin,
+            $destination
+        );
+        $extraordinaryCommission = $useCase($dto);
+        return response()->json($extraordinaryCommission);
     }
 }

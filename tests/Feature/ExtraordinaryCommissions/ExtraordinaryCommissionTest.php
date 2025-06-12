@@ -3,12 +3,20 @@
 namespace Feature\ExtraordinaryCommissions;
 
 use App\Shared\Models\ExtraordinaryCommission;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ExtraordinaryCommissionTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $user = User::factory()->create(['role' => 'administrador']);
+        $this->actingAs($user, 'sanctum');
+    }
 
     public function test_can_create_extraordinary_commission(): void
     {

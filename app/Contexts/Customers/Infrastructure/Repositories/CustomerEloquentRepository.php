@@ -108,6 +108,33 @@ class CustomerEloquentRepository implements CustomerRepository
         }
     }
 
-
-
+    public function search(string $query): array
+    {
+        return Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id', 'created_at')
+            ->with(['user:id,name'])
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                    ->orWhere('last_name', 'like', "%{$query}%")
+                    ->orWhere('email', 'like', "%{$query}%")
+                    ->orWhere('dni', 'like', "%{$query}%");
+            })
+            ->get()
+            ->map(function (Customer $customer) {
+                return [
+                    'id' => $customer->id,
+                    'dni' => $customer->dni,
+                    'name' => $customer->name,
+                    'email' => $customer->email,
+                    'last_name' => $customer->last_name,
+                    'address' => $customer->address,
+                    'city' => $customer->city,
+                    'phone' => $customer->phone,
+                    'is_premium' => $customer->is_premium,
+                    'user' => optional($customer->user),
+                    'branch' => optional($customer->branch),
+                    'created_at' => $customer->created_at
+                ];
+            })
+            ->toArray();
+    }
 }

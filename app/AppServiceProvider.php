@@ -4,6 +4,8 @@ namespace App;
 
 use App\Contexts\Branchs\Domain\Repositories\BranchRepository;
 use App\Contexts\Branchs\Infrastructure\Repositories\BranchEloquentRepository;
+use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
+use App\Contexts\Commissions\Infrastructure\Repositories\CommissionsEloquentRepository;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Customers\Infrastructure\Repositories\CustomerEloquentRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
@@ -40,6 +42,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             ExtraordinaryCommissionRepository::class,
             ExtraordinaryCommissionEloquentRepository::class
+        );
+        $this->app->bind(
+            CommissionsRepository::class,
+            CommissionsEloquentRepository::class
         );
     }
 

@@ -21,6 +21,8 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
+use App\Contexts\Customers\Application\SearchCustomersUseCase;
 
 class CustomerController extends Controller
 {
@@ -48,7 +50,7 @@ class CustomerController extends Controller
             $request->input('email'),
             $request->input('dni'),
             'customer',
-            $request->input('branch_id', Auth::user()->branch_id)
+            $request->input('branch_id', Auth::user()->branch_id ?? Branch::first()->id)
         );
         $userCreated = $useCaseCreateUser($dtoCreateUser);
         $useCase = new CreateCustomerUseCase($this->repository);
@@ -123,5 +125,13 @@ class CustomerController extends Controller
         } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Customer not found'], 404);
         }
+    }
+
+    public function search(Request $request): JsonResponse
+    {
+        $query = $request->input('q', '');
+        $useCase = new SearchCustomersUseCase($this->repository);
+        $customers = $useCase($query);
+        return response()->json($customers);
     }
 }
