@@ -12,4 +12,6 @@ enum CommissionStatus: string
     case ENTREGADO = 'ENTREGADO';
     case ENTREGAR_Y_RETIRAR = 'ENTREGAR_Y_RETIRAR';
 
+    case PRESUPUESTO = 'PRESUPUESTO';
+
 }
