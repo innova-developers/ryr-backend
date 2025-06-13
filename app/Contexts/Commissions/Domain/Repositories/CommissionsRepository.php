@@ -3,6 +3,7 @@
 namespace App\Contexts\Commissions\Domain\Repositories;
 
 use App\Contexts\Commissions\Application\DTOs\CreateCommissionDTO;
+use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
 use App\Contexts\Commissions\Application\DTOs\ListCommissionsFiltersDTO;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Commission;
@@ -36,4 +37,5 @@ interface CommissionsRepository
     public function delete(int $id): void;
 
     public function updateStatus(int $id, CommissionStatus $status): void;
+    public function createLog(CreateCommissionLogDTO $dto): void;
 }

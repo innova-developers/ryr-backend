@@ -15,14 +15,14 @@ class ListCommissionsUseCase
     public function __invoke(ListCommissionsFiltersDTO $filters): array
     {
         $result = $this->repository->findAllWithItems($filters);
-        
+
         return [
             'data' => CommissionsMapper::fromDomainToArray($result->items()),
             'meta' => [
                 'current_page' => $result->currentPage(),
                 'last_page' => $result->lastPage(),
                 'per_page' => $result->perPage(),
-                'total' => $result->total(),
+                'total' => $result->total()
             ]
         ];
     }

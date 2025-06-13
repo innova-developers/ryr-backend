@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Validation\Rule;
 use App\Contexts\Commissions\Application\UpdateCommissionStatusUseCase;
+use Illuminate\Support\Facades\Auth;
 
 class CommissionController extends Controller
 {
@@ -108,13 +109,28 @@ class CommissionController extends Controller
     {
         try {
             $validated = $request->validate([
-                'status' => ['required', 'string', Rule::enum(CommissionStatus::class)]
+                'status' => ['required', 'string', Rule::enum(CommissionStatus::class)],
+                'details' => ['nullable', 'string']
             ]);
 
             $useCase = new UpdateCommissionStatusUseCase($this->repository);
-            $useCase($id, CommissionStatus::from($validated['status']));
+            $useCase($id, CommissionStatus::from($validated['status']), $validated['details'] ?? null);
 
-            return response()->json(['message' => 'Estado de la comisión actualizado correctamente']);
+            $commission = $this->repository->findById($id);
+            $user = Auth::user();
+            $branch = $user->branch;
+
+            return response()->json([
+                'message' => 'Estado de la comisión actualizado correctamente',
+                'commission' => [
+                    'id' => $commission->id,
+                    'status' => $commission->status,
+                    'branch' => [
+                        'id' => $branch->id,
+                        'name' => $branch->name
+                    ]
+                ]
+            ]);
         } catch (\Exception $e) {
             if (str_contains($e->getMessage(), 'Comisión no encontrada')) {
                 return response()->json(['error' => $e->getMessage()], 404);
