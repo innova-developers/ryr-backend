@@ -55,6 +55,11 @@ class Commission extends Model
         return $this->hasMany(CommissionItem::class);
     }
 
+    public function logs(): HasMany
+    {
+        return $this->hasMany(CommissionLog::class);
+    }
+
     public static function newFactory(): CommissionFactory
     {
         return CommissionFactory::new();

@@ -36,7 +36,8 @@ class CommissionsMapper
                 ],
                 'origin' =>$commission->origin,
                 'destination' => $commission->destination,
-                'items' => $items->map(function ($item) {
+                'current_branch' => $commission->logs->last()->user->branch->name,
+                'items' => $commission->items->map(function ($item) {
                     return [
                         'id' => $item->id,
                         'commission_id' => $item->commission_id,
@@ -73,6 +74,7 @@ class CommissionsMapper
                 'id' => $commission->branch->id,
                 'name' => $commission->branch->name,
             ],
+            'current_branch' => $commission->logs->last()->user->branch->name,
             'date' => $commission->date->format('Y-m-d H:i:s'),
             'status' => $commission->status,
             'user_id' => $commission->user_id,
@@ -95,6 +97,17 @@ class CommissionsMapper
                     'updated_at' => $item->updated_at,
                 ];
             })->toArray(),
+            'logs' => $commission->logs->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'previous_status' => $item->previous_status,
+                            'new_status' => $item->new_status,
+                            'details' => $item->details,
+                            'created_at' => $item->created_at,
+                            'updated_at' => $item->updated_at,
+                            'user' => $item->user->name,
+                        ];
+                    })->toArray(),
             'created_at' => $commission->created_at,
             'updated_at' => $commission->updated_at,
         ];

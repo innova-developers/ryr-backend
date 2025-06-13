@@ -3,16 +3,14 @@
 namespace App\Contexts\Commissions\Application;
 
 use App\Contexts\Commissions\Application\DTOs\CreateCommissionDTO;
+use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Contexts\Commissions\Infrastructure\Mappers\CommissionMapper;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
-use App\Shared\Enums\CommissionItemType;
-use App\Shared\Models\Commission;
-use App\Shared\Models\CommissionItem;
 use App\Shared\Models\Destination;
-use App\Shared\Models\Rate;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 readonly class CreateCommissionUseCase
 {
@@ -34,6 +32,17 @@ readonly class CreateCommissionUseCase
             $this->validateItems($dto->items);
             $commission = $this->commissionRepository->create($dto, $destination->id);
             $this->commissionRepository->addItems($commission->id, $dto->items);
+
+            $dto = new CreateCommissionLogDTO(
+                commissionId: $commission->id,
+                userId: Auth::id(),
+                previousStatus: null,
+                newStatus: $dto->status->value,
+                details: 'Comisión creada'
+            );
+
+            $this->commissionRepository->createLog($dto);
+
             return CommissionMapper::fromEntityToArray($this->commissionRepository->findById($commission->id));
         });
     }
