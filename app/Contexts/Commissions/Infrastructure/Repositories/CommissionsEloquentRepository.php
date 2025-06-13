@@ -10,6 +10,7 @@ use App\Shared\Models\CommissionItem;
 use App\Shared\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use App\Shared\Enums\CommissionStatus;
 
 class CommissionsEloquentRepository implements CommissionsRepository
 {
@@ -74,8 +75,11 @@ class CommissionsEloquentRepository implements CommissionsRepository
         try {
             $query = Commission::with(['items', 'client', 'destination', 'user', 'branch']);
 
-            if ($filters->clientId) {
-                $query->where('client_id', $filters->clientId);
+            if ($filters->client) {
+                $query->whereHas('client', function($q) use ($filters) {
+                    $q->where('name', 'LIKE', "%{$filters->client}%")
+                      ->orWhere('last_name', 'LIKE', "%{$filters->client}%");
+                });
             }
 
             if ($filters->destinationId) {
@@ -106,6 +110,37 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 ->paginate($filters->perPage, ['*'], 'page', $filters->page);
         } catch (\Exception $e) {
             throw new \Exception('Error al obtener las comisiones: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * @throws \Exception
+     */
+    public function delete(int $id): void
+    {
+        try {
+            $commission = Commission::find($id);
+            if (!$commission) {
+                throw new \Exception('Comisión no encontrada');
+            }
+
+            $commission->items()->delete();
+            $commission->delete();
+        } catch (\Exception $e) {
+            throw new \Exception('Error al eliminar la comisión: ' . $e->getMessage());
+        }
+    }
+    public function updateStatus(int $id, CommissionStatus $status): void
+    {
+        try {
+            $commission = Commission::find($id);
+            if (!$commission) {
+                throw new \Exception('Comisión no encontrada');
+            }
+            $commission->status = $status;
+            $commission->save();
+        } catch (\Exception $e) {
+            throw new \Exception('Error al actualizar el estado de la comisión: ' . $e->getMessage());
         }
     }
 }

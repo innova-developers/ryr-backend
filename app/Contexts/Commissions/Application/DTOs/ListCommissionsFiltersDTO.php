@@ -7,7 +7,7 @@ use App\Shared\Enums\CommissionStatus;
 class ListCommissionsFiltersDTO
 {
     public function __construct(
-        public readonly ?int $clientId = null,
+        public readonly ?string $client = null,
         public readonly ?int $destinationId = null,
         public readonly ?int $branchId = null,
         public readonly ?int $userId = null,
@@ -21,15 +21,15 @@ class ListCommissionsFiltersDTO
     public static function fromArray(array $data): self
     {
         return new self(
-            clientId: $data['client_id'] ?? null,
+            client: $data['clientName'] ?? null,
             destinationId: $data['destination_id'] ?? null,
             branchId: $data['branch_id'] ?? null,
             userId: $data['user_id'] ?? null,
-            dateFrom: $data['date_from'] ?? null,
-            dateTo: $data['date_to'] ?? null,
+            dateFrom: $data['dateFrom'] ?? null,
+            dateTo: $data['dateTo'] ?? null,
             status: isset($data['status']) ? CommissionStatus::from($data['status']) : null,
             page: $data['page'] ?? 1,
-            perPage: $data['per_page'] ?? 15
+            perPage: $data['perPage'] ?? 15
         );
     }
-} 
+}

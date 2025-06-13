@@ -8,7 +8,6 @@ use App\Contexts\ExtraordinaryCommissions\Infrastructure\Http\Controllers\Extrao
 use App\Contexts\Users\Infrastructure\Http\Controllers\UserController;
 use App\Contexts\Commissions\Infrastructure\Http\Controllers\CommissionController;
 use App\Contexts\Orders\Infrastructure\Http\Controllers\ListOrdersController;
-use App\Contexts\Commissions\Infrastructure\Http\Controllers\GetCommissionController;
 use Illuminate\Support\Facades\Route;
 
 // Rutas públicas
@@ -38,10 +37,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Rutas de comisiones
     Route::post('/commissions', [CommissionController::class, 'store']);
     Route::get('/commissions/statuses', [CommissionController::class, 'getStatuses']);
+    Route::get('/commissions/{id}', [CommissionController::class, 'show']);
+    Route::patch('/commissions/{id}/status', [CommissionController::class, 'updateStatus']);
 
     // Rutas de órdenes
     Route::get('/commissions',  [CommissionController::class, 'index']);
-    Route::get('/commissions/{id}', [CommissionController::class, 'show']);
+    Route::delete('/commissions/{id}', [CommissionController::class, 'destroy']);
 });
 
 // Rutas protegidas con auth:sanctum y isAdmin
