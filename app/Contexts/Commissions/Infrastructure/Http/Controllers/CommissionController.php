@@ -3,27 +3,28 @@
 namespace App\Contexts\Commissions\Infrastructure\Http\Controllers;
 
 use App\Contexts\Commissions\Application\CreateCommissionUseCase;
+use App\Contexts\Commissions\Application\DeleteCommissionUseCase;
 use App\Contexts\Commissions\Application\DTOs\CreateCommissionDTO;
 use App\Contexts\Commissions\Application\DTOs\ListCommissionsFiltersDTO;
 use App\Contexts\Commissions\Application\GetCommissionUseCase;
 use App\Contexts\Commissions\Application\ListCommissionsUseCase;
-use App\Contexts\Commissions\Domain\Exceptions\CommissionNotFoundException;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Contexts\Commissions\Infrastructure\Http\Requests\CreateCommissionRequest;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
-use App\Contexts\Users\Domain\Repositories\UserRepository;
 use App\Shared\Enums\CommissionStatus;
-use App\Shared\Models\Rate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
+use App\Contexts\Commissions\Application\UpdateCommissionStatusUseCase;
 
 class CommissionController extends Controller
 {
     private CommissionsRepository $repository;
     private CustomerRepository $customerRepository;
     private DestinationRepository $destinationRepository;
+
     public function __construct()
     {
         $this->repository = app(CommissionsRepository::class);
@@ -64,7 +65,7 @@ class CommissionController extends Controller
     {
         try {
             $filters = ListCommissionsFiltersDTO::fromArray($request->all());
-            $useCase = new ListCommissionsUseCase($this->repository);
+           $useCase = new ListCommissionsUseCase($this->repository);
             $result = $useCase($filters);
             return response()->json($result, 200);
         } catch (\Exception $e) {
@@ -87,6 +88,38 @@ class CommissionController extends Controller
             return response()->json([
                 'error' => $e->getMessage()
             ], 404);
+        }
+    }
+    public function destroy(int $id): JsonResponse
+    {
+        try {
+            $useCase = new DeleteCommissionUseCase($this->repository);
+            $useCase($id);
+            return response()->json(['message' => 'Comisión eliminada correctamente']);
+        } catch (\Exception $e) {
+            if (str_contains($e->getMessage(), 'Comisión no encontrada')) {
+                return response()->json(['error' => $e->getMessage()], 404);
+            }
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updateStatus(int $id, Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'status' => ['required', 'string', Rule::enum(CommissionStatus::class)]
+            ]);
+
+            $useCase = new UpdateCommissionStatusUseCase($this->repository);
+            $useCase($id, CommissionStatus::from($validated['status']));
+
+            return response()->json(['message' => 'Estado de la comisión actualizado correctamente']);
+        } catch (\Exception $e) {
+            if (str_contains($e->getMessage(), 'Comisión no encontrada')) {
+                return response()->json(['error' => $e->getMessage()], 404);
+            }
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 }
