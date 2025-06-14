@@ -11,7 +11,6 @@ use App\Contexts\ExtraordinaryCommissions\Application\GetExtraordinaryCommission
 use App\Contexts\ExtraordinaryCommissions\Application\GetExtraordinaryCommissionsUseCase;
 use App\Contexts\ExtraordinaryCommissions\Application\GetExtraordinaryCommissionUseCase;
 use App\Contexts\ExtraordinaryCommissions\Application\UpdateExtraordinaryCommissionUseCase;
-use App\Contexts\ExtraordinaryCommissions\Domain\Repositories\EloquentExtraordinaryCommissionRepository;
 use App\Contexts\ExtraordinaryCommissions\Domain\Repositories\ExtraordinaryCommissionRepository;
 use App\Contexts\ExtraordinaryCommissions\Infrastructure\Http\Requests\CreateExtraordinaryCommissionRequest;
 use App\Contexts\ExtraordinaryCommissions\Infrastructure\Http\Requests\UpdateExtraordinaryCommissionRequest;
