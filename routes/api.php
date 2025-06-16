@@ -2,12 +2,12 @@
 
 use App\Contexts\Auth\Infrastructure\Http\Controllers\AuthController;
 use App\Contexts\Branchs\Infrastructure\Http\Controllers\BranchController;
+use App\Contexts\Commissions\Infrastructure\Http\Controllers\CommissionController;
 use App\Contexts\Customers\Infrastructure\Http\Controllers\CustomerController;
 use App\Contexts\Destinations\Infrastructure\Http\Controllers\DestinationController;
 use App\Contexts\ExtraordinaryCommissions\Infrastructure\Http\Controllers\ExtraordinaryCommissionController;
+use App\Contexts\Locations\Infrastructure\Http\Controllers\LocationsController;
 use App\Contexts\Users\Infrastructure\Http\Controllers\UserController;
-use App\Contexts\Commissions\Infrastructure\Http\Controllers\CommissionController;
-use App\Contexts\Orders\Infrastructure\Http\Controllers\ListOrdersController;
 use Illuminate\Support\Facades\Route;
 
 // Rutas públicas
@@ -55,6 +55,13 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
 
     // Rutas de sucursales
     Route::apiResource('branches', BranchController::class);
+});
+
+Route::prefix('locations')->group(function () {
+    Route::get('/', [LocationsController::class, 'index']);
+    Route::post('/', [LocationsController::class, 'store']);
+    Route::put('/{id}', [LocationsController::class, 'update']);
+    Route::delete('/{id}', [LocationsController::class, 'destroy']);
 });
 
 
