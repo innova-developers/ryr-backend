@@ -2,7 +2,6 @@
 
 namespace App\Contexts\Destinations\Application;
 
-use App\Contexts\Destinations\Application\DTO\CreateDestinationDTO;
 use App\Contexts\Destinations\Application\DTO\UpdateDestinationDTO;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
 use App\Shared\Models\Destination;

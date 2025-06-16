@@ -47,7 +47,7 @@ class UserEloquentRepository implements UserRepository
 
     public function update(UpdateUserDTO $dto): User
     {
-        try{
+        try {
             $user = User::find($dto->id);
             $user->name = $dto->name;
             $user->email = $dto->email;
@@ -55,10 +55,11 @@ class UserEloquentRepository implements UserRepository
             $user->role = $dto->role;
             $user->branch_id = $dto->branch_id;
             $user->save();
+
             return $user;
-        }catch(\Exception $e){
-            throw new \Exception('Usuario no encontrado',404);
+        } catch (\Exception $e) {
+            throw new \Exception('Usuario no encontrado', 404);
         }
-        
+
     }
 }

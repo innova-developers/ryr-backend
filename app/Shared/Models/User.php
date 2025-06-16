@@ -3,7 +3,6 @@
 namespace App\Shared\Models;
 
 use App\Shared\Enums\UserRole;
-use Database\Factories\DestinationFactory;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -57,6 +56,7 @@ class User extends Authenticatable
     {
         /** @var BelongsTo<\App\Shared\Models\Commission, \App\Shared\Models\User> $relation */
         $relation = $this->belongsTo(Commission::class);
+
         return $relation;
     }
     public function isAdmin(): bool

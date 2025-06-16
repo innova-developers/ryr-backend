@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Commissions;
 
-use App\Shared\Enums\CommissionStatus;
-use App\Shared\Enums\CommissionItemType;
 use App\Shared\Enums\CommissionItemSize;
+use App\Shared\Enums\CommissionItemType;
+use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Branch;
 use App\Shared\Models\Commission;
 use App\Shared\Models\CommissionItem;
@@ -43,7 +43,7 @@ class DeleteCommissionTest extends TestCase
             'user_id' => $this->user->id,
             'date' => '2024-03-21',
             'status' => CommissionStatus::DEPOSITO->value,
-            'total' => '1000.00'
+            'total' => '1000.00',
         ]);
 
         CommissionItem::factory()->create([
@@ -53,7 +53,7 @@ class DeleteCommissionTest extends TestCase
             'quantity' => 1,
             'unit_price' => '1000.00',
             'subtotal' => '1000.00',
-            'detail' => 'Item Test'
+            'detail' => 'Item Test',
         ]);
 
         // Act

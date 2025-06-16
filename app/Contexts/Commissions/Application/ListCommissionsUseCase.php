@@ -10,7 +10,8 @@ class ListCommissionsUseCase
 {
     public function __construct(
         private readonly CommissionsRepository $repository
-    ) {}
+    ) {
+    }
 
     public function __invoke(ListCommissionsFiltersDTO $filters): array
     {
@@ -22,8 +23,8 @@ class ListCommissionsUseCase
                 'current_page' => $result->currentPage(),
                 'last_page' => $result->lastPage(),
                 'per_page' => $result->perPage(),
-                'total' => $result->total()
-            ]
+                'total' => $result->total(),
+            ],
         ];
     }
 }

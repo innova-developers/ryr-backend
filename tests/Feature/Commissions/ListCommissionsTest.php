@@ -2,15 +2,15 @@
 
 namespace Tests\Feature\Commissions;
 
+use App\Shared\Enums\CommissionItemSize;
+use App\Shared\Enums\CommissionItemType;
+use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Branch;
 use App\Shared\Models\Commission;
 use App\Shared\Models\CommissionItem;
 use App\Shared\Models\Customer;
 use App\Shared\Models\Destination;
 use App\Shared\Models\User;
-use App\Shared\Enums\CommissionStatus;
-use App\Shared\Enums\CommissionItemType;
-use App\Shared\Enums\CommissionItemSize;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -26,7 +26,7 @@ class ListCommissionsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->branch = Branch::factory()->create();
         $this->user = User::factory()->create(['branch_id' => $this->branch->id]);
         $this->customer = Customer::factory()->create();

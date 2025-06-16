@@ -22,9 +22,9 @@ class CommissionMapper
                     'quantity' => $item->quantity,
                     'unit_price' => $item->unit_price,
                     'subtotal' => $item->subtotal,
-                    'detail' => $item->detail
+                    'detail' => $item->detail,
                 ];
-            })->toArray()
+            })->toArray(),
         ];
     }
 

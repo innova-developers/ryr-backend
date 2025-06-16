@@ -8,6 +8,7 @@ use App\Contexts\Customers\Application\DTO\CreateCustomerDTO;
 use App\Contexts\Customers\Application\DTO\UpdateCustomerDTO;
 use App\Contexts\Customers\Application\GetCustomersUseCase;
 use App\Contexts\Customers\Application\GetCustomerUseCase;
+use App\Contexts\Customers\Application\SearchCustomersUseCase;
 use App\Contexts\Customers\Application\UpdateCustomerUseCase;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Customers\Infrastructure\Http\Requests\CreateCustomerRequest;
@@ -16,13 +17,11 @@ use App\Contexts\Users\Application\CreateUserUseCase;
 use App\Contexts\Users\Application\DTO\CreateUserDTO;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
 use App\Shared\Models\Branch;
-use App\Shared\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\Request;
-use App\Contexts\Customers\Application\SearchCustomersUseCase;
 
 class CustomerController extends Controller
 {
@@ -39,6 +38,7 @@ class CustomerController extends Controller
     {
         $useCase = new GetCustomersUseCase($this->repository);
         $customers = $useCase();
+
         return response()->json($customers);
     }
 
@@ -121,6 +121,7 @@ class CustomerController extends Controller
         try {
             $useCase = new DeleteCustomerUseCase($this->repository);
             $useCase($id);
+
             return response()->json(null, 200);
         } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Customer not found'], 404);
@@ -132,6 +133,7 @@ class CustomerController extends Controller
         $query = $request->input('q', '');
         $useCase = new SearchCustomersUseCase($this->repository);
         $customers = $useCase($query);
+
         return response()->json($customers);
     }
 }

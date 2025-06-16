@@ -10,8 +10,7 @@ class GetExtraordinaryCommissionByOriginAndDestinationDTO
     public function __construct(
         string $origin,
         string $destination
-    )
-    {
+    ) {
         $this->origin = $origin;
         $this->destination = $destination;
     }

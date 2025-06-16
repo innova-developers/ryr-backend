@@ -26,8 +26,8 @@ class LocationsTest extends TestCase
                     'phone',
                     'map',
                     'schedule',
-                    'observation'
-                ]
+                    'observation',
+                ],
             ]);
     }
 
@@ -40,7 +40,7 @@ class LocationsTest extends TestCase
             'phone' => '1234567890',
             'map' => 'https://maps.google.com',
             'schedule' => '9:00 - 18:00',
-            'observation' => 'Test observation'
+            'observation' => 'Test observation',
         ];
 
         $response = $this->postJson('/api/locations', $data);
@@ -54,7 +54,7 @@ class LocationsTest extends TestCase
                 'phone',
                 'map',
                 'schedule',
-                'observation'
+                'observation',
             ]);
 
         $this->assertDatabaseHas('locations', [
@@ -64,7 +64,7 @@ class LocationsTest extends TestCase
             'phone' => $data['phone'],
             'map' => $data['map'],
             'schedule' => $data['schedule'],
-            'observation' => $data['observation']
+            'observation' => $data['observation'],
         ]);
     }
 
@@ -86,7 +86,7 @@ class LocationsTest extends TestCase
             'phone' => '0987654321',
             'map' => 'https://maps.google.com/updated',
             'schedule' => '10:00 - 19:00',
-            'observation' => 'Updated observation'
+            'observation' => 'Updated observation',
         ];
 
         $response = $this->putJson("/api/locations/{$location->id}", $data);
@@ -100,7 +100,7 @@ class LocationsTest extends TestCase
                 'phone',
                 'map',
                 'schedule',
-                'observation'
+                'observation',
             ]);
 
         $this->assertDatabaseHas('locations', [
@@ -111,7 +111,7 @@ class LocationsTest extends TestCase
             'phone' => $data['phone'],
             'map' => $data['map'],
             'schedule' => $data['schedule'],
-            'observation' => $data['observation']
+            'observation' => $data['observation'],
         ]);
     }
 
@@ -122,7 +122,7 @@ class LocationsTest extends TestCase
             'address' => 'Test Address',
             'origin' => 'Test Origin',
             'phone' => '1234567890',
-            'schedule' => '9:00 - 18:00'
+            'schedule' => '9:00 - 18:00',
         ];
 
         $response = $this->putJson('/api/locations/999', $data);
@@ -139,7 +139,7 @@ class LocationsTest extends TestCase
         $response->assertStatus(204);
 
         $this->assertSoftDeleted('locations', [
-            'id' => $location->id
+            'id' => $location->id,
         ]);
     }
 

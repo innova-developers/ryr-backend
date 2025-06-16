@@ -2,7 +2,6 @@
 
 namespace App\Contexts\ExtraordinaryCommissions\Infrastructure\Repositories;
 
-
 use App\Contexts\ExtraordinaryCommissions\Application\DTO\CreateExtraordinaryCommissionDTO;
 use App\Contexts\ExtraordinaryCommissions\Application\DTO\GetExtraordinaryCommissionByOriginAndDestinationDTO;
 use App\Contexts\ExtraordinaryCommissions\Application\DTO\UpdateExtraordinaryCommissionDTO;
@@ -11,7 +10,6 @@ use App\Shared\Models\ExtraordinaryCommission;
 
 class ExtraordinaryCommissionEloquentRepository implements ExtraordinaryCommissionRepository
 {
-
     public function get(): array
     {
         return ExtraordinaryCommission::all()->toArray();
@@ -26,12 +24,13 @@ class ExtraordinaryCommissionEloquentRepository implements ExtraordinaryCommissi
             $ExtraordinaryCommission = new ExtraordinaryCommission();
             $ExtraordinaryCommission->origin = $dto->origin;
             $ExtraordinaryCommission->destination = $dto->destination;
-            $ExtraordinaryCommission->detail  = $dto->detail;
-            $ExtraordinaryCommission->price  = $dto->price;
-            $ExtraordinaryCommission->observations  = $dto->observations;
+            $ExtraordinaryCommission->detail = $dto->detail;
+            $ExtraordinaryCommission->price = $dto->price;
+            $ExtraordinaryCommission->observations = $dto->observations;
             $ExtraordinaryCommission->save();
+
             return $ExtraordinaryCommission;
-        }catch (\Exception $exception){
+        } catch (\Exception $exception) {
             throw new \Exception($exception->getMessage());
         }
     }
@@ -43,7 +42,7 @@ class ExtraordinaryCommissionEloquentRepository implements ExtraordinaryCommissi
     {
         try {
             return ExtraordinaryCommission::find($id);
-        }catch (\Exception $exception){
+        } catch (\Exception $exception) {
             throw new \Exception($exception->getMessage());
         }
     }
@@ -57,12 +56,13 @@ class ExtraordinaryCommissionEloquentRepository implements ExtraordinaryCommissi
             $ExtraordinaryCommission = ExtraordinaryCommission::find($dto->id);
             $ExtraordinaryCommission->origin = $dto->origin;
             $ExtraordinaryCommission->destination = $dto->destination;
-            $ExtraordinaryCommission->detail  = $dto->detail;
-            $ExtraordinaryCommission->price  = $dto->price;
-            $ExtraordinaryCommission->observations  = $dto->observations;
+            $ExtraordinaryCommission->detail = $dto->detail;
+            $ExtraordinaryCommission->price = $dto->price;
+            $ExtraordinaryCommission->observations = $dto->observations;
             $ExtraordinaryCommission->save();
+
             return $ExtraordinaryCommission;
-        }catch (\Exception $exception){
+        } catch (\Exception $exception) {
             throw new \Exception($exception->getMessage());
         }
     }

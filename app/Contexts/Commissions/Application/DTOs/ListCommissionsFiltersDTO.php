@@ -18,7 +18,8 @@ class ListCommissionsFiltersDTO
         public readonly int $perPage = 15,
         public readonly ?string $sort = 'date',
         public readonly ?string $sortDirection = 'asc',
-    ) {}
+    ) {
+    }
 
     public static function fromArray(array $data): self
     {

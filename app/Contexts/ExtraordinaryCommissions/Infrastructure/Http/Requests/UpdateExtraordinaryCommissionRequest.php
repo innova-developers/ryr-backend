@@ -5,6 +5,7 @@ namespace App\Contexts\ExtraordinaryCommissions\Infrastructure\Http\Requests;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+
 class UpdateExtraordinaryCommissionRequest extends FormRequest
 {
     public function authorize(): bool
@@ -21,7 +22,7 @@ class UpdateExtraordinaryCommissionRequest extends FormRequest
             'destination' => 'required|string',
             'detail' => 'required|string',
             'price' => 'required|numeric|min:0',
-            'observations' => 'nullable|string'
+            'observations' => 'nullable|string',
         ];
     }
 
@@ -34,4 +35,3 @@ class UpdateExtraordinaryCommissionRequest extends FormRequest
         );
     }
 }
-

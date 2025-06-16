@@ -3,16 +3,16 @@
 namespace App\Contexts\Commissions\Infrastructure\Repositories;
 
 use App\Contexts\Commissions\Application\DTOs\CreateCommissionDTO;
-use App\Contexts\Commissions\Application\DTOs\ListCommissionsFiltersDTO;
 use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
+use App\Contexts\Commissions\Application\DTOs\ListCommissionsFiltersDTO;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
+use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Commission;
 use App\Shared\Models\CommissionItem;
 use App\Shared\Models\CommissionLog;
 use App\Shared\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
-use App\Shared\Enums\CommissionStatus;
 
 class CommissionsEloquentRepository implements CommissionsRepository
 {
@@ -21,7 +21,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
      */
     public function create(CreateCommissionDTO $dto, int $destinationId): Commission
     {
-        try{
+        try {
             $user = User::find(Auth::id());
             $commission = new Commission();
             $commission->client_id = $dto->clientId;
@@ -32,6 +32,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission->branch_id = $user->branch_id;
             $commission->total = $dto->total;
             $commission->save();
+
             return $commission;
         } catch (\Exception $e) {
             throw new \Exception('Error al crear comisión: ' . $e->getMessage());
@@ -39,7 +40,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
     }
     public function addItems(int $commissionId, array $items): void
     {
-        try{
+        try {
             foreach ($items as $item) {
                 $commissionItem = new CommissionItem();
                 $commissionItem->commission_id = $commissionId;
@@ -51,7 +52,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 $commissionItem->detail = $item->detail;
                 $commissionItem->save();
             }
-        }catch (\Exception $e){
+        } catch (\Exception $e) {
             throw new \Exception('Error al agregar items a la comisión: ' . $e->getMessage());
         }
 
@@ -63,9 +64,10 @@ class CommissionsEloquentRepository implements CommissionsRepository
     public function findById(int $id): Commission
     {
         $commission = Commission::find($id);
-        if (!$commission) {
+        if (! $commission) {
             throw new \Exception('Comisión no encontrada');
         }
+
         return $commission;
     }
 
@@ -78,7 +80,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $query = Commission::with(['items', 'client', 'destination', 'user', 'branch']);
 
             if ($filters->client) {
-                $query->whereHas('client', function($q) use ($filters) {
+                $query->whereHas('client', function ($q) use ($filters) {
                     $q->where('name', 'LIKE', "%{$filters->client}%")
                       ->orWhere('last_name', 'LIKE', "%{$filters->client}%");
                 });
@@ -111,32 +113,40 @@ class CommissionsEloquentRepository implements CommissionsRepository
             switch ($filters->sort) {
                 case 'id':
                     $query->orderBy('commissions.id', $filters->sortDirection);
+
                     break;
                 case 'client_name':
                     $query->leftJoin('customers', 'customers.id', '=', 'commissions.client_id')
                         ->orderBy('customers.name', $filters->sortDirection)
                         ->select('commissions.*');
+
                     break;
                 case 'origin':
                     $query->leftJoin('destinations', 'destinations.id', '=', 'commissions.destination_id')
                         ->orderBy('destinations.origin', $filters->sortDirection)
                         ->select('commissions.*');
+
                     break;
                 case 'destination':
                     $query->leftJoin('destinations', 'destinations.id', '=', 'commissions.destination_id')
                         ->orderBy('destinations.destination', $filters->sortDirection)
                         ->select('commissions.*');
+
                     break;
                 case 'date':
                     $query->orderBy('date', $filters->sortDirection);
+
                     break;
                 case 'total':
                     $query->orderBy('total', $filters->sortDirection);
+
                     break;
                 case 'status':
                     $query->orderBy('status', $filters->sortDirection);
+
                     break;
             }
+
             return $query->paginate($filters->perPage, ['*'], 'page', $filters->page);
         } catch (\Exception $e) {
             throw new \Exception('Error al obtener las comisiones: ' . $e->getMessage());
@@ -150,7 +160,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
     {
         try {
             $commission = Commission::find($id);
-            if (!$commission) {
+            if (! $commission) {
                 throw new \Exception('Comisión no encontrada');
             }
             $commission->delete();
@@ -162,7 +172,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
     {
         try {
             $commission = Commission::find($id);
-            if (!$commission) {
+            if (! $commission) {
                 throw new \Exception('Comisión no encontrada');
             }
             $commission->status = $status;
@@ -183,7 +193,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 'user_id' => $dto->userId,
                 'previous_status' => $dto->previousStatus,
                 'new_status' => $dto->newStatus,
-                'details' => $dto->details
+                'details' => $dto->details,
             ]);
         } catch (\Exception $e) {
             throw new \Exception('Error al crear el log de la comisión: ' . $e->getMessage());

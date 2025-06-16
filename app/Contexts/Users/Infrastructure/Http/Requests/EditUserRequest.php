@@ -21,13 +21,14 @@ class EditUserRequest extends FormRequest
     public function rules(): array
     {
         $userId = $this->route('id') ?? $this->route('user');
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => [
                 'required',
                 'email',
                 'max:255',
-                'unique:users,email,' . $userId
+                'unique:users,email,' . $userId,
             ],
             'password' => ['nullable', 'string', 'min:8'],
             'role' => ['required', new Enum(UserRole::class)],

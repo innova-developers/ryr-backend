@@ -25,7 +25,7 @@ class ExtraordinaryCommissionTest extends TestCase
             'destination' => 'Córdoba',
             'detail' => 'Servicio especial',
             'price' => 1500.50,
-            'observations' => 'Comisión por servicio urgente'
+            'observations' => 'Comisión por servicio urgente',
         ];
 
         $response = $this->postJson('/api/extraordinary-commissions', $data);
@@ -39,7 +39,7 @@ class ExtraordinaryCommissionTest extends TestCase
                 'price',
                 'observations',
                 'created_at',
-                'updated_at'
+                'updated_at',
             ]);
 
         $this->assertDatabaseHas('extraordinary_commissions', $data);
@@ -62,8 +62,8 @@ class ExtraordinaryCommissionTest extends TestCase
                     'price',
                     'observations',
                     'created_at',
-                    'updated_at'
-                ]
+                    'updated_at',
+                ],
             ]);
     }
 
@@ -82,7 +82,7 @@ class ExtraordinaryCommissionTest extends TestCase
                 'price',
                 'observations',
                 'created_at',
-                'updated_at'
+                'updated_at',
             ]);
     }
 
@@ -94,7 +94,7 @@ class ExtraordinaryCommissionTest extends TestCase
             'destination' => 'Nuevo Destino',
             'detail' => 'Nuevo Detalle',
             'price' => 2000.00,
-            'observations' => 'Nuevas observaciones'
+            'observations' => 'Nuevas observaciones',
         ];
 
         $response = $this->putJson("/api/extraordinary-commissions/{$commission->id}", $data);

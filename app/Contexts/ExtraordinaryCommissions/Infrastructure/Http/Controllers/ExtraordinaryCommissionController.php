@@ -15,18 +15,19 @@ use App\Contexts\ExtraordinaryCommissions\Domain\Repositories\ExtraordinaryCommi
 use App\Contexts\ExtraordinaryCommissions\Infrastructure\Http\Requests\CreateExtraordinaryCommissionRequest;
 use App\Contexts\ExtraordinaryCommissions\Infrastructure\Http\Requests\UpdateExtraordinaryCommissionRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class ExtraordinaryCommissionController
 {
     public function __construct(
         private readonly ExtraordinaryCommissionRepository $repository,
-    ) {}
+    ) {
+    }
 
     public function index(): JsonResponse
     {
         $useCase = new GetExtraordinaryCommissionsUseCase($this->repository);
         $extraordinaryCommissions = $useCase();
+
         return response()->json($extraordinaryCommissions);
     }
 
@@ -39,9 +40,9 @@ class ExtraordinaryCommissionController
             $request->input('detail'),
             $request->input('price'),
             $request->input('observations'),
-
         );
         $commission = $useCase($dto);
+
         return response()->json($commission, 201);
     }
 
@@ -49,6 +50,7 @@ class ExtraordinaryCommissionController
     {
         $useCase = new GetExtraordinaryCommissionUseCase($this->repository);
         $extraordinaryCommission = $useCase($id);
+
         return response()->json($extraordinaryCommission);
     }
 
@@ -64,6 +66,7 @@ class ExtraordinaryCommissionController
             $request->input('observations'),
         );
         $commission = $useCase($dto);
+
         return response()->json($commission, 204);
     }
 
@@ -71,6 +74,7 @@ class ExtraordinaryCommissionController
     {
         $useCase = new DeleteExtraordinaryCommissionUseCase($this->repository);
         $useCase($id);
+
         return response()->json([], 204);
     }
 
@@ -82,6 +86,7 @@ class ExtraordinaryCommissionController
             $destination
         );
         $extraordinaryCommission = $useCase($dto);
+
         return response()->json($extraordinaryCommission);
     }
 }

@@ -27,4 +27,4 @@ class HandleCors extends Middleware
 
         return $response;
     }
-} 
+}

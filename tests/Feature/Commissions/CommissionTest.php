@@ -48,24 +48,24 @@ class CommissionTest extends TestCase
                     'size' => CommissionItemSize::SMALL->value,
                     'quantity' => 2,
                     'unit_price' => 500,
-                    'subtotal' => 1000
+                    'subtotal' => 1000,
                 ],
                 [
                     'type' => CommissionItemType::ORDINARIA->value,
                     'size' => CommissionItemSize::LARGE->value,
                     'quantity' => 1,
                     'unit_price' => 800,
-                    'subtotal' => 800
+                    'subtotal' => 800,
                 ],
                 [
                     'type' => CommissionItemType::EXTRAORDINARIA->value,
                     'quantity' => 1,
                     'unit_price' => 1500,
                     'subtotal' => 1500,
-                    'detail' => 'Manejo especial'
-                ]
+                    'detail' => 'Manejo especial',
+                ],
             ],
-            'total' => 3300
+            'total' => 3300,
         ];
 
         $response = $this->postJson('/api/commissions', $data);
@@ -74,7 +74,7 @@ class CommissionTest extends TestCase
 
         $this->assertDatabaseHas('commissions', [
             'client_id' => $this->customer->id,
-            'status' => CommissionStatus::DEPOSITO->value
+            'status' => CommissionStatus::DEPOSITO->value,
         ]);
 
         $this->assertDatabaseCount('commission_items', 3);
@@ -90,13 +90,13 @@ class CommissionTest extends TestCase
             ->assertJsonStructure([
                 '*' => [
                     'value',
-                    'label'
-                ]
+                    'label',
+                ],
             ]);
 
         $statuses = collect($response->json())->pluck('value')->toArray();
         $this->assertEquals(
-            array_map(fn($status) => $status->value, CommissionStatus::cases()),
+            array_map(fn ($status) => $status->value, CommissionStatus::cases()),
             $statuses
         );
     }
@@ -115,7 +115,7 @@ class CommissionTest extends TestCase
                 'origin',
                 'destination',
                 'status',
-                'items'
+                'items',
             ]);
     }
 

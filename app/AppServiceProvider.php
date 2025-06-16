@@ -14,6 +14,8 @@ use App\Contexts\ExtraordinaryCommissions\Domain\Repositories\ExtraordinaryCommi
 use App\Contexts\ExtraordinaryCommissions\Infrastructure\Repositories\ExtraordinaryCommissionEloquentRepository;
 use App\Contexts\Locations\Domain\Repositories\LocationsRepository;
 use App\Contexts\Locations\Infrastructure\Repositories\LocationsEloquentRepository;
+use App\Contexts\Transports\Domain\Repositories\TransportRepository;
+use App\Contexts\Transports\Infrastructure\Repositories\TransportEloquentRepository;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
 use App\Contexts\Users\Infrastructure\Repositories\UserEloquentRepository;
 use Illuminate\Support\ServiceProvider;
@@ -52,6 +54,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             LocationsRepository::class,
             LocationsEloquentRepository::class
+        );
+        $this->app->bind(
+            TransportRepository::class,
+            TransportEloquentRepository::class
         );
     }
 

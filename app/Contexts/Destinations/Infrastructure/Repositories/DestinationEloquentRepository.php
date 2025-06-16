@@ -28,8 +28,9 @@ class DestinationEloquentRepository implements DestinationRepository
             $destination->small_bulk_price = $dto->small_bulk_price;
             $destination->large_bulk_price = $dto->large_bulk_price;
             $destination->save();
+
             return $destination;
-        }catch (\Exception $exception){
+        } catch (\Exception $exception) {
             throw new \Exception($exception->getMessage());
         }
     }
@@ -41,7 +42,7 @@ class DestinationEloquentRepository implements DestinationRepository
     {
         try {
             return Destination::find($id);
-        }catch (\Exception $exception){
+        } catch (\Exception $exception) {
             throw new \Exception($exception->getMessage());
         }
     }
@@ -56,8 +57,9 @@ class DestinationEloquentRepository implements DestinationRepository
             $destination->small_bulk_price = $dto->small_bulk_price;
             $destination->large_bulk_price = $dto->large_bulk_price;
             $destination->save();
+
             return $destination;
-        }catch (\Exception $exception){
+        } catch (\Exception $exception) {
             throw new \Exception($exception->getMessage());
         }
     }
@@ -101,7 +103,7 @@ class DestinationEloquentRepository implements DestinationRepository
                 ->where('destination', $dto->destination)
                 ->select('fixed_price', 'small_bulk_price', 'large_bulk_price')
                 ->first();
-        }catch (\Exception $exception){
+        } catch (\Exception $exception) {
             throw new \Exception('Error al obtener tarifas: ' . $exception->getMessage());
         }
     }

@@ -5,7 +5,6 @@ namespace App\Contexts\Commissions\Application;
 use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Shared\Enums\CommissionStatus;
-use App\Shared\Models\CommissionLog;
 use Illuminate\Support\Facades\Auth;
 
 class UpdateCommissionStatusUseCase

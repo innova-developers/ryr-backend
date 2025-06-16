@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Commissions;
 
-use App\Shared\Enums\CommissionStatus;
-use App\Shared\Enums\CommissionItemType;
 use App\Shared\Enums\CommissionItemSize;
+use App\Shared\Enums\CommissionItemType;
+use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Branch;
 use App\Shared\Models\Commission;
 use App\Shared\Models\CommissionItem;
@@ -43,7 +43,7 @@ class GetCommissionTest extends TestCase
             'user_id' => $this->user->id,
             'date' => '2024-03-21',
             'status' => CommissionStatus::DEPOSITO->value,
-            'total' => '1000.00'
+            'total' => '1000.00',
         ]);
 
         CommissionItem::factory()->create([
@@ -53,7 +53,7 @@ class GetCommissionTest extends TestCase
             'quantity' => 1,
             'unit_price' => '1000.00',
             'subtotal' => '1000.00',
-            'detail' => 'Item Test'
+            'detail' => 'Item Test',
         ]);
 
         // Act
@@ -68,24 +68,24 @@ class GetCommissionTest extends TestCase
                     'client_id',
                     'client' => [
                         'id',
-                        'name'
+                        'name',
                     ],
                     'destination_id',
                     'destination' => [
                         'id',
-                        'name'
+                        'name',
                     ],
                     'branch_id',
                     'branch' => [
                         'id',
-                        'name'
+                        'name',
                     ],
                     'date',
                     'status',
                     'user_id',
                     'user' => [
                         'id',
-                        'name'
+                        'name',
                     ],
                     'total',
                     'items' => [
@@ -98,12 +98,12 @@ class GetCommissionTest extends TestCase
                             'subtotal',
                             'detail',
                             'created_at',
-                            'updated_at'
-                        ]
+                            'updated_at',
+                        ],
                     ],
                     'created_at',
-                    'updated_at'
-                ]
+                    'updated_at',
+                ],
             ])
             ->assertJson([
                 'data' => [
@@ -111,27 +111,27 @@ class GetCommissionTest extends TestCase
                     'client_id' => $this->customer->id,
                     'client' => [
                         'id' => $this->customer->id,
-                        'name' => $this->customer->name
+                        'name' => $this->customer->name,
                     ],
                     'destination_id' => $this->destination->id,
                     'destination' => [
                         'id' => $this->destination->id,
-                        'name' => $this->destination->name
+                        'name' => $this->destination->name,
                     ],
                     'branch_id' => $this->branch->id,
                     'branch' => [
                         'id' => $this->branch->id,
-                        'name' => $this->branch->name
+                        'name' => $this->branch->name,
                     ],
                     'date' => $commission->date->format('Y-m-d H:i:s'),
                     'status' => CommissionStatus::DEPOSITO->value,
                     'user_id' => $this->user->id,
                     'user' => [
                         'id' => $this->user->id,
-                        'name' => $this->user->name
+                        'name' => $this->user->name,
                     ],
-                    'total' => '1000.00'
-                ]
+                    'total' => '1000.00',
+                ],
             ]);
     }
 
@@ -142,7 +142,7 @@ class GetCommissionTest extends TestCase
 
         $response->assertStatus(404)
             ->assertJson([
-                'error' => 'Comisión no encontrada'
+                'error' => 'Comisión no encontrada',
             ]);
     }
 

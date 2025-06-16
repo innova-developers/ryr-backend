@@ -9,8 +9,8 @@ use App\Contexts\Commissions\Infrastructure\Mappers\CommissionMapper;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
 use App\Shared\Models\Destination;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 readonly class CreateCommissionUseCase
 {
@@ -52,7 +52,7 @@ readonly class CreateCommissionUseCase
      */
     private function validateCustomer(int $customerId): void
     {
-        if (!$this->customerRepository->findById($customerId)) {
+        if (! $this->customerRepository->findById($customerId)) {
             throw new \Exception('Cliente no encontrado');
         }
     }

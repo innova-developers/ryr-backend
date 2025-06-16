@@ -24,7 +24,7 @@ class CreateLocationRequest extends FormRequest
             'phone' => 'required|string',
             'map' => 'nullable|string',
             'schedule' => 'required|string',
-            'observation' => 'nullable|string'
+            'observation' => 'nullable|string',
         ];
     }
 

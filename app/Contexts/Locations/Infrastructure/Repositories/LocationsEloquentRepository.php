@@ -6,7 +6,6 @@ use App\Contexts\Locations\Application\DTOs\CreateLocationDTO;
 use App\Contexts\Locations\Application\DTOs\UpdateLocationDTO;
 use App\Contexts\Locations\Domain\Repositories\LocationsRepository as LocationsRepositoryInterface;
 use App\Shared\Models\Location;
-use Illuminate\Database\Eloquent\Collection;
 
 class LocationsEloquentRepository implements LocationsRepositoryInterface
 {
@@ -35,8 +34,9 @@ class LocationsEloquentRepository implements LocationsRepositoryInterface
             $location->schedule = $dto->schedule;
             $location->observation = $dto->observation;
             $location->save();
+
             return $location;
-        }catch (\Exception $exception){
+        } catch (\Exception $exception) {
             throw new \Exception('Error creating location: ' . $exception->getMessage());
         }
     }
@@ -54,8 +54,9 @@ class LocationsEloquentRepository implements LocationsRepositoryInterface
             'phone' => $dto->phone,
             'map' => $dto->map,
             'schedule' => $dto->schedule,
-            'observation' => $dto->observation
+            'observation' => $dto->observation,
         ]);
+
         return Location::find($dto->id);
 
     }

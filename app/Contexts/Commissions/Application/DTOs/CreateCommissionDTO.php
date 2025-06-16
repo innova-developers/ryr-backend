@@ -43,7 +43,7 @@ class CreateCommissionDTO
             'destination' => $this->destination,
             'status' => $this->status->value,
             'items' => array_map(fn ($item) => $item->toArray(), $this->items),
-            'total' => $this->total
+            'total' => $this->total,
         ];
     }
 }

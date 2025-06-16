@@ -18,7 +18,7 @@ class CreateLocationDTO
         string $phone,
         ?string $map,
         string $schedule,
-       ?string $observation
+        ?string $observation
     ) {
         $this->name = $name;
         $this->address = $address;
