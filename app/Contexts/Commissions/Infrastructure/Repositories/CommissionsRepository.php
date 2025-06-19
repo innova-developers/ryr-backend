@@ -2,9 +2,9 @@
 
 namespace App\Contexts\Commissions\Infrastructure\Repositories;
 
+use App\Contexts\Commissions\Domain\DTOs\ListCommissionsFiltersDTO;
 use App\Contexts\Commissions\Domain\Entities\Commission;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use App\Contexts\Commissions\Domain\DTOs\ListCommissionsFiltersDTO;
 
 class CommissionsRepository
 {
@@ -64,4 +64,4 @@ class CommissionsRepository
 
         return $query->paginate($filters->perPage ?? 15);
     }
-} 
+}

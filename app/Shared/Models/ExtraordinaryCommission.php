@@ -9,18 +9,19 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ExtraordinaryCommission extends Model
 {
-    use SoftDeletes, HasFactory;
+    use SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'origin',
         'destination',
         'detail',
         'price',
-        'observations'
+        'observations',
     ];
 
     protected $casts = [
-        'price' => 'decimal:2'
+        'price' => 'decimal:2',
     ];
 
     public static function newFactory(): ExtraordinaryCommissionFactory

@@ -12,7 +12,7 @@ class CommissionLog extends Model
         'user_id',
         'previous_status',
         'new_status',
-        'details'
+        'details',
     ];
 
     public function commission(): BelongsTo
@@ -24,4 +24,4 @@ class CommissionLog extends Model
     {
         return $this->belongsTo(User::class);
     }
-} 
+}

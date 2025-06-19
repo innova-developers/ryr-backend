@@ -12,7 +12,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Commission extends Model
 {
-    use SoftDeletes, HasFactory;
+    use SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'client_id',
@@ -21,13 +22,13 @@ class Commission extends Model
         'date',
         'status',
         'total',
-        'user_id'
+        'user_id',
     ];
 
     protected $casts = [
         'date' => 'date',
         'status' => CommissionStatus::class,
-        'total' => 'decimal:2'
+        'total' => 'decimal:2',
     ];
 
     public function client(): BelongsTo

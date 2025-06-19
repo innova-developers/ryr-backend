@@ -9,10 +9,10 @@ use App\Shared\Models\ExtraordinaryCommission;
 
 interface ExtraordinaryCommissionRepository
 {
-    public function get():array;
-    public function create(CreateExtraordinaryCommissionDTO $dto):ExtraordinaryCommission;
+    public function get(): array;
+    public function create(CreateExtraordinaryCommissionDTO $dto): ExtraordinaryCommission;
     public function findById(int $id): ExtraordinaryCommission;
-    public function update(UpdateExtraordinaryCommissionDTO $dto):ExtraordinaryCommission;
+    public function update(UpdateExtraordinaryCommissionDTO $dto): ExtraordinaryCommission;
     public function delete(int $id): void;
     public function findByOriginAndDestination(GetExtraordinaryCommissionByOriginAndDestinationDTO $dto): array;
 

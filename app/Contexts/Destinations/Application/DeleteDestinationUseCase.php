@@ -3,7 +3,6 @@
 namespace App\Contexts\Destinations\Application;
 
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
-use App\Shared\Models\Destination;
 
 class DeleteDestinationUseCase
 {

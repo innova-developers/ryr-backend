@@ -8,6 +8,7 @@ use App\Contexts\Destinations\Infrastructure\Http\Controllers\DestinationControl
 use App\Contexts\ExtraordinaryCommissions\Infrastructure\Http\Controllers\ExtraordinaryCommissionController;
 use App\Contexts\Locations\Infrastructure\Http\Controllers\LocationsController;
 use App\Contexts\Users\Infrastructure\Http\Controllers\UserController;
+use App\Contexts\Transports\Infrastructure\Http\Controllers\TransportController;
 use Illuminate\Support\Facades\Route;
 
 // Rutas públicas
@@ -62,6 +63,13 @@ Route::prefix('locations')->group(function () {
     Route::post('/', [LocationsController::class, 'store']);
     Route::put('/{id}', [LocationsController::class, 'update']);
     Route::delete('/{id}', [LocationsController::class, 'destroy']);
+});
+
+Route::prefix('transports')->group(function () {
+    Route::get('/', [TransportController::class, 'index']);
+    Route::post('/', [TransportController::class, 'store']);
+    Route::put('/{id}', [TransportController::class, 'update']);
+    Route::delete('/{id}', [TransportController::class, 'destroy']);
 });
 
 

@@ -8,7 +8,8 @@ class ListLocationsUseCase
 {
     public function __construct(
         private readonly LocationsRepository $repository
-    ) {}
+    ) {
+    }
 
     public function __invoke(): array
     {

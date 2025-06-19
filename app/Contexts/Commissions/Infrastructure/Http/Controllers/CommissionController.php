@@ -8,6 +8,7 @@ use App\Contexts\Commissions\Application\DTOs\CreateCommissionDTO;
 use App\Contexts\Commissions\Application\DTOs\ListCommissionsFiltersDTO;
 use App\Contexts\Commissions\Application\GetCommissionUseCase;
 use App\Contexts\Commissions\Application\ListCommissionsUseCase;
+use App\Contexts\Commissions\Application\UpdateCommissionStatusUseCase;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Contexts\Commissions\Infrastructure\Http\Requests\CreateCommissionRequest;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
@@ -16,9 +17,8 @@ use App\Shared\Enums\CommissionStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Validation\Rule;
-use App\Contexts\Commissions\Application\UpdateCommissionStatusUseCase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class CommissionController extends Controller
 {
@@ -43,20 +43,21 @@ class CommissionController extends Controller
                 $this->destinationRepository
             );
             $commission = $useCase($dto);
+
             return response()->json($commission, 201);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error al crear la comisión',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 400);
         }
     }
 
     public function getStatuses(): JsonResponse
     {
-        $statuses = array_map(fn($status) => [
+        $statuses = array_map(fn ($status) => [
             'value' => $status->value,
-            'label' => $status->name
+            'label' => $status->name,
         ], CommissionStatus::cases());
 
         return response()->json($statuses, 200);
@@ -66,13 +67,14 @@ class CommissionController extends Controller
     {
         try {
             $filters = ListCommissionsFiltersDTO::fromArray($request->all());
-           $useCase = new ListCommissionsUseCase($this->repository);
+            $useCase = new ListCommissionsUseCase($this->repository);
             $result = $useCase($filters);
+
             return response()->json($result, 200);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error al obtener las comisiones',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -82,12 +84,13 @@ class CommissionController extends Controller
         try {
             $useCase = new GetCommissionUseCase($this->repository);
             $commission = $useCase($id);
+
             return response()->json([
-                'data' => $commission
+                'data' => $commission,
             ]);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 404);
         }
     }
@@ -96,11 +99,13 @@ class CommissionController extends Controller
         try {
             $useCase = new DeleteCommissionUseCase($this->repository);
             $useCase($id);
+
             return response()->json(['message' => 'Comisión eliminada correctamente']);
         } catch (\Exception $e) {
             if (str_contains($e->getMessage(), 'Comisión no encontrada')) {
                 return response()->json(['error' => $e->getMessage()], 404);
             }
+
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
@@ -110,7 +115,7 @@ class CommissionController extends Controller
         try {
             $validated = $request->validate([
                 'status' => ['required', 'string', Rule::enum(CommissionStatus::class)],
-                'details' => ['nullable', 'string']
+                'details' => ['nullable', 'string'],
             ]);
 
             $useCase = new UpdateCommissionStatusUseCase($this->repository);
@@ -127,14 +132,15 @@ class CommissionController extends Controller
                     'status' => $commission->status,
                     'branch' => [
                         'id' => $branch->id,
-                        'name' => $branch->name
-                    ]
-                ]
+                        'name' => $branch->name,
+                    ],
+                ],
             ]);
         } catch (\Exception $e) {
             if (str_contains($e->getMessage(), 'Comisión no encontrada')) {
                 return response()->json(['error' => $e->getMessage()], 404);
             }
+
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

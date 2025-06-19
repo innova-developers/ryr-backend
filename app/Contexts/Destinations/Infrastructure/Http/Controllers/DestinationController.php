@@ -2,7 +2,6 @@
 
 namespace App\Contexts\Destinations\Infrastructure\Http\Controllers;
 
-use App\Contexts\Customers\Application\GetCustomersUseCase;
 use App\Contexts\Destinations\Application\CreateDestinationUseCase;
 use App\Contexts\Destinations\Application\DeleteDestinationUseCase;
 use App\Contexts\Destinations\Application\DTO\CreateDestinationDTO;
@@ -31,6 +30,7 @@ class DestinationController extends Controller
     {
         $useCase = new GetDestinationsUseCase($this->repository);
         $destinations = $useCase();
+
         return response()->json($destinations);
     }
 
@@ -45,6 +45,7 @@ class DestinationController extends Controller
             $request->input('large_bulk_price'),
         );
         $destination = $useCase($dto);
+
         return response()->json($destination, 201);
     }
 
@@ -52,6 +53,7 @@ class DestinationController extends Controller
     {
         $useCase = new GetDestinationUseCase($this->repository);
         $destination = $useCase($id);
+
         return response()->json($destination);
     }
 
@@ -66,7 +68,8 @@ class DestinationController extends Controller
             $request->input('small_bulk_price'),
             $request->input('large_bulk_price'),
         );
-        $updatedDestination = $useCase($dto); 
+        $updatedDestination = $useCase($dto);
+
         return response()->json($updatedDestination);
     }
 
@@ -74,6 +77,7 @@ class DestinationController extends Controller
     {
         $useCase = new DeleteDestinationUseCase($this->repository);
         $useCase($id);
+
         return response()->json(null);
     }
 
@@ -81,6 +85,7 @@ class DestinationController extends Controller
     {
         $useCase = new GetOriginsUseCase($this->repository);
         $origins = $useCase();
+
         return response()->json($origins);
     }
 
@@ -88,6 +93,7 @@ class DestinationController extends Controller
     {
         $useCase = new GetDestinationsByOriginUseCase($this->repository);
         $destinations = $useCase($origin);
+
         return response()->json($destinations);
     }
 
@@ -97,8 +103,9 @@ class DestinationController extends Controller
         $dto = new GetDestinationRatesDTO(
             $origin,
             $destination
-        ); 
+        );
         $rates = $useCase($dto);
+
         return response()->json($rates);
     }
 }

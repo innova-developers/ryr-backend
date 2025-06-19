@@ -5,8 +5,6 @@ namespace App\Contexts\Locations\Domain\Repositories;
 use App\Contexts\Locations\Application\DTOs\CreateLocationDTO;
 use App\Contexts\Locations\Application\DTOs\UpdateLocationDTO;
 use App\Shared\Models\Location;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 interface LocationsRepository
 {

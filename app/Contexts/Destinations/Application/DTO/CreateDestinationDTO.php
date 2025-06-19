@@ -17,11 +17,11 @@ class CreateDestinationDTO
         float $small_bulk_price,
         float $large_bulk_price
     ) {
-       $this -> origin = $origin;
-       $this -> destination = $destination;
-       $this -> fixed_price = $fixed_price;
-       $this -> small_bulk_price = $small_bulk_price;
-       $this -> large_bulk_price = $large_bulk_price;
+        $this -> origin = $origin;
+        $this -> destination = $destination;
+        $this -> fixed_price = $fixed_price;
+        $this -> small_bulk_price = $small_bulk_price;
+        $this -> large_bulk_price = $large_bulk_price;
     }
 
 }

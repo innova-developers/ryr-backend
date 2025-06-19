@@ -17,12 +17,14 @@ class DeleteCommissionController extends Controller
     {
         try {
             $this->deleteCommissionUseCase->__invoke($id);
+
             return response()->json(['message' => 'Comisión eliminada correctamente']);
         } catch (\Exception $e) {
             if (str_contains($e->getMessage(), 'Comisión no encontrada')) {
                 return response()->json(['error' => $e->getMessage()], 404);
             }
+
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }
-} 
+}

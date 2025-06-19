@@ -13,7 +13,7 @@ class CustomerEloquentRepository implements CustomerRepository
 {
     public function get(): array
     {
-        return Customer::select('id', 'dni', 'name', 'email','last_name', 'address', 'city', 'phone', 'is_premium', 'user_id','created_at')
+        return Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id', 'created_at')
             ->with(['user:id,name'])
             ->get()
             ->map(function (Customer $customer) {
@@ -29,7 +29,7 @@ class CustomerEloquentRepository implements CustomerRepository
                     'is_premium' => $customer->is_premium,
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),
-                    'created_at' => $customer->created_at
+                    'created_at' => $customer->created_at,
                 ];
             })
             ->toArray();
@@ -132,7 +132,7 @@ class CustomerEloquentRepository implements CustomerRepository
                     'is_premium' => $customer->is_premium,
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),
-                    'created_at' => $customer->created_at
+                    'created_at' => $customer->created_at,
                 ];
             })
             ->toArray();

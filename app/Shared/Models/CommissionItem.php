@@ -12,7 +12,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CommissionItem extends Model
 {
-    use SoftDeletes, HasFactory;
+    use SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'commission_id',
@@ -21,7 +22,7 @@ class CommissionItem extends Model
         'quantity',
         'unit_price',
         'subtotal',
-        'detail'
+        'detail',
     ];
 
     protected $casts = [
@@ -29,7 +30,7 @@ class CommissionItem extends Model
         'size' => CommissionItemSize::class,
         'quantity' => 'integer',
         'unit_price' => 'decimal:2',
-        'subtotal' => 'decimal:2'
+        'subtotal' => 'decimal:2',
     ];
 
     public function commission(): BelongsTo

@@ -12,20 +12,20 @@ use App\Contexts\Locations\Domain\Repositories\LocationsRepository;
 use App\Contexts\Locations\Infrastructure\Http\Requests\CreateLocationRequest;
 use App\Contexts\Locations\Infrastructure\Http\Requests\UpdateLocationRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Validator;
 
 class LocationsController extends Controller
 {
     public function __construct(
         private readonly LocationsRepository $repository
-    ) {}
+    ) {
+    }
 
     public function index(): JsonResponse
     {
         $useCase = new ListLocationsUseCase($this->repository);
         $locations = $useCase();
+
         return response()->json($locations);
     }
 
@@ -42,6 +42,7 @@ class LocationsController extends Controller
         );
         $useCase = new CreateLocationUseCase($this->repository);
         $location = $useCase($dto);
+
         return response()->json($location, 201);
     }
 
@@ -59,6 +60,7 @@ class LocationsController extends Controller
             observation: $request->input('observation')
         );
         $location = $useCase($dto);
+
         return response()->json($location);
     }
 
@@ -66,6 +68,7 @@ class LocationsController extends Controller
     {
         $useCase = new DeleteLocationUseCase($this->repository);
         $useCase($id);
+
         return response()->json(null, 204);
     }
 }
