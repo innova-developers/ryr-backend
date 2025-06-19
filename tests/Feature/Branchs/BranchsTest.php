@@ -14,7 +14,11 @@ class BranchsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->admin = User::factory()->create(['role' => 'administrador']);
+        $branch = Branch::factory()->create();
+        $this->admin = User::factory()->create([
+            'role' => 'administrador',
+            'branch_id' => $branch->id,
+        ]);
         $this->actingAs($this->admin, 'sanctum');
     }
 
@@ -22,7 +26,7 @@ class BranchsTest extends TestCase
     {
         Branch::factory()->count(2)->create();
         $response = $this->getJson('/api/branches');
-        $response->assertOk()->assertJsonCount(2);
+        $response->assertOk()->assertJsonCount(3);
     }
 
     public function test_store_creates_branch()

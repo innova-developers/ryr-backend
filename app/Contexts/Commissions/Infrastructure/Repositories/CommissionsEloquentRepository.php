@@ -31,6 +31,8 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission->user_id = $user->id;
             $commission->branch_id = $user->branch_id;
             $commission->total = $dto->total;
+            $commission->origin_location_id = $dto->originLocationId;
+            $commission->destination_location_id = $dto->destinationLocationId;
             $commission->save();
 
             return $commission;
@@ -63,7 +65,17 @@ class CommissionsEloquentRepository implements CommissionsRepository
      */
     public function findById(int $id): Commission
     {
-        $commission = Commission::find($id);
+        $commission = Commission::with([
+            'items',
+            'client',
+            'destination',
+            'user',
+            'branch',
+            'originLocation',
+            'destinationLocation',
+            'logs.user',
+        ])->find($id);
+
         if (! $commission) {
             throw new \Exception('Comisión no encontrada');
         }
@@ -77,7 +89,17 @@ class CommissionsEloquentRepository implements CommissionsRepository
     public function findAllWithItems(ListCommissionsFiltersDTO $filters): LengthAwarePaginator
     {
         try {
-            $query = Commission::with(['items', 'client', 'destination', 'user', 'branch']);
+            $query = Commission::with([
+                'items',
+                'client',
+                'destination',
+                'user',
+                'branch',
+                'originLocation',
+                'destinationLocation',
+                'logs.user',
+                'logs.user.branch',
+            ]);
 
             if ($filters->client) {
                 $query->whereHas('client', function ($q) use ($filters) {

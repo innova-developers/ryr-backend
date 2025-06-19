@@ -14,7 +14,9 @@ class CreateCommissionDTO
         public readonly string $destination,
         public readonly CommissionStatus $status,
         public readonly array $items,
-        public readonly float $total
+        public readonly float $total,
+        public readonly int $originLocationId,
+        public readonly int $destinationLocationId
     ) {
     }
 
@@ -30,7 +32,9 @@ class CreateCommissionDTO
             destination: $data['destination'],
             status: CommissionStatus::from($data['status']),
             items: array_map(fn ($item) => CommissionItemDTO::fromArray($item), $data['items']),
-            total: $data['total']
+            total: $data['total'],
+            originLocationId: $data['origin_location_id'],
+            destinationLocationId: $data['destination_location_id']
         );
     }
 
@@ -44,6 +48,8 @@ class CreateCommissionDTO
             'status' => $this->status->value,
             'items' => array_map(fn ($item) => $item->toArray(), $this->items),
             'total' => $this->total,
+            'origin_location_id' => $this->originLocationId,
+            'destination_location_id' => $this->destinationLocationId,
         ];
     }
 }

@@ -9,6 +9,7 @@ use App\Contexts\Commissions\Infrastructure\Mappers\CommissionMapper;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
 use App\Shared\Models\Destination;
+use App\Shared\Models\Location;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -30,13 +31,15 @@ readonly class CreateCommissionUseCase
             $this->validateCustomer($dto->clientId);
             $destination = $this->validateDestination($dto->origin, $dto->destination);
             $this->validateItems($dto->items);
+            $this->validateLocations($dto->originLocationId, $dto->destinationLocationId);
+
             $commission = $this->commissionRepository->create($dto, $destination->id);
             $this->commissionRepository->addItems($commission->id, $dto->items);
 
             $dto = new CreateCommissionLogDTO(
                 commissionId: $commission->id,
                 userId: Auth::id(),
-                previousStatus: null,
+                previousStatus: "",
                 newStatus: $dto->status->value,
                 details: 'Comisión creada'
             );
@@ -75,4 +78,19 @@ readonly class CreateCommissionUseCase
         }
     }
 
+    /**
+     * @throws \Exception
+     */
+    private function validateLocations(int $originLocationId, int $destinationLocationId): void
+    {
+        $originLocation = Location::find($originLocationId);
+        if (! $originLocation) {
+            throw new \Exception('La ubicación de origen no existe');
+        }
+
+        $destinationLocation = Location::find($destinationLocationId);
+        if (! $destinationLocation) {
+            throw new \Exception('La ubicación de destino no existe');
+        }
+    }
 }

@@ -6,6 +6,7 @@ use App\Contexts\Locations\Application\CreateLocationUseCase;
 use App\Contexts\Locations\Application\DeleteLocationUseCase;
 use App\Contexts\Locations\Application\DTOs\CreateLocationDTO;
 use App\Contexts\Locations\Application\DTOs\UpdateLocationDTO;
+use App\Contexts\Locations\Application\GetLocationsByOriginUseCase;
 use App\Contexts\Locations\Application\ListLocationsUseCase;
 use App\Contexts\Locations\Application\UpdateLocationUseCase;
 use App\Contexts\Locations\Domain\Repositories\LocationsRepository;
@@ -70,5 +71,13 @@ class LocationsController extends Controller
         $useCase($id);
 
         return response()->json(null, 204);
+    }
+
+    public function getByOrigin(string $origin): JsonResponse
+    {
+        $useCase = new GetLocationsByOriginUseCase($this->repository);
+        $locations = $useCase($origin);
+
+        return response()->json($locations);
     }
 }

@@ -41,7 +41,13 @@ class DestinationEloquentRepository implements DestinationRepository
     public function findById(int $id): Destination
     {
         try {
-            return Destination::find($id);
+            $destination = Destination::find($id);
+
+            if (! $destination) {
+                throw new \Exception('Destino no encontrado');
+            }
+
+            return $destination;
         } catch (\Exception $exception) {
             throw new \Exception($exception->getMessage());
         }

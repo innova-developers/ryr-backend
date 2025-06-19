@@ -23,7 +23,14 @@ class UserFactory extends Factory
             'password' => Hash::make('password'),
             'remember_token' => Str::random(10),
             'role' => $this->faker->randomElement(array_column(UserRole::cases(), 'value')),
-            'branch_id' => Branch::factory()->create()->id,
+            'branch_id' => Branch::factory(),
         ];
+    }
+
+    public function withBranch(?Branch $branch = null): self
+    {
+        return $this->state(fn (array $attributes) => [
+            'branch_id' => $branch?->id ?? Branch::factory(),
+        ]);
     }
 }

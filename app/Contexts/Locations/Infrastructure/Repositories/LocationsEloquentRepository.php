@@ -66,4 +66,12 @@ class LocationsEloquentRepository implements LocationsRepositoryInterface
         $location = Location::findOrFail($id);
         $location->delete();
     }
+
+    public function findByOrigin(string $origin): array
+    {
+        return Location::where('origin', $origin)
+            ->orderBy('name')
+            ->get()
+            ->toArray();
+    }
 }
