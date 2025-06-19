@@ -21,12 +21,13 @@ class UserEloquentRepository implements UserRepository
     }
     public function get(): array
     {
-        return User::select('name', 'email', 'role', 'created_at', 'branch_id')
+        return User::select('id','name', 'email', 'role', 'created_at', 'branch_id')
             ->with(['branch:id,name'])
             ->where('role', '!=', 'customer')
             ->get()
             ->map(function ($user) {
                 return [
+                    'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
                     'role' => $user->role,
