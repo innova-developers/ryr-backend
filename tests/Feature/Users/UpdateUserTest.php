@@ -24,7 +24,7 @@ class UpdateUserTest extends TestCase
         $user = User::factory()->create([
             'name' => 'Original',
             'email' => 'original@example.com',
-            'role' => 'usuario',
+            'role' => 'administrador',
             'branch_id' => $branch->id,
         ]);
 
@@ -33,7 +33,7 @@ class UpdateUserTest extends TestCase
             'name' => 'Editado',
             'email' => 'editado@example.com',
             'password' => 'password123',
-            'role' => 'usuario',
+            'role' => 'cadete',
             'branch_id' => $newBranch->id,
         ];
 
@@ -43,7 +43,7 @@ class UpdateUserTest extends TestCase
             ->assertJsonFragment([
                 'name' => 'Editado',
                 'email' => 'editado@example.com',
-                'role' => 'usuario',
+                'role' => 'cadete',
                 'branch_id' => $newBranch->id,
             ]);
 
@@ -63,7 +63,7 @@ class UpdateUserTest extends TestCase
             'name' => 'No existe',
             'email' => 'noexiste@example.com',
             'password' => 'password123',
-            'role' => 'usuario',
+            'role' => 'cadete',
             'branch_id' => $branch->id,
         ]);
 

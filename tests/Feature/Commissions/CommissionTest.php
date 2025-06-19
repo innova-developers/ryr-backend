@@ -8,6 +8,7 @@ use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Branch;
 use App\Shared\Models\Customer;
 use App\Shared\Models\Destination;
+use App\Shared\Models\Location;
 use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -20,6 +21,8 @@ class CommissionTest extends TestCase
     private Customer $customer;
     private Destination $destination;
     private Branch $branch;
+    private Location $originLocation;
+    private Location $destinationLocation;
 
     protected function setUp(): void
     {
@@ -29,7 +32,8 @@ class CommissionTest extends TestCase
         $this->customer = Customer::factory()->create();
         $this->destination = Destination::factory()->create();
         $this->branch = Branch::factory()->create();
-
+        $this->originLocation = Location::factory()->create();
+        $this->destinationLocation = Location::factory()->create();
     }
 
     public function test_can_create_commission(): void
@@ -42,6 +46,8 @@ class CommissionTest extends TestCase
             'origin' => $this->destination->origin,
             'destination' => $this->destination->destination,
             'status' => CommissionStatus::DEPOSITO->value,
+            'origin_location_id' => $this->originLocation->id,
+            'destination_location_id' => $this->destinationLocation->id,
             'items' => [
                 [
                     'type' => CommissionItemType::ORDINARIA->value,
@@ -75,6 +81,8 @@ class CommissionTest extends TestCase
         $this->assertDatabaseHas('commissions', [
             'client_id' => $this->customer->id,
             'status' => CommissionStatus::DEPOSITO->value,
+            'origin_location_id' => $this->originLocation->id,
+            'destination_location_id' => $this->destinationLocation->id,
         ]);
 
         $this->assertDatabaseCount('commission_items', 3);
@@ -101,7 +109,6 @@ class CommissionTest extends TestCase
         );
     }
 
-
     public function test_validates_required_fields(): void
     {
         $this->actingAs($this->user);
@@ -116,7 +123,8 @@ class CommissionTest extends TestCase
                 'destination',
                 'status',
                 'items',
+                'origin_location_id',
+                'destination_location_id',
             ]);
     }
-
 }

@@ -21,7 +21,7 @@ class UserEloquentRepository implements UserRepository
     }
     public function get(): array
     {
-        return User::select('id','name', 'email', 'role', 'created_at', 'branch_id')
+        return User::select('id', 'name', 'email', 'role', 'created_at', 'branch_id')
             ->with(['branch:id,name'])
             ->where('role', '!=', 'customer')
             ->get()
@@ -50,6 +50,11 @@ class UserEloquentRepository implements UserRepository
     {
         try {
             $user = User::find($dto->id);
+
+            if (! $user) {
+                throw new \Exception('Usuario no encontrado', 404);
+            }
+
             $user->name = $dto->name;
             $user->email = $dto->email;
             $user->password = $dto->password ? bcrypt($dto->password) : $user->password;
@@ -59,8 +64,11 @@ class UserEloquentRepository implements UserRepository
 
             return $user;
         } catch (\Exception $e) {
-            throw new \Exception('Usuario no encontrado', 404);
-        }
+            if ($e->getCode() === 404) {
+                throw new \Exception($e->getMessage(), 404);
+            }
 
+            throw new \Exception('Error al actualizar el usuario: ' . $e->getMessage());
+        }
     }
 }

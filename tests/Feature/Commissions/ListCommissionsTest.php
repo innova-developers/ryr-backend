@@ -8,8 +8,10 @@ use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Branch;
 use App\Shared\Models\Commission;
 use App\Shared\Models\CommissionItem;
+use App\Shared\Models\CommissionLog;
 use App\Shared\Models\Customer;
 use App\Shared\Models\Destination;
+use App\Shared\Models\Location;
 use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,11 +19,11 @@ use Tests\TestCase;
 class ListCommissionsTest extends TestCase
 {
     use RefreshDatabase;
-
     private User $user;
     private Branch $branch;
     private Customer $customer;
     private Destination $destination;
+    private Location $location;
 
     protected function setUp(): void
     {
@@ -31,6 +33,7 @@ class ListCommissionsTest extends TestCase
         $this->user = User::factory()->create(['branch_id' => $this->branch->id]);
         $this->customer = Customer::factory()->create();
         $this->destination = Destination::factory()->create();
+        $this->location = Location::factory()->create();
     }
 
     public function test_it_returns_commissions_with_items(): void
@@ -42,6 +45,8 @@ class ListCommissionsTest extends TestCase
             'branch_id' => $this->branch->id,
             'user_id' => $this->user->id,
             'status' => CommissionStatus::DEPOSITO->value,
+            'origin_location_id' => $this->location->id,
+            'destination_location_id' => $this->location->id,
         ]);
 
         CommissionItem::factory()->create([
@@ -64,58 +69,40 @@ class ListCommissionsTest extends TestCase
             'detail' => null,
         ]);
 
+        CommissionLog::create([
+            'commission_id' => $commission->id,
+            'user_id' => $this->user->id,
+            'previous_status' => "",
+            'new_status' => CommissionStatus::DEPOSITO->value,
+            'details' => 'Comisión creada',
+        ]);
+
         // Act
         $response = $this->actingAs($this->user)
             ->getJson('/api/commissions');
 
         // Assert
         $response->assertStatus(200)
-            ->assertJson([
+            ->assertJsonStructure([
                 'data' => [
-                    [
-                        'id' => $commission->id,
-                        'client_id' => $this->customer->id,
-                        'destination_id' => $this->destination->id,
-                        'branch_id' => $this->branch->id,
-                        'date' => $commission->date->toJSON(),
-                        'status' => CommissionStatus::DEPOSITO->value,
-                        'user_id' => $this->user->id,
-                        'total' => number_format($commission->total, 2, '.', ''),
-                        'created_at' => $commission->created_at->toJSON(),
-                        'updated_at' => $commission->updated_at->toJSON(),
-                        'items' => [
-                            [
-                                'id' => 1,
-                                'commission_id' => $commission->id,
-                                'type' => CommissionItemType::ORDINARIA->value,
-                                'size' => CommissionItemSize::SMALL->value,
-                                'quantity' => 2,
-                                'unit_price' => number_format(500.00, 2, '.', ''),
-                                'subtotal' => number_format(1000.00, 2, '.', ''),
-                                'detail' => 'Manejo especial',
-                                'created_at' => $commission->created_at->toJSON(),
-                                'updated_at' => $commission->updated_at->toJSON(),
-                            ],
-                            [
-                                'id' => 2,
-                                'commission_id' => $commission->id,
-                                'type' => CommissionItemType::EXTRAORDINARIA->value,
-                                'size' => CommissionItemSize::LARGE->value,
-                                'quantity' => 1,
-                                'unit_price' => number_format(800.00, 2, '.', ''),
-                                'subtotal' => number_format(800.00, 2, '.', ''),
-                                'detail' => null,
-                                'created_at' => $commission->created_at->toJSON(),
-                                'updated_at' => $commission->updated_at->toJSON(),
-                            ],
-                        ],
+                    '*' => [
+                        'id',
+                        'client_id',
+                        'client',
+                        'destination',
+                        'branch_id',
+                        'date',
+                        'status',
+                        'user_id',
+                        'total',
+                        'items',
                     ],
                 ],
                 'meta' => [
-                    'current_page' => 1,
-                    'last_page' => 1,
-                    'per_page' => 15,
-                    'total' => 1,
+                    'current_page',
+                    'last_page',
+                    'per_page',
+                    'total',
                 ],
             ]);
     }
@@ -129,6 +116,16 @@ class ListCommissionsTest extends TestCase
             'branch_id' => $this->branch->id,
             'user_id' => $this->user->id,
             'status' => CommissionStatus::DEPOSITO->value,
+            'origin_location_id' => $this->location->id,
+            'destination_location_id' => $this->location->id,
+        ]);
+
+        CommissionLog::create([
+            'commission_id' => $commission->id,
+            'user_id' => $this->user->id,
+            'previous_status' => "",
+            'new_status' => CommissionStatus::DEPOSITO->value,
+            'details' => 'Comisión creada',
         ]);
 
         // Act

@@ -11,7 +11,6 @@ use App\Contexts\Users\Application\UpdateUserUseCase;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
 use App\Contexts\Users\Infrastructure\Http\Requests\CreateUserRequest;
 use App\Contexts\Users\Infrastructure\Http\Requests\EditUserRequest;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 
@@ -72,8 +71,12 @@ class UserController extends Controller
             $editedUser = $useCase($dto);
 
             return response()->json($editedUser);
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['message' => 'Usuario no encontrado'], 404);
+        } catch (\Exception $e) {
+            if ($e->getCode() === 404) {
+                return response()->json(['message' => $e->getMessage()], 404);
+            }
+
+            return response()->json(['message' => 'Error interno del servidor'], 500);
         }
     }
 }

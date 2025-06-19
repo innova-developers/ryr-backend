@@ -8,8 +8,10 @@ use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Branch;
 use App\Shared\Models\Commission;
 use App\Shared\Models\CommissionItem;
+use App\Shared\Models\CommissionLog;
 use App\Shared\Models\Customer;
 use App\Shared\Models\Destination;
+use App\Shared\Models\Location;
 use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -31,6 +33,7 @@ class GetCommissionTest extends TestCase
         $this->user = User::factory()->create(['branch_id' => $this->branch->id]);
         $this->customer = Customer::factory()->create();
         $this->destination = Destination::factory()->create();
+        $this->location = Location::factory()->create();
     }
 
     public function test_it_returns_commission_data_when_found(): void
@@ -44,6 +47,8 @@ class GetCommissionTest extends TestCase
             'date' => '2024-03-21',
             'status' => CommissionStatus::DEPOSITO->value,
             'total' => '1000.00',
+            'origin_location_id' => $this->location->id,
+            'destination_location_id' => $this->location->id,
         ]);
 
         CommissionItem::factory()->create([
@@ -56,9 +61,16 @@ class GetCommissionTest extends TestCase
             'detail' => 'Item Test',
         ]);
 
+        CommissionLog::create([
+            'commission_id' => $commission->id,
+            'user_id' => $this->user->id,
+            'previous_status' => "",
+            'new_status' => CommissionStatus::DEPOSITO->value,
+            'details' => 'Comisión creada',
+        ]);
+
         // Act
-        $response = $this->actingAs($this->user)
-            ->getJson("/api/commissions/{$commission->id}");
+        $response = $this->actingAs($this->user)->getJson("/api/commissions/{$commission->id}");
 
         // Assert
         $response->assertStatus(200)
@@ -70,11 +82,8 @@ class GetCommissionTest extends TestCase
                         'id',
                         'name',
                     ],
-                    'destination_id',
-                    'destination' => [
-                        'id',
-                        'name',
-                    ],
+                    'destination' ,
+                    'origin',
                     'branch_id',
                     'branch' => [
                         'id',
@@ -101,6 +110,17 @@ class GetCommissionTest extends TestCase
                             'updated_at',
                         ],
                     ],
+                    'logs' => [
+                        '*' => [
+                            'id',
+                            'previous_status',
+                            'new_status',
+                            'details',
+                            'created_at',
+                            'updated_at',
+                            'user',
+                        ],
+                    ],
                     'created_at',
                     'updated_at',
                 ],
@@ -112,11 +132,6 @@ class GetCommissionTest extends TestCase
                     'client' => [
                         'id' => $this->customer->id,
                         'name' => $this->customer->name,
-                    ],
-                    'destination_id' => $this->destination->id,
-                    'destination' => [
-                        'id' => $this->destination->id,
-                        'name' => $this->destination->name,
                     ],
                     'branch_id' => $this->branch->id,
                     'branch' => [
@@ -131,6 +146,14 @@ class GetCommissionTest extends TestCase
                         'name' => $this->user->name,
                     ],
                     'total' => '1000.00',
+                    'logs' => [
+                        [
+                            'previous_status' => "",
+                            'new_status' => CommissionStatus::DEPOSITO->value,
+                            'details' => 'Comisión creada',
+                            'user' => $this->user->name,
+                        ],
+                    ],
                 ],
             ]);
     }

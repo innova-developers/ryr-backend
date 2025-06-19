@@ -13,4 +13,5 @@ interface LocationsRepository
     public function create(CreateLocationDTO $dto): Location;
     public function update(UpdateLocationDTO $dto): Location;
     public function delete(int $id): void;
+    public function findByOrigin(string $origin): array;
 }

@@ -10,6 +10,8 @@ use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Customers\Infrastructure\Repositories\CustomerEloquentRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
 use App\Contexts\Destinations\Infrastructure\Repositories\DestinationEloquentRepository;
+use App\Contexts\Expenses\Domain\Repositories\ExpensesRepository;
+use App\Contexts\Expenses\Infrastructure\Repositories\ExpensesEloquentRepository;
 use App\Contexts\ExtraordinaryCommissions\Domain\Repositories\ExtraordinaryCommissionRepository;
 use App\Contexts\ExtraordinaryCommissions\Infrastructure\Repositories\ExtraordinaryCommissionEloquentRepository;
 use App\Contexts\Locations\Domain\Repositories\LocationsRepository;
@@ -58,6 +60,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(
             TransportRepository::class,
             TransportEloquentRepository::class
+        );
+        $this->app->bind(
+            ExpensesRepository::class,
+            ExpensesEloquentRepository::class
         );
     }
 

@@ -51,10 +51,18 @@ class DestinationController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $useCase = new GetDestinationUseCase($this->repository);
-        $destination = $useCase($id);
+        try {
+            $useCase = new GetDestinationUseCase($this->repository);
+            $destination = $useCase($id);
 
-        return response()->json($destination);
+            return response()->json($destination);
+        } catch (\Exception $e) {
+            if ($e->getMessage() === 'Destino no encontrado') {
+                return response()->json(['message' => 'Destino no encontrado'], 404);
+            }
+
+            return response()->json(['message' => 'Error interno del servidor'], 500);
+        }
     }
 
     public function update(UpdateDestinationRequest $request, int $id): JsonResponse

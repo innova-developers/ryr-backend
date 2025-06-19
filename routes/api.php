@@ -9,6 +9,7 @@ use App\Contexts\ExtraordinaryCommissions\Infrastructure\Http\Controllers\Extrao
 use App\Contexts\Locations\Infrastructure\Http\Controllers\LocationsController;
 use App\Contexts\Users\Infrastructure\Http\Controllers\UserController;
 use App\Contexts\Transports\Infrastructure\Http\Controllers\TransportController;
+use App\Contexts\Expenses\Infrastructure\Http\Controllers\ExpensesController;
 use Illuminate\Support\Facades\Route;
 
 // Rutas públicas
@@ -25,11 +26,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Rutas de destinos
     Route::get('destinations', [DestinationController::class, 'index']);
     Route::post('destinations', [DestinationController::class, 'store']);
-    Route::put('destinations/{id}', [DestinationController::class, 'update']);
-    Route::delete('destinations/{id}', [DestinationController::class, 'destroy']);
     Route::get('destinations/rates/{origin}/{destination}', [DestinationController::class, 'rates']);
     Route::get('/origins', [DestinationController::class, 'origins']);
-    Route::get('/destinations/{origin}', [DestinationController::class, 'destinations']);
+    Route::get('/destinations/origin/{origin}', [DestinationController::class, 'destinations']);
+    Route::get('destinations/{id}', [DestinationController::class, 'show']);
+    Route::put('destinations/{id}', [DestinationController::class, 'update']);
+    Route::delete('destinations/{id}', [DestinationController::class, 'destroy']);
 
     // Rutas de comisiones extraordinarias
     Route::apiResource('extraordinary-commissions', ExtraordinaryCommissionController::class);
@@ -61,6 +63,7 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
 Route::prefix('locations')->group(function () {
     Route::get('/', [LocationsController::class, 'index']);
     Route::post('/', [LocationsController::class, 'store']);
+    Route::get('/origin/{origin}', [LocationsController::class, 'getByOrigin']);
     Route::put('/{id}', [LocationsController::class, 'update']);
     Route::delete('/{id}', [LocationsController::class, 'destroy']);
 });
@@ -70,6 +73,12 @@ Route::prefix('transports')->group(function () {
     Route::post('/', [TransportController::class, 'store']);
     Route::put('/{id}', [TransportController::class, 'update']);
     Route::delete('/{id}', [TransportController::class, 'destroy']);
+    
+    // Rutas de gastos
+    Route::get('/{transportId}/expenses', [ExpensesController::class, 'index']);
+    Route::post('/{transportId}/expenses', [ExpensesController::class, 'store']);
+    Route::put('/{transportId}/expenses/{expenseId}', [ExpensesController::class, 'update']);
+    Route::delete('/{transportId}/expenses/{expenseId}', [ExpensesController::class, 'destroy']);
 });
 
 

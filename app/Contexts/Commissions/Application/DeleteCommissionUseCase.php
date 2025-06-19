@@ -24,7 +24,7 @@ class DeleteCommissionUseCase
             $dto = new CreateCommissionLogDTO(
                 commissionId: $id,
                 userId: Auth::id(),
-                previousStatus: $commission->status,
+                previousStatus: $commission->status->value,
                 newStatus: 'ELIMINADO',
                 details: 'Comisión eliminada'
             );

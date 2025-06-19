@@ -23,6 +23,8 @@ class Commission extends Model
         'status',
         'total',
         'user_id',
+        'origin_location_id',
+        'destination_location_id',
     ];
 
     protected $casts = [
@@ -49,6 +51,16 @@ class Commission extends Model
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function originLocation(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'origin_location_id');
+    }
+
+    public function destinationLocation(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'destination_location_id');
     }
 
     public function items(): HasMany

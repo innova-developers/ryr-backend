@@ -10,6 +10,7 @@ use App\Shared\Models\Commission;
 use App\Shared\Models\CommissionItem;
 use App\Shared\Models\Customer;
 use App\Shared\Models\Destination;
+use App\Shared\Models\Location;
 use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -22,6 +23,8 @@ class DeleteCommissionTest extends TestCase
     private Branch $branch;
     private Customer $customer;
     private Destination $destination;
+    private Location $originLocation;
+    private Location $destinationLocation;
 
     protected function setUp(): void
     {
@@ -31,6 +34,8 @@ class DeleteCommissionTest extends TestCase
         $this->user = User::factory()->create(['branch_id' => $this->branch->id]);
         $this->customer = Customer::factory()->create();
         $this->destination = Destination::factory()->create();
+        $this->originLocation = Location::factory()->create();
+        $this->destinationLocation = Location::factory()->create();
     }
 
     public function test_it_deletes_commission_successfully(): void
@@ -41,6 +46,8 @@ class DeleteCommissionTest extends TestCase
             'destination_id' => $this->destination->id,
             'branch_id' => $this->branch->id,
             'user_id' => $this->user->id,
+            'origin_location_id' => $this->originLocation->id,
+            'destination_location_id' => $this->destinationLocation->id,
             'date' => '2024-03-21',
             'status' => CommissionStatus::DEPOSITO->value,
             'total' => '1000.00',
