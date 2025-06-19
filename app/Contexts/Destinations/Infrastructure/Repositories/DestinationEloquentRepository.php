@@ -21,15 +21,22 @@ class DestinationEloquentRepository implements DestinationRepository
     public function create(CreateDestinationDTO $dto): Destination
     {
         try {
-            $destination = new Destination();
-            $destination->origin = $dto->origin;
-            $destination->destination = $dto->destination;
-            $destination->fixed_price = $dto->fixed_price;
-            $destination->small_bulk_price = $dto->small_bulk_price;
-            $destination->large_bulk_price = $dto->large_bulk_price;
-            $destination->save();
+            $oneWayDestination = new Destination();
+            $oneWayDestination->origin = $dto->origin;
+            $oneWayDestination->destination = $dto->destination;
+            $oneWayDestination->fixed_price = $dto->fixed_price;
+            $oneWayDestination->small_bulk_price = $dto->small_bulk_price;
+            $oneWayDestination->large_bulk_price = $dto->large_bulk_price;
+            $oneWayDestination->save();
+            $roundTripDestination = new Destination();
+            $roundTripDestination->origin = $dto->destination;
+            $roundTripDestination->destination = $dto->origin;
+            $roundTripDestination->fixed_price = $dto->fixed_price;
+            $roundTripDestination->small_bulk_price = $dto->small_bulk_price;
+            $roundTripDestination->large_bulk_price = $dto->large_bulk_price;
+            $roundTripDestination->save();
 
-            return $destination;
+            return $oneWayDestination;
         } catch (\Exception $exception) {
             throw new \Exception($exception->getMessage());
         }
