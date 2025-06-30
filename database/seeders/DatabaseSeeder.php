@@ -15,7 +15,8 @@ class DatabaseSeeder extends Seeder
             BranchSeeder::class,
             UserSeeder::class,
             DestinationSeeder::class,
-            ExtraordinaryCommissionsSeeder::class
+            ExtraordinaryCommissionsSeeder::class,
+            ExpenseCategorySeeder::class,
         ]);
 
     }

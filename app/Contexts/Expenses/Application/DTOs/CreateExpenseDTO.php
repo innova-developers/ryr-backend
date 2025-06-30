@@ -7,7 +7,8 @@ use DateTime;
 class CreateExpenseDTO
 {
     public function __construct(
-        public readonly int $transportId,
+        public readonly ?int $transportId,
+        public readonly ?int $expenseCategoryId,
         public readonly DateTime $date,
         public readonly string $detail,
         public readonly float $amount
