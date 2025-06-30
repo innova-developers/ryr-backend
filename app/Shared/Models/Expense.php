@@ -15,6 +15,7 @@ class Expense extends Model
 
     protected $fillable = [
         'transport_id',
+        'expense_category_id',
         'date',
         'detail',
         'amount',
@@ -31,6 +32,28 @@ class Expense extends Model
     public function transport(): BelongsTo
     {
         return $this->belongsTo(Transport::class);
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(ExpenseCategory::class, 'expense_category_id');
+    }
+
+    public function toArray(): array
+    {
+        $array = parent::toArray();
+        
+        // Asegurar que expense_category_id esté presente
+        if (!isset($array['expense_category_id'])) {
+            $array['expense_category_id'] = $this->expense_category_id;
+        }
+        
+        // Formatear la fecha como Y-m-d para mantener compatibilidad con los tests
+        if (isset($array['date']) && $this->date) {
+            $array['date'] = $this->date->format('Y-m-d');
+        }
+        
+        return $array;
     }
 
     public static function newFactory(): ExpenseFactory

@@ -5,6 +5,7 @@ use App\Contexts\Branchs\Infrastructure\Http\Controllers\BranchController;
 use App\Contexts\Commissions\Infrastructure\Http\Controllers\CommissionController;
 use App\Contexts\Customers\Infrastructure\Http\Controllers\CustomerController;
 use App\Contexts\Destinations\Infrastructure\Http\Controllers\DestinationController;
+use App\Contexts\ExpenseCategories\Infrastructure\Http\Controllers\ExpenseCategoryController;
 use App\Contexts\ExtraordinaryCommissions\Infrastructure\Http\Controllers\ExtraordinaryCommissionController;
 use App\Contexts\Locations\Infrastructure\Http\Controllers\LocationsController;
 use App\Contexts\Users\Infrastructure\Http\Controllers\UserController;
@@ -17,36 +18,44 @@ Route::post('/login', [AuthController::class, 'login']);
 
 // Rutas protegidas con auth:sanctum
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Rutas de clientes
-    Route::get('customers/search', [CustomerController::class, 'search']);
-    Route::apiResource('customers', CustomerController::class);
-
-    // Rutas de destinos
-    Route::get('destinations', [DestinationController::class, 'index']);
-    Route::post('destinations', [DestinationController::class, 'store']);
-    Route::get('destinations/rates/{origin}/{destination}', [DestinationController::class, 'rates']);
-    Route::get('/origins', [DestinationController::class, 'origins']);
-    Route::get('/destinations/origin/{origin}', [DestinationController::class, 'destinations']);
-    Route::get('destinations/{id}', [DestinationController::class, 'show']);
-    Route::put('destinations/{id}', [DestinationController::class, 'update']);
-    Route::delete('destinations/{id}', [DestinationController::class, 'destroy']);
-
-    // Rutas de comisiones extraordinarias
-    Route::apiResource('extraordinary-commissions', ExtraordinaryCommissionController::class);
-    Route::get('extraordinary-commissions/{origin}/{destination}', [ExtraordinaryCommissionController::class, 'getByOriginAndDestination']);
-
-    // Rutas de comisiones
-    Route::post('/commissions', [CommissionController::class, 'store']);
-    Route::get('/commissions/statuses', [CommissionController::class, 'getStatuses']);
-    Route::get('/commissions/{id}', [CommissionController::class, 'show']);
-    Route::patch('/commissions/{id}/status', [CommissionController::class, 'updateStatus']);
-
-    // Rutas de órdenes
-    Route::get('/commissions',  [CommissionController::class, 'index']);
-    Route::delete('/commissions/{id}', [CommissionController::class, 'destroy']);
 });
+
+Route::post('/logout', [AuthController::class, 'logout']);
+
+// Rutas de clientes
+Route::get('customers/search', [CustomerController::class, 'search']);
+Route::apiResource('customers', CustomerController::class);
+
+// Rutas de destinos
+Route::get('destinations', [DestinationController::class, 'index']);
+Route::post('destinations', [DestinationController::class, 'store']);
+Route::get('destinations/rates/{origin}/{destination}', [DestinationController::class, 'rates']);
+Route::get('/origins', [DestinationController::class, 'origins']);
+Route::get('/destinations/origin/{origin}', [DestinationController::class, 'destinations']);
+Route::get('destinations/{id}', [DestinationController::class, 'show']);
+Route::put('destinations/{id}', [DestinationController::class, 'update']);
+Route::delete('destinations/{id}', [DestinationController::class, 'destroy']);
+
+// Rutas de comisiones extraordinarias
+Route::apiResource('extraordinary-commissions', ExtraordinaryCommissionController::class);
+Route::get('extraordinary-commissions/{origin}/{destination}', [ExtraordinaryCommissionController::class, 'getByOriginAndDestination']);
+
+// Rutas de comisiones
+Route::post('/commissions', [CommissionController::class, 'store']);
+Route::get('/commissions/statuses', [CommissionController::class, 'getStatuses']);
+Route::get('/commissions/{id}', [CommissionController::class, 'show']);
+Route::patch('/commissions/{id}/status', [CommissionController::class, 'updateStatus']);
+
+// Rutas de órdenes
+Route::get('/commissions',  [CommissionController::class, 'index']);
+Route::delete('/commissions/{id}', [CommissionController::class, 'destroy']);
+
+// Rutas de categorías de gastos
+Route::apiResource('expense-categories', ExpenseCategoryController::class);
+
+// Rutas de gastos generales
+Route::apiResource('expenses', ExpensesController::class);
 
 // Rutas protegidas con auth:sanctum y isAdmin
 Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
@@ -73,12 +82,12 @@ Route::prefix('transports')->group(function () {
     Route::post('/', [TransportController::class, 'store']);
     Route::put('/{id}', [TransportController::class, 'update']);
     Route::delete('/{id}', [TransportController::class, 'destroy']);
-    
-    // Rutas de gastos
-    Route::get('/{transportId}/expenses', [ExpensesController::class, 'index']);
-    Route::post('/{transportId}/expenses', [ExpensesController::class, 'store']);
-    Route::put('/{transportId}/expenses/{expenseId}', [ExpensesController::class, 'update']);
-    Route::delete('/{transportId}/expenses/{expenseId}', [ExpensesController::class, 'destroy']);
+
+    // Rutas de gastos de transportes (mantener compatibilidad)
+    Route::get('/{transportId}/expenses', [ExpensesController::class, 'indexByTransport']);
+    Route::post('/{transportId}/expenses', [ExpensesController::class, 'storeForTransport']);
+    Route::put('/{transportId}/expenses/{expenseId}', [ExpensesController::class, 'updateForTransport']);
+    Route::delete('/{transportId}/expenses/{expenseId}', [ExpensesController::class, 'destroyForTransport']);
 });
 
 

@@ -19,6 +19,7 @@ class CreateExpenseUseCase
         return [
             'id' => $expense->id,
             'transport_id' => $expense->transport_id,
+            'expense_category_id' => $expense->expense_category_id,
             'date' => $expense->date->format('Y-m-d'),
             'detail' => $expense->detail,
             'amount' => $expense->amount,

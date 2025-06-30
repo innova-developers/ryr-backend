@@ -1,1400 +1,292 @@
+# RYR Backend
 
-<p align="center">
-<img src="public/logo.jpeg" width="60%" style="padding:50px;border-radius:15px;" alt="Innova Logo" /></p>
+Sistema de gestión de transportes y logística con arquitectura hexagonal.
 
+## Características
 
-<p style="font-size:3em;" align="center">
-  🚚 RyR Comisiones <br>
-  <img src="https://img.shields.io/badge/Laravel-FF2D20?style=flat-square&logo=laravel&logoColor=white" alt="Laravel" />
-  <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker" />
-  <img src="https://img.shields.io/badge/PHP-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP" />
-  <img src="https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white" alt="MySQL" />
-</p>
+- **Autenticación**: Sistema de login/logout con Sanctum
+- **Gestión de Usuarios**: CRUD completo con roles de administrador
+- **Sucursales**: Gestión de sucursales de la empresa
+- **Clientes**: Gestión de clientes con búsqueda
+- **Destinos**: Gestión de destinos y tarifas
+- **Comisiones**: Sistema completo de comisiones con estados
+- **Comisiones Extraordinarias**: Gestión de comisiones especiales
+- **Transportes**: Gestión de transportes
+- **Gastos**: Sistema de gastos con categorías
+- **Categorías de Gastos**: ABM de categorías para clasificar gastos
+- **Ubicaciones**: Gestión de ubicaciones por origen
 
-<p align="center">
- 
-</p>
+## Arquitectura
 
+El proyecto utiliza arquitectura hexagonal (Clean Architecture) con los siguientes contextos:
 
-## 🌟 Características
+- **Auth**: Autenticación y autorización
+- **Users**: Gestión de usuarios
+- **Branchs**: Gestión de sucursales
+- **Customers**: Gestión de clientes
+- **Destinations**: Gestión de destinos
+- **Commissions**: Gestión de comisiones
+- **ExtraordinaryCommissions**: Comisiones extraordinarias
+- **Transports**: Gestión de transportes
+- **Expenses**: Gestión de gastos
+- **ExpenseCategories**: Categorías de gastos
+- **Locations**: Gestión de ubicaciones
 
-- 🐳 Dockerizado con PHP, MySQL y phpMyAdmin  
-- 🔐 Autenticación con Sanctum  
-- 🏗️ Arquitectura hexagonal  
-- 🔍 PHPStan para análisis estático  
-- ✨ PHP-CS-Fixer para formateo de código  
-- ⚙️ GitHub Actions para CI  
-- 🔄 Pre-push hooks para verificación de código  
-- 🧪 Tests automatizados incluidos  
+## Instalación
 
-## 📋 Requisitos
+1. Clonar el repositorio
+2. Instalar dependencias: `composer install`
+3. Copiar `.env.example` a `.env` y configurar
+4. Generar clave: `php artisan key:generate`
+5. Ejecutar migraciones: `php artisan migrate`
+6. Ejecutar seeders: `php artisan db:seed`
+7. Iniciar servidor: `php artisan serve`
 
-- Docker 🐳  
-- Docker Compose 🐙  
-- PHP 8.2 🐘  
-- Composer 📦  
+## Endpoints
 
-## 🛠️ Instalación
+### Autenticación
 
-### 1. Clonar el Proyecto
+- `POST /api/login` - Iniciar sesión
+- `POST /api/logout` - Cerrar sesión (requiere auth)
 
-- Clona el repositorio:
+### Usuarios (requiere admin)
 
-git clone https://github.com/innova-developers/ryr-back.git
-cd ryr-back
+- `GET /api/users` - Listar usuarios
+- `POST /api/users` - Crear usuario
+- `PUT /api/users/{id}` - Actualizar usuario
+- `DELETE /api/users/{id}` - Eliminar usuario
 
-### 2. ⚙️ Configuración Inicial
+### Sucursales (requiere admin)
 
-- Copia el archivo `.env.example` a `.env`:
-cp .env.example .env
+- `GET /api/branches` - Listar sucursales
+- `POST /api/branches` - Crear sucursal
+- `PUT /api/branches/{id}` - Actualizar sucursal
+- `DELETE /api/branches/{id}` - Eliminar sucursal
 
-- Inicia los contenedores de Docker:
-docker-compose up -d --build
+### Clientes
 
-- Instala las dependencias de Composer:
-composer install
+- `GET /api/customers` - Listar clientes
+- `POST /api/customers` - Crear cliente
+- `PUT /api/customers/{id}` - Actualizar cliente
+- `DELETE /api/customers/{id}` - Eliminar cliente
+- `GET /api/customers/search` - Buscar clientes
 
-- Genera la clave de aplicación:
-php artisan key:generate
+### Destinos
 
-- Ejecuta las migraciones:
-php artisan migrate
+- `GET /api/destinations` - Listar destinos
+- `POST /api/destinations` - Crear destino
+- `PUT /api/destinations/{id}` - Actualizar destino
+- `DELETE /api/destinations/{id}` - Eliminar destino
+- `GET /api/destinations/rates/{origin}/{destination}` - Obtener tarifas
+- `GET /api/origins` - Listar orígenes
+- `GET /api/destinations/origin/{origin}` - Destinos por origen
 
-- Ejecuta los tests para verificar que todo funciona:
+### Comisiones
+
+- `GET /api/commissions` - Listar comisiones
+- `POST /api/commissions` - Crear comisión
+- `GET /api/commissions/{id}` - Ver comisión
+- `PATCH /api/commissions/{id}/status` - Actualizar estado
+- `DELETE /api/commissions/{id}` - Eliminar comisión
+- `GET /api/commissions/statuses` - Estados disponibles
+
+### Comisiones Extraordinarias
+
+- `GET /api/extraordinary-commissions` - Listar comisiones extraordinarias
+- `POST /api/extraordinary-commissions` - Crear comisión extraordinaria
+- `PUT /api/extraordinary-commissions/{id}` - Actualizar comisión extraordinaria
+- `DELETE /api/extraordinary-commissions/{id}` - Eliminar comisión extraordinaria
+- `GET /api/extraordinary-commissions/{origin}/{destination}` - Obtener por origen y destino
+
+### Transportes
+
+- `GET /api/transports` - Listar transportes
+- `POST /api/transports` - Crear transporte
+- `PUT /api/transports/{id}` - Actualizar transporte
+- `DELETE /api/transports/{id}` - Eliminar transporte
+
+### Categorías de Gastos
+
+- `GET /api/expense-categories` - Listar categorías
+- `POST /api/expense-categories` - Crear categoría
+- `GET /api/expense-categories/{id}` - Ver categoría
+- `PUT /api/expense-categories/{id}` - Actualizar categoría
+- `DELETE /api/expense-categories/{id}` - Eliminar categoría
+
+**Parámetros de consulta:**
+- `?active=true` - Solo categorías activas
+
+### Gastos
+
+#### Gastos Generales
+- `GET /api/expenses` - Listar todos los gastos
+- `POST /api/expenses` - Crear gasto
+- `GET /api/expenses/{id}` - Ver gasto
+- `PUT /api/expenses/{id}` - Actualizar gasto
+- `DELETE /api/expenses/{id}` - Eliminar gasto
+
+**Parámetros de consulta:**
+- `?transport_id={id}` - Filtrar por transporte
+
+#### Gastos de Transportes (compatibilidad)
+- `GET /api/transports/{transportId}/expenses` - Gastos de un transporte
+- `POST /api/transports/{transportId}/expenses` - Crear gasto para transporte
+- `PUT /api/transports/{transportId}/expenses/{expenseId}` - Actualizar gasto de transporte
+- `DELETE /api/transports/{transportId}/expenses/{expenseId}` - Eliminar gasto de transporte
+
+### Ubicaciones
+
+- `GET /api/locations` - Listar ubicaciones
+- `POST /api/locations` - Crear ubicación
+- `GET /api/locations/origin/{origin}` - Ubicaciones por origen
+- `PUT /api/locations/{id}` - Actualizar ubicación
+- `DELETE /api/locations/{id}` - Eliminar ubicación
+
+## Estructura de Datos
+
+### Gasto
+
+```json
+{
+  "id": 1,
+  "transport_id": 1,
+  "expense_category_id": 1,
+  "date": "2024-03-25",
+  "detail": "Combustible",
+  "amount": "150.50",
+  "created_at": "2024-03-25T10:00:00.000000Z",
+  "updated_at": "2024-03-25T10:00:00.000000Z",
+  "transport": {
+    "id": 1,
+    "name": "Transporte 1"
+  },
+  "category": {
+    "id": 1,
+    "name": "Combustible",
+    "description": "Gastos de combustible"
+  }
+}
+```
+
+### Categoría de Gasto
+
+```json
+{
+  "id": 1,
+  "name": "Combustible",
+  "description": "Gastos de combustible y lubricantes",
+  "is_active": true,
+  "created_at": "2024-03-25T10:00:00.000000Z",
+  "updated_at": "2024-03-25T10:00:00.000000Z"
+}
+```
+
+## Validaciones
+
+### Crear/Actualizar Gasto
+
+- `date`: Requerido, fecha válida
+- `detail`: Requerido, máximo 255 caracteres
+- `amount`: Requerido, numérico, mínimo 0
+- `transport_id`: Opcional, debe existir en tabla transports
+- `expense_category_id`: Opcional, debe existir en tabla expense_categories
+
+### Crear/Actualizar Categoría
+
+- `name`: Requerido, único, máximo 255 caracteres
+- `description`: Opcional, máximo 1000 caracteres
+- `is_active`: Requerido para actualizar, booleano
+
+## Categorías Predefinidas
+
+El sistema incluye las siguientes categorías por defecto:
+
+- **Transportes**: Gastos relacionados con transportes y logística
+- **Combustible**: Gastos de combustible y lubricantes
+- **Mantenimiento**: Gastos de mantenimiento de vehículos y equipos
+- **Peajes**: Gastos de peajes y viáticos
+- **Seguros**: Gastos de seguros y coberturas
+- **Oficina**: Gastos de oficina y administración
+- **Marketing**: Gastos de marketing y publicidad
+- **Otros**: Otros gastos varios
+
+## Compatibilidad
+
+El sistema mantiene compatibilidad con el sistema anterior de gastos de transportes:
+
+- Las rutas `/api/transports/{id}/expenses` siguen funcionando
+- Los gastos existentes mantienen su estructura
+- Se pueden crear gastos con o sin transporte asociado
+- Se pueden crear gastos con o sin categoría asociada
+
+## Testing
+
+Ejecutar tests:
+
+```bash
+# Todos los tests
 php artisan test
 
-### 3.🔍 Análisis de Código
-#### PHPStan : composer analyse
-#### PHP-CS-Fixer composer format
-
-# 📶 EndPoints 
-## 🔐 Autenticación
-
-### POST `/api/login`
-Inicia sesión y devuelve un token de acceso.
-
-**Parámetros:**
-- `email` (string, requerido)
-- `password` (string, requerido)
-
-**Respuesta exitosa:**
-```json
-{
-  "success": true,
-  "token": "TOKEN_GENERADO",
-  "user": {
-    "id": 1,
-    "name": "Nombre",
-    "email": "usuario@ejemplo.com",
-    "role": "admin"
-  }
-}
-```
-
-### POST `/api/logout`
-Cierra la sesión del usuario autenticado y revoca el token.
-
-**Respuesta exitosa:**
-```json
-{
-  "success": true,
-  "message": "Sesión cerrada correctamente"
-}
-```
-
-## 👤 Usuarios
-
-### POST `/api/users`
-Crea un nuevo usuario con los datos proporcionados.
-
-### Payload de ejemplo
-
-```json
-{
-  "name": "Juan Pérez",
-  "email": "nuevo@ejemplo.com",
-  "password": "passwordseguro",
-  "role": "administrador"
-}
-```
-### Respuesta exitosa
-
-```json
-{
-  "success": true,
-  "message": "Usuario creado correctamente",
-  "user": {
-      "id": 1,
-      "name": "Juan Pérez",
-      "email": "nuevo@ejemplo.com",
-      "role": "administrador"
-    }
-}
-```
-
-### Respuesta Erronea 
-
-```json
-{
-  "success": false,
-    "message": "Datos inválidos: The name field is required., The email field must be a valid email address., The password field is required., The selected role is invalid."
-}
-```
-
-### Validaciones
-
-- **name**: requerido, string, máximo 255 caracteres
-- **email**: requerido, email válido, único, máximo 255 caracteres
-- **password**: requerido, string, mínimo 8 caracteres
-- **role**: requerido, string, uno de: `administrador`, `mostrador`,`cadete`,`cliente`
-
-### GET `/api/users`
-Devuelve la lista de usuarios registrados (requiere autenticación).
-
-##### Respuesta exitosa
-```json
-[
-  {
-    "id": 1,
-    "name": "Juan",
-    "email": "juan@example.com",
-    "role": "admin",
-  },
-  ...
-]
-```
-
-### DELETE `/api/users/{id}`
-Elimina un usuario por su ID (requiere autenticación y rol de administrador).
-
-#### Parámetros de ruta:
-- `id` (integer, requerido): ID del usuario a eliminar.
-
-##### Respuesta exitosa
-```json
-[
-    {
-        "id": 1,
-        "name": "Juan",
-        "email": "juan@example.com",
-        "role": "admin",
-    },
-    ...
-]
-```
-
-### PUT `/api/users/{id}`
-Actualiza los datos de un usuario existente (requiere autenticación y rol de administrador).
-#### Payload de ejemplo
-
-```json
-{
-    "name": "Juan Editado",
-    "email": "editado@ejemplo.com",
-    "password": "nuevacontraseña",
-    "role": "mostrador"
-} 
-```
-
-#### Parámetros de ruta:
-- `id` (integer, requerido): ID del usuario a eliminar.
-
-##### Respuesta exitosa
-```json
-[
-    {
-        "id": 1,
-        "name": "Juan",
-        "email": "juan@example.com",
-        "role": "admin"
-    }
-]
-```
-
-
-## 👤 Sucursales
-
-### POST `/api/branches`
-Crea una nueva sucursal con los datos proporcionados.
-
-### Payload de ejemplo
-
-```json
-{
-  "name": "Sucursal Moreno",
-  "address": "Calle 1234",
-  "schedule": "8 a 21hs",
-  "phone": "2917493992"
-}
-```
-### Respuesta exitosa
-
-```json
-{
-  "success": true,
-  "message": "sucursal creada correctamente",
-}
-```
-
-### Respuesta Erronea
-
-```json
-{
-  "success": false,
-    "message": "Datos inválidos: The name field is required., The email field must be a valid email address., The password field is required., The selected role is invalid."
-}
-```
-### GET `/api/branches`
-Devuelve la lista de sucursales (requiere autenticación).
-
-##### Respuesta exitosa
-```json
-[
-  {
-    "id": 1,
-    "name": "Sucursal Moreno",
-    "address": "Calle 1234",
-    "schedule": "8 a 21hs",
-      "phone": "2917493992",
-  },
-  ...
-]
-```
-
-### DELETE `/api/branches/{id}`
-Elimina una sucursal por su ID (requiere autenticación y rol de administrador).
-
-#### Parámetros de ruta:
-- `id` (integer, requerido): ID de la sucursal a eliminar.
-
-##### Respuesta exitosa
-```json
-[
-    "success" => "true"
-]
-```
-
-### PUT `/api/branches/{id}`
-Actualiza los datos de una sucursal existente (requiere autenticación y rol de administrador).
-#### Payload de ejemplo
-
-```json
-{
-    "name": "Sucursal Moreno",
-    "address": "Calle 1234",
-    "schedule": "8 a 21hs",
-    "phone": "2917493992"
-} 
-```
-
-#### Parámetros de ruta:
-- `id` (integer, requerido): ID de la sucursal a actualizar.
-
-##### Respuesta exitosa
-```json
-[
-    {
-        "id": 1,
-        "name": "Sucursal Moreno",
-        "address": "Calle 1234",
-        "schedule": "8 a 21hs",
-        "phone": "2917493992",
-    }
-]
-```
-
-## 👤 Clientes
-
-### POST `/api/customers`
-Crea un nuevo cliente con los datos proporcionados.
-
-#### Payload de ejemplo
-```json
-{
-  "dni": 12345678,
-  "name": "Juan",
-  "last_name": "Pérez",
-  "mobile": "2917493992",
-  "email": "cliente@ejemplo.com",
-  "address": "Calle 123",
-  "city": "Bahía Blanca",
-  "phone": "2917493992",
-  "maps_url": "https://maps.google.com",
-  "business_hours": "9 a 18hs",
-  "observations": "Cliente frecuente",
-  "is_premium": false,
-  "branch_id": 1
-}
-```
-
-#### Respuesta exitosa
-```json
-{
-  "id": 1,
-  "dni": 12345678,
-  "name": "Juan",
-  "last_name": "Pérez",
-  "mobile": "2917493992",
-  "email": "cliente@ejemplo.com",
-  "address": "Calle 123",
-  "city": "Bahía Blanca",
-  "phone": "2917493992",
-  "maps_url": "https://maps.google.com",
-  "business_hours": "9 a 18hs",
-  "observations": "Cliente frecuente",
-  "is_premium": false,
-  "user_id": 1,
-  "branch_id": 1,
-  "created_at": "2024-03-21T12:00:00.000000Z",
-  "updated_at": "2024-03-21T12:00:00.000000Z"
-}
-```
-
-#### Validaciones
-- **dni**: requerido, número entero, único
-- **name**: requerido, string, máximo 255 caracteres
-- **last_name**: requerido, string, máximo 255 caracteres
-- **mobile**: requerido, string, máximo 255 caracteres
-- **email**: requerido, email válido, único, máximo 255 caracteres
-- **address**: requerido, string, máximo 255 caracteres
-- **city**: requerido, string, máximo 255 caracteres
-- **phone**: requerido, string, máximo 255 caracteres
-- **maps_url**: opcional, string, máximo 255 caracteres
-- **business_hours**: opcional, string, máximo 255 caracteres
-- **observations**: opcional, string
-- **is_premium**: opcional, booleano
-- **branch_id**: requerido, número entero, debe existir en la tabla branches
-
-### GET `/api/customers`
-Devuelve la lista de clientes registrados (requiere autenticación).
-
-#### Respuesta exitosa
-```json
-[
-  {
-    "id": 1,
-    "dni": 12345678,
-    "name": "Juan",
-    "last_name": "Pérez",
-    "mobile": "2917493992",
-    "email": "cliente@ejemplo.com",
-    "address": "Calle 123",
-    "city": "Bahía Blanca",
-    "phone": "2917493992",
-    "maps_url": "https://maps.google.com",
-    "business_hours": "9 a 18hs",
-    "observations": "Cliente frecuente",
-    "is_premium": false,
-    "user_id": 1,
-    "branch_id": 1,
-    "created_at": "2024-03-21T12:00:00.000000Z",
-    "updated_at": "2024-03-21T12:00:00.000000Z"
-  }
-]
-```
-
-### GET `/api/customers/{id}`
-Obtiene los detalles de un cliente específico por su ID.
-
-#### Parámetros de ruta:
-- `id` (integer, requerido): ID del cliente a consultar.
-
-#### Respuesta exitosa
-```json
-{
-  "id": 1,
-  "dni": 12345678,
-  "name": "Juan",
-  "last_name": "Pérez",
-  "mobile": "2917493992",
-  "email": "cliente@ejemplo.com",
-  "address": "Calle 123",
-  "city": "Bahía Blanca",
-  "phone": "2917493992",
-  "maps_url": "https://maps.google.com",
-  "business_hours": "9 a 18hs",
-  "observations": "Cliente frecuente",
-  "is_premium": false,
-  "user_id": 1,
-  "branch_id": 1,
-  "created_at": "2024-03-21T12:00:00.000000Z",
-  "updated_at": "2024-03-21T12:00:00.000000Z"
-}
-```
-
-#### Respuesta de error (404)
-```json
-{
-  "message": "Customer not found"
-}
-```
-
-### PUT `/api/customers/{id}`
-Actualiza los datos de un cliente existente.
-
-#### Parámetros de ruta:
-- `id` (integer, requerido): ID del cliente a actualizar.
-
-#### Payload de ejemplo
-```json
-{
-  "dni": 12345678,
-  "name": "Juan",
-  "last_name": "Pérez",
-  "mobile": "2917493992",
-  "email": "cliente@ejemplo.com",
-  "address": "Calle 123",
-  "city": "Bahía Blanca",
-  "phone": "2917493992",
-  "maps_url": "https://maps.google.com",
-  "business_hours": "9 a 18hs",
-  "observations": "Cliente frecuente",
-  "is_premium": false,
-  "branch_id": 1
-}
-```
-
-#### Respuesta exitosa
-```json
-{
-  "id": 1,
-  "dni": 12345678,
-  "name": "Juan",
-  "last_name": "Pérez",
-  "mobile": "2917493992",
-  "email": "cliente@ejemplo.com",
-  "address": "Calle 123",
-  "city": "Bahía Blanca",
-  "phone": "2917493992",
-  "maps_url": "https://maps.google.com",
-  "business_hours": "9 a 18hs",
-  "observations": "Cliente frecuente",
-  "is_premium": false,
-  "user_id": 1,
-  "branch_id": 1,
-  "created_at": "2024-03-21T12:00:00.000000Z",
-  "updated_at": "2024-03-21T12:00:00.000000Z"
-}
-```
-
-#### Respuesta de error (404)
-```json
-{
-  "message": "Customer not found"
-}
-```
-
-### DELETE `/api/customers/{id}`
-Elimina un cliente por su ID.
-
-#### Parámetros de ruta:
-- `id` (integer, requerido): ID del cliente a eliminar.
-
-#### Respuesta exitosa
-```json
-null
-```
-Status: 204 No Content
-
-#### Respuesta de error (404)
-```json
-{
-  "message": "Customer not found"
-}
-```
-
-## 🚚 Destinos
-
-El módulo de destinos permite gestionar las rutas y precios de transporte entre diferentes ciudades.
-
-### Listar todos los destinos
-```http
-GET /api/destinations
-```
-
-#### Respuesta
-```json
-[
-    {
-        "id": 1,
-        "origin": "Buenos Aires",
-        "destination": "Córdoba",
-        "fixed_price": 1500.00,
-        "small_bulk_price": 1200.00,
-        "large_bulk_price": 900.00,
-        "created_at": "2024-03-21T10:00:00.000000Z",
-        "updated_at": "2024-03-21T10:00:00.000000Z"
-    }
-]
-```
-
-### Crear un nuevo destino
-```http
-POST /api/destinations
-```
-
-#### Parámetros
-| Parámetro | Tipo | Requerido | Descripción |
-|-----------|------|-----------|-------------|
-| origin | string | Sí | Ciudad de origen |
-| destination | string | Sí | Ciudad de destino |
-| fixed_price | float | Sí | Precio fijo del transporte |
-| small_bulk_price | float | Sí | Precio por bulto chico (aproximadamente 20% menos que el fijo) |
-| large_bulk_price | float | Sí | Precio por bulto grande (aproximadamente 40% menos que el fijo) |
-
-#### Ejemplo de solicitud
-```json
-{
-    "origin": "Buenos Aires",
-    "destination": "Córdoba",
-    "fixed_price": 1500.00,
-    "small_bulk_price": 1200.00,
-    "large_bulk_price": 900.00
-}
-```
-
-#### Respuesta
-```json
-{
-    "id": 1,
-    "origin": "Buenos Aires",
-    "destination": "Córdoba",
-    "fixed_price": 1500.00,
-    "small_bulk_price": 1200.00,
-    "large_bulk_price": 900.00,
-    "created_at": "2024-03-21T10:00:00.000000Z",
-    "updated_at": "2024-03-21T10:00:00.000000Z"
-}
-```
-
-### Obtener un destino específico
-```http
-GET /api/destinations/{id}
-```
-
-#### Respuesta
-```json
-{
-    "id": 1,
-    "origin": "Buenos Aires",
-    "destination": "Córdoba",
-    "fixed_price": 1500.00,
-    "small_bulk_price": 1200.00,
-    "large_bulk_price": 900.00,
-    "created_at": "2024-03-21T10:00:00.000000Z",
-    "updated_at": "2024-03-21T10:00:00.000000Z"
-}
-```
-
-### Actualizar un destino
-```http
-PUT /api/destinations/{id}
-```
-
-#### Parámetros
-| Parámetro | Tipo | Requerido | Descripción |
-|-----------|------|-----------|-------------|
-| origin | string | No | Ciudad de origen |
-| destination | string | No | Ciudad de destino |
-| fixed_price | float | No | Precio fijo del transporte |
-| small_bulk_price | float | No | Precio por bulto chico |
-| large_bulk_price | float | No | Precio por bulto grande |
-
-#### Ejemplo de solicitud
-```json
-{
-    "fixed_price": 1600.00,
-    "small_bulk_price": 1280.00,
-    "large_bulk_price": 960.00
-}
-```
-
-#### Respuesta
-```json
-{
-    "id": 1,
-    "origin": "Buenos Aires",
-    "destination": "Córdoba",
-    "fixed_price": 1600.00,
-    "small_bulk_price": 1280.00,
-    "large_bulk_price": 960.00,
-    "created_at": "2024-03-21T10:00:00.000000Z",
-    "updated_at": "2024-03-21T11:00:00.000000Z"
-}
-```
-
-### Eliminar un destino
-```http
-DELETE /api/destinations/{id}
-```
-
-#### Respuesta
-```json
-{
-    "message": "Destino eliminado correctamente"
-}
-```
-
-### Códigos de error
-| Código | Descripción |
-|--------|-------------|
-| 404 | Destino no encontrado |
-| 422 | Error de validación en los datos enviados |
-
-#### Ejemplo de error de validación
-```json
-{
-    "message": "The given data was invalid.",
-    "errors": {
-        "origin": ["El campo origen es obligatorio"],
-        "destination": ["El campo destino es obligatorio"],
-        "fixed_price": ["El campo precio fijo es obligatorio y debe ser un número"],
-        "small_bulk_price": ["El campo precio por bulto chico es obligatorio y debe ser un número"],
-        "large_bulk_price": ["El campo precio por bulto grande es obligatorio y debe ser un número"]
-    }
-}
-```
-
-## 🚚 Comisiones Extraordinarias
-
-### Endpoints
-
-- `GET /api/extraordinary-commissions` - Listar todas las comisiones extraordinarias
-- `POST /api/extraordinary-commissions` - Crear una nueva comisión extraordinaria
-- `GET /api/extraordinary-commissions/{id}` - Obtener una comisión extraordinaria específica
-- `PUT /api/extraordinary-commissions/{id}` - Actualizar una comisión extraordinaria
-- `DELETE /api/extraordinary-commissions/{id}` - Eliminar una comisión extraordinaria
-
-### Estructura de Datos
-
-```json
-{
-    "origin": "string",
-    "destination": "string",
-    "detail": "string",
-    "price": "decimal",
-    "observations": "string (opcional)"
-}
-```
-
-### Validaciones
-
-- `origin`: Requerido, string
-- `destination`: Requerido, string
-- `detail`: Requerido, string
-- `price`: Requerido, numérico
-- `observations`: Opcional, string
-
-## 🚛 Transportes
-
-El módulo de transportes permite gestionar los vehículos disponibles para el transporte de mercancías.
-
-### Listar todos los transportes
-```http
-GET /api/transports
-```
-
-#### Respuesta
-```json
-[
-    {
-        "id": 1,
-        "plate": "ABC123",
-        "description": "Camión de carga",
-        "phone": "1234567890",
-        "insurance": "Seguro XYZ",
-        "usage": "Carga general",
-        "observation": "Observación de prueba",
-        "created_at": "2024-03-21T10:00:00.000000Z",
-        "updated_at": "2024-03-21T10:00:00.000000Z"
-    }
-]
-```
-
-### Crear un nuevo transporte
-```http
-POST /api/transports
-```
-
-#### Parámetros
-| Parámetro | Tipo | Requerido | Descripción |
-|-----------|------|-----------|-------------|
-| plate | string | Sí | Placa del vehículo (máximo 10 caracteres) |
-| description | string | Sí | Descripción del vehículo |
-| phone | string | No | Teléfono de contacto |
-| insurance | string | No | Información del seguro |
-| usage | string | No | Uso del vehículo |
-| observation | string | No | Observaciones adicionales |
-
-#### Ejemplo de solicitud
-```json
-{
-    "plate": "ABC123",
-    "description": "Camión de carga",
-    "phone": "1234567890",
-    "insurance": "Seguro XYZ",
-    "usage": "Carga general",
-    "observation": "Observación de prueba"
-}
-```
-
-#### Respuesta
-```json
-{
-    "id": 1,
-    "plate": "ABC123",
-    "description": "Camión de carga",
-    "phone": "1234567890",
-    "insurance": "Seguro XYZ",
-    "usage": "Carga general",
-    "observation": "Observación de prueba",
-    "created_at": "2024-03-21T10:00:00.000000Z",
-    "updated_at": "2024-03-21T10:00:00.000000Z"
-}
-```
-
-### Actualizar un transporte
-```http
-PUT /api/transports/{id}
-```
-
-#### Parámetros de ruta:
-- `id` (integer, requerido): ID del transporte a actualizar.
-
-#### Respuesta
-```json
-{
-    "id": 1,
-    "plate": "XYZ789",
-    "description": "Nueva descripción",
-    "phone": "9876543210",
-    "insurance": "Nuevo seguro",
-    "usage": "Nuevo uso",
-    "observation": "Nueva observación",
-    "created_at": "2024-03-21T10:00:00.000000Z",
-    "updated_at": "2024-03-21T11:00:00.000000Z"
-}
-```
-
-### Eliminar un transporte
-```http
-DELETE /api/transports/{id}
-```
-
-#### Parámetros de ruta:
-- `id` (integer, requerido): ID del transporte a eliminar.
-
-#### Respuesta
-Status: 204 No Content
-
-### Códigos de error
-| Código | Descripción |
-|--------|-------------|
-| 400 | Error en los datos enviados o transporte no encontrado |
-| 422 | Error de validación en los datos enviados |
-
-## 💰 Gastos de Transporte
-
-El módulo de gastos permite gestionar los gastos asociados a cada transporte.
-
-### Listar gastos de un transporte
-```http
-GET /api/transports/{transportId}/expenses
-```
-
-#### Parámetros de ruta:
-- `transportId` (integer, requerido): ID del transporte.
-
-#### Respuesta
-```json
-[
-    {
-        "id": 1,
-        "transport_id": 1,
-        "date": "2024-03-25",
-        "detail": "Combustible",
-        "amount": "150.50",
-        "created_at": "2024-03-25T10:00:00.000000Z",
-        "updated_at": "2024-03-25T10:00:00.000000Z"
-    }
-]
-```
-
-### Crear un nuevo gasto
-```http
-POST /api/transports/{transportId}/expenses
-```
-
-#### Parámetros de ruta:
-- `transportId` (integer, requerido): ID del transporte.
-
-#### Parámetros
-| Parámetro | Tipo | Requerido | Descripción |
-|-----------|------|-----------|-------------|
-| date | date | Sí | Fecha del gasto |
-| detail | string | Sí | Detalle del gasto |
-| amount | numeric | Sí | Monto del gasto (debe ser positivo) |
-
-#### Ejemplo de solicitud
-```json
-{
-    "date": "2024-03-25",
-    "detail": "Combustible",
-    "amount": 150.50
-}
-```
-
-#### Respuesta
-```json
-{
-    "id": 1,
-    "transport_id": 1,
-    "date": "2024-03-25",
-    "detail": "Combustible",
-    "amount": "150.50",
-    "created_at": "2024-03-25T10:00:00.000000Z",
-    "updated_at": "2024-03-25T10:00:00.000000Z"
-}
-```
-
-### Actualizar un gasto
-```http
-PUT /api/transports/{transportId}/expenses/{expenseId}
-```
-
-#### Parámetros de ruta:
-- `transportId` (integer, requerido): ID del transporte.
-- `expenseId` (integer, requerido): ID del gasto.
-
-#### Respuesta
-```json
-{
-    "id": 1,
-    "transport_id": 1,
-    "date": "2024-03-26",
-    "detail": "Mantenimiento",
-    "amount": "200.00",
-    "created_at": "2024-03-25T10:00:00.000000Z",
-    "updated_at": "2024-03-26T10:00:00.000000Z"
-}
-```
-
-### Eliminar un gasto
-```http
-DELETE /api/transports/{transportId}/expenses/{expenseId}
-```
-
-#### Parámetros de ruta:
-- `transportId` (integer, requerido): ID del transporte.
-- `expenseId` (integer, requerido): ID del gasto.
-
-#### Respuesta
-```json
-{
-    "message": "Gasto eliminado correctamente"
-}
-```
-
-### Códigos de error
-| Código | Descripción |
-|--------|-------------|
-| 404 | Gasto no encontrado |
-| 422 | Error de validación en los datos enviados |
-
-## 📍 Ubicaciones
-
-El módulo de ubicaciones permite gestionar las ubicaciones de origen y destino para las comisiones.
-
-### Listar todas las ubicaciones
-```http
-GET /api/locations
-```
-
-#### Respuesta
-```json
-[
-    {
-        "id": 1,
-        "name": "Sucursal Centro",
-        "address": "Av. Principal 123",
-        "origin": "Buenos Aires",
-        "phone": "1234567890",
-        "map": "https://maps.google.com",
-        "schedule": "9:00 - 18:00",
-        "observation": "Ubicación principal",
-        "created_at": "2024-03-21T10:00:00.000000Z",
-        "updated_at": "2024-03-21T10:00:00.000000Z"
-    }
-]
-```
-
-### Crear una nueva ubicación
-```http
-POST /api/locations
-```
-
-#### Parámetros
-| Parámetro | Tipo | Requerido | Descripción |
-|-----------|------|-----------|-------------|
-| name | string | Sí | Nombre de la ubicación |
-| address | string | Sí | Dirección de la ubicación |
-| origin | string | Sí | Ciudad de origen |
-| phone | string | Sí | Teléfono de contacto |
-| map | string | No | URL del mapa |
-| schedule | string | Sí | Horario de atención |
-| observation | string | No | Observaciones adicionales |
-
-#### Ejemplo de solicitud
-```json
-{
-    "name": "Sucursal Centro",
-    "address": "Av. Principal 123",
-    "origin": "Buenos Aires",
-    "phone": "1234567890",
-    "map": "https://maps.google.com",
-    "schedule": "9:00 - 18:00",
-    "observation": "Ubicación principal"
-}
-```
-
-#### Respuesta
-```json
-{
-    "id": 1,
-    "name": "Sucursal Centro",
-    "address": "Av. Principal 123",
-    "origin": "Buenos Aires",
-    "phone": "1234567890",
-    "map": "https://maps.google.com",
-    "schedule": "9:00 - 18:00",
-    "observation": "Ubicación principal",
-    "created_at": "2024-03-21T10:00:00.000000Z",
-    "updated_at": "2024-03-21T10:00:00.000000Z"
-}
-```
-
-### Obtener ubicaciones por origen
-```http
-GET /api/locations/origin/{origin}
-```
-
-#### Parámetros de ruta:
-- `origin` (string, requerido): Ciudad de origen.
-
-#### Respuesta
-```json
-[
-    {
-        "id": 1,
-        "name": "Sucursal Centro",
-        "address": "Av. Principal 123",
-        "origin": "Buenos Aires",
-        "phone": "1234567890",
-        "map": "https://maps.google.com",
-        "schedule": "9:00 - 18:00",
-        "observation": "Ubicación principal"
-    }
-]
-```
-
-### Actualizar una ubicación
-```http
-PUT /api/locations/{id}
-```
-
-#### Parámetros de ruta:
-- `id` (integer, requerido): ID de la ubicación a actualizar.
-
-#### Respuesta
-```json
-{
-    "id": 1,
-    "name": "Sucursal Centro Actualizada",
-    "address": "Av. Principal 456",
-    "origin": "Buenos Aires",
-    "phone": "0987654321",
-    "map": "https://maps.google.com/updated",
-    "schedule": "10:00 - 19:00",
-    "observation": "Ubicación actualizada",
-    "created_at": "2024-03-21T10:00:00.000000Z",
-    "updated_at": "2024-03-21T11:00:00.000000Z"
-}
-```
-
-### Eliminar una ubicación
-```http
-DELETE /api/locations/{id}
-```
-
-#### Parámetros de ruta:
-- `id` (integer, requerido): ID de la ubicación a eliminar.
-
-#### Respuesta
-Status: 204 No Content
-
-### Códigos de error
-| Código | Descripción |
-|--------|-------------|
-| 404 | Ubicación no encontrada |
-| 422 | Error de validación en los datos enviados |
-
-## 📋 Comisiones
-
-El módulo de comisiones permite gestionar las órdenes de transporte y sus estados.
-
-### Crear una nueva comisión
-```http
-POST /api/commissions
-```
-
-#### Parámetros
-| Parámetro | Tipo | Requerido | Descripción |
-|-----------|------|-----------|-------------|
-| client_id | integer | Sí | ID del cliente |
-| date | date | Sí | Fecha de la comisión |
-| origin | string | Sí | Ciudad de origen |
-| destination | string | Sí | Ciudad de destino |
-| status | string | Sí | Estado de la comisión |
-| origin_location_id | integer | Sí | ID de la ubicación de origen |
-| destination_location_id | integer | Sí | ID de la ubicación de destino |
-| items | array | Sí | Array de items de la comisión |
-| total | numeric | Sí | Total de la comisión |
-
-#### Estructura de items
-```json
-{
-    "type": "ordinaria|extraordinaria",
-    "size": "small|large (solo para ordinaria)",
-    "quantity": 1,
-    "unit_price": 100.00,
-    "subtotal": 100.00,
-    "detail": "Detalle (solo para extraordinaria)"
-}
-```
-
-#### Ejemplo de solicitud
-```json
-{
-    "client_id": 1,
-    "date": "2024-03-21",
-    "origin": "Buenos Aires",
-    "destination": "Córdoba",
-    "status": "deposito",
-    "origin_location_id": 1,
-    "destination_location_id": 2,
-    "items": [
-        {
-            "type": "ordinaria",
-            "size": "small",
-            "quantity": 2,
-            "unit_price": 500,
-            "subtotal": 1000
-        },
-        {
-            "type": "extraordinaria",
-            "quantity": 1,
-            "unit_price": 1500,
-            "subtotal": 1500,
-            "detail": "Manejo especial"
-        }
-    ],
-    "total": 2500
-}
-```
-
-#### Respuesta
-```json
-{
-    "id": 1,
-    "client_id": 1,
-    "destination_id": 1,
-    "branch_id": 1,
-    "date": "2024-03-21",
-    "status": "deposito",
-    "total": "2500.00",
-    "user_id": 1,
-    "origin_location_id": 1,
-    "destination_location_id": 2,
-    "created_at": "2024-03-21T10:00:00.000000Z",
-    "updated_at": "2024-03-21T10:00:00.000000Z"
-}
-```
-
-### Listar comisiones
-```http
-GET /api/commissions
-```
-
-#### Parámetros de consulta opcionales:
-- `clientName`: Filtrar por nombre del cliente
-- `destination_id`: Filtrar por ID de destino
-- `branch_id`: Filtrar por ID de sucursal
-- `user_id`: Filtrar por ID de usuario
-- `dateFrom`: Filtrar desde fecha
-- `dateTo`: Filtrar hasta fecha
-- `status`: Filtrar por estado
-- `page`: Número de página
-- `perPage`: Elementos por página
-- `sort_by`: Campo para ordenar
-- `sort_direction`: Dirección del ordenamiento (asc/desc)
-
-#### Respuesta
-```json
-{
-    "data": [
-        {
-            "id": 1,
-            "client_id": 1,
-            "client": {
-                "id": 1,
-                "name": "Juan Pérez"
-            },
-            "destination": {
-                "id": 1,
-                "origin": "Buenos Aires",
-                "destination": "Córdoba"
-            },
-            "branch_id": 1,
-            "date": "2024-03-21",
-            "status": "deposito",
-            "user_id": 1,
-            "total": "2500.00",
-            "items": [
-                {
-                    "id": 1,
-                    "type": "ordinaria",
-                    "size": "small",
-                    "quantity": 2,
-                    "unit_price": "500.00",
-                    "subtotal": "1000.00"
-                }
-            ]
-        }
-    ],
-    "meta": {
-        "current_page": 1,
-        "last_page": 1,
-        "per_page": 15,
-        "total": 1
-    }
-}
-```
-
-### Obtener una comisión específica
-```http
-GET /api/commissions/{id}
-```
-
-#### Parámetros de ruta:
-- `id` (integer, requerido): ID de la comisión.
-
-#### Respuesta
-```json
-{
-    "data": {
-        "id": 1,
-        "client_id": 1,
-        "client": {
-            "id": 1,
-            "name": "Juan Pérez"
-        },
-        "destination": {
-            "id": 1,
-            "origin": "Buenos Aires",
-            "destination": "Córdoba"
-        },
-        "branch_id": 1,
-        "branch": {
-            "id": 1,
-            "name": "Sucursal Centro"
-        },
-        "date": "2024-03-21",
-        "status": "deposito",
-        "user_id": 1,
-        "user": {
-            "id": 1,
-            "name": "Usuario"
-        },
-        "total": "2500.00",
-        "items": [
-            {
-                "id": 1,
-                "type": "ordinaria",
-                "size": "small",
-                "quantity": 2,
-                "unit_price": "500.00",
-                "subtotal": "1000.00"
-            }
-        ],
-        "logs": [
-            {
-                "previous_status": "",
-                "new_status": "deposito",
-                "details": "Comisión creada",
-                "user": "Usuario"
-            }
-        ]
-    }
-}
-```
-
-### Obtener estados disponibles
-```http
-GET /api/commissions/statuses
-```
-
-#### Respuesta
-```json
-[
-    {
-        "value": "deposito",
-        "label": "DEPOSITO"
-    },
-    {
-        "value": "las_rosas",
-        "label": "LAS_ROSAS"
-    },
-    {
-        "value": "en_transito",
-        "label": "EN_TRANSITO"
-    },
-    {
-        "value": "entregado",
-        "label": "ENTREGADO"
-    }
-]
-```
-
-### Actualizar estado de una comisión
-```http
-PATCH /api/commissions/{id}/status
-```
-
-#### Parámetros de ruta:
-- `id` (integer, requerido): ID de la comisión.
-
-#### Parámetros
-| Parámetro | Tipo | Requerido | Descripción |
-|-----------|------|-----------|-------------|
-| status | string | Sí | Nuevo estado de la comisión |
-| details | string | No | Detalles del cambio de estado |
-
-#### Ejemplo de solicitud
-```json
-{
-    "status": "en_transito",
-    "details": "En camino a destino"
-}
-```
-
-#### Respuesta
-```json
-{
-    "message": "Estado de la comisión actualizado correctamente",
-    "commission": {
-        "id": 1,
-        "status": "en_transito",
-        "branch": {
-            "id": 1,
-            "name": "Sucursal Centro"
-        }
-    }
-}
-```
-
-### Eliminar una comisión
-```http
-DELETE /api/commissions/{id}
-```
-
-#### Parámetros de ruta:
-- `id` (integer, requerido): ID de la comisión a eliminar.
-
-#### Respuesta
-```json
-{
-    "message": "Comisión eliminada correctamente"
-}
+# Tests específicos
+php artisan test --filter=ExpenseCategoryTest
+php artisan test --filter=ExpensesTest
 ```
 
-### Códigos de error
-| Código | Descripción |
-|--------|-------------|
-| 400 | Error en los datos enviados |
-| 404 | Comisión no encontrada |
-| 422 | Error de validación en los datos enviados |
+## Migraciones
 
-## 🔧 Comandos Útiles
+Para aplicar las nuevas migraciones:
 
-### Análisis de Código
 ```bash
-# Ejecutar PHPStan para análisis estático
-composer analyse
-
-# Formatear código con PHP-CS-Fixer
-composer format
-```
-
-### Base de Datos
-```bash
-# Ejecutar migraciones
 php artisan migrate
+```
 
-# Revertir migraciones
-php artisan migrate:rollback
+Para ejecutar los seeders:
 
-# Ejecutar seeders
+```bash
 php artisan db:seed
-
-# Marcar migraciones como ejecutadas (si hay problemas)
-php artisan migrate:status
 ```
 
-### Tests
-```bash
-# Ejecutar todos los tests
-php artisan test
+## Desarrollo
 
-# Ejecutar tests específicos
-php artisan test --filter=UserTest
+### Estructura de Carpetas
 
-# Ejecutar tests con cobertura
-php artisan test --coverage
+```
+app/
+├── Contexts/
+│   ├── Auth/
+│   ├── Users/
+│   ├── Branchs/
+│   ├── Customers/
+│   ├── Destinations/
+│   ├── Commissions/
+│   ├── ExtraordinaryCommissions/
+│   ├── Transports/
+│   ├── Expenses/
+│   ├── ExpenseCategories/
+│   └── Locations/
+├── Shared/
+│   ├── Models/
+│   ├── Enums/
+│   └── Middleware/
+└── Providers/
 ```
 
-## 🐳 Docker
+### Patrones Utilizados
 
-### Comandos Docker
-```bash
-# Construir y levantar contenedores
-docker-compose up -d --build
+- **Arquitectura Hexagonal**: Separación clara entre dominio, aplicación e infraestructura
+- **Repository Pattern**: Abstracción del acceso a datos
+- **Use Case Pattern**: Lógica de negocio encapsulada
+- **DTO Pattern**: Transferencia de datos entre capas
+- **Factory Pattern**: Creación de objetos complejos
 
-# Ver logs
-docker-compose logs -f
-
-# Ejecutar comandos dentro del contenedor
-docker-compose exec app php artisan migrate
-
-# Detener contenedores
-docker-compose down
-```
-
-## 📝 Notas Importantes
-
-- Todas las rutas de la API requieren autenticación excepto `/api/login`
-- Las rutas de usuarios y sucursales requieren rol de administrador
-- Los transportes y gastos no requieren autenticación específica
-- Las ubicaciones no requieren autenticación
-- Las comisiones requieren autenticación y están asociadas al usuario autenticado
-
-## 🤝 Contribución
+## Contribución
 
 1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+2. Crear rama feature (`git checkout -b feature/AmazingFeature`)
+3. Commit cambios (`git commit -m 'Add some AmazingFeature'`)
 4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
+5. Abrir Pull Request
 
-## 📄 Licencia
+## Licencia
 
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+Este proyecto está bajo la Licencia MIT.
