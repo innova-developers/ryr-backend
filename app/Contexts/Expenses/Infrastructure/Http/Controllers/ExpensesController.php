@@ -30,8 +30,14 @@ class ExpensesController extends Controller
                 $useCase = new GetExpensesByTransportUseCase($this->repository);
                 $expenses = $useCase($request->integer('transport_id'));
             } else {
-                // Obtener todos los gastos y convertir a array
-                $expenses = $this->repository->findAll()->toArray();
+                // Construir el DTO de filtros
+                $filterDTO = new \App\Contexts\Expenses\Application\DTOs\ExpenseFilterDTO(
+                    $request->get('dateFrom'),
+                    $request->get('dateTo'),
+                    $request->get('category'),
+                    $request->get('transport')
+                );
+                $expenses = $this->repository->findAll($filterDTO)->toArray();
             }
 
             return response()->json($expenses);
