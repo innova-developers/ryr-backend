@@ -24,6 +24,8 @@ class UserFactory extends Factory
             'remember_token' => Str::random(10),
             'role' => $this->faker->randomElement(array_column(UserRole::cases(), 'value')),
             'branch_id' => Branch::factory(),
+            'base_salary' => $this->faker->optional(0.7)->randomFloat(2, 1000, 10000),
+            'commission_percentage' => $this->faker->optional(0.7)->randomFloat(2, 0, 50),
         ];
     }
 

@@ -61,6 +61,9 @@ Route::get('users/{userId}/incomes', [IncomesController::class, 'indexByUser']);
 Route::apiResource('income-categories', IncomeCategoryController::class);
 
 // Rutas de usuarios
+Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
+});
+
 Route::get('/users', [UserController::class, 'index']);
 Route::post('/users', [UserController::class, 'store']);
 Route::put('/users/{id}', [UserController::class, 'update']);
