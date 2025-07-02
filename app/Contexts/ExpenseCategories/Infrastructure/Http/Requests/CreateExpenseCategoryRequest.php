@@ -29,4 +29,4 @@ class CreateExpenseCategoryRequest extends FormRequest
             'description.max' => 'La descripción no puede tener más de 1000 caracteres',
         ];
     }
-} 
+}

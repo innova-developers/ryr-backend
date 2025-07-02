@@ -17,4 +17,4 @@ class ExpensesServiceProvider extends ServiceProvider
     {
         //
     }
-} 
+}

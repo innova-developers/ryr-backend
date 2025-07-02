@@ -22,7 +22,6 @@ class UpdateExpenseCategoryRequest extends FormRequest
                 Rule::unique('expense_categories', 'name')->ignore($this->route('expenseCategory')),
             ],
             'description' => 'nullable|string|max:1000',
-            'is_active' => 'required|boolean',
         ];
     }
 
@@ -33,7 +32,6 @@ class UpdateExpenseCategoryRequest extends FormRequest
             'name.unique' => 'Ya existe una categoría con ese nombre',
             'name.max' => 'El nombre no puede tener más de 255 caracteres',
             'description.max' => 'La descripción no puede tener más de 1000 caracteres',
-            'is_active.required' => 'El estado activo es obligatorio',
         ];
     }
-} 
+}

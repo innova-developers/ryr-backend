@@ -11,16 +11,12 @@ use App\Contexts\Locations\Infrastructure\Http\Controllers\LocationsController;
 use App\Contexts\Users\Infrastructure\Http\Controllers\UserController;
 use App\Contexts\Transports\Infrastructure\Http\Controllers\TransportController;
 use App\Contexts\Expenses\Infrastructure\Http\Controllers\ExpensesController;
+use App\Contexts\Incomes\Infrastructure\Http\Controllers\IncomesController;
+use App\Contexts\IncomeCategories\Infrastructure\Http\Controllers\IncomeCategoryController;
 use Illuminate\Support\Facades\Route;
 
 // Rutas públicas
 Route::post('/login', [AuthController::class, 'login']);
-
-// Rutas protegidas con auth:sanctum
-Route::middleware('auth:sanctum')->group(function () {
-
-});
-
 Route::post('/logout', [AuthController::class, 'logout']);
 
 // Rutas de clientes
@@ -57,17 +53,21 @@ Route::apiResource('expense-categories', ExpenseCategoryController::class);
 // Rutas de gastos generales
 Route::apiResource('expenses', ExpensesController::class);
 
-// Rutas protegidas con auth:sanctum y isAdmin
-Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
-    // Rutas de usuarios
-    Route::get('/users', [UserController::class, 'index']);
-    Route::post('/users', [UserController::class, 'store']);
-    Route::put('/users/{id}', [UserController::class, 'update']);
-    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+// Rutas de ingresos
+Route::apiResource('incomes', IncomesController::class);
+Route::get('users/{userId}/incomes', [IncomesController::class, 'indexByUser']);
 
-    // Rutas de sucursales
-    Route::apiResource('branches', BranchController::class);
-});
+// Rutas de categorías de ingresos
+Route::apiResource('income-categories', IncomeCategoryController::class);
+
+// Rutas de usuarios
+Route::get('/users', [UserController::class, 'index']);
+Route::post('/users', [UserController::class, 'store']);
+Route::put('/users/{id}', [UserController::class, 'update']);
+Route::delete('/users/{id}', [UserController::class, 'destroy']);
+
+// Rutas de sucursales
+Route::apiResource('branches', BranchController::class);
 
 Route::prefix('locations')->group(function () {
     Route::get('/', [LocationsController::class, 'index']);

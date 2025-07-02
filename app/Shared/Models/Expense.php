@@ -42,17 +42,17 @@ class Expense extends Model
     public function toArray(): array
     {
         $array = parent::toArray();
-        
+
         // Asegurar que expense_category_id esté presente
-        if (!isset($array['expense_category_id'])) {
+        if (! isset($array['expense_category_id'])) {
             $array['expense_category_id'] = $this->expense_category_id;
         }
-        
+
         // Formatear la fecha como Y-m-d para mantener compatibilidad con los tests
         if (isset($array['date']) && $this->date) {
             $array['date'] = $this->date->format('Y-m-d');
         }
-        
+
         return $array;
     }
 

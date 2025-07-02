@@ -3,9 +3,9 @@
 namespace App\Contexts\Expenses\Domain\Repositories;
 
 use App\Contexts\Expenses\Application\DTOs\CreateExpenseDTO;
+use App\Contexts\Expenses\Application\DTOs\ExpenseFilterDTO;
 use App\Contexts\Expenses\Application\DTOs\UpdateExpenseDTO;
 use App\Shared\Models\Expense;
-use App\Contexts\Expenses\Application\DTOs\ExpenseFilterDTO;
 use Illuminate\Database\Eloquent\Collection;
 
 interface ExpensesRepository

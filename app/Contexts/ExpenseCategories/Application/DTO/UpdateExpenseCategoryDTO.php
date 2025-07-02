@@ -10,4 +10,4 @@ class UpdateExpenseCategoryDTO
         public readonly bool $isActive,
     ) {
     }
-} 
+}

@@ -17,4 +17,4 @@ class UpdateExpenseCategoryUseCase
     {
         return $this->repository->update($id, $dto);
     }
-} 
+}

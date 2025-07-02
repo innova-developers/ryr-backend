@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             DestinationSeeder::class,
             ExtraordinaryCommissionsSeeder::class,
             ExpenseCategorySeeder::class,
+            IncomeCategorySeeder::class,
         ]);
 
     }
