@@ -24,6 +24,8 @@ class User extends Authenticatable
         'password',
         'role',
         'branch_id',
+        'base_salary',
+        'commission_percentage',
     ];
 
     protected $hidden = [
@@ -34,6 +36,8 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'deleted_at' => 'datetime',
+        'base_salary' => 'decimal:2',
+        'commission_percentage' => 'decimal:2',
     ];
 
 

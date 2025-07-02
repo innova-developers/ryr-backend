@@ -17,11 +17,13 @@ class UserEloquentRepository implements UserRepository
             'password' => bcrypt($dto->password),
             'role' => $dto->role,
             'branch_id' => $dto->branch_id,
+            'base_salary' => $dto->base_salary,
+            'commission_percentage' => $dto->commission_percentage,
         ]);
     }
     public function get(): array
     {
-        return User::select('id', 'name', 'email', 'role', 'created_at', 'branch_id')
+        return User::select('id', 'name', 'email', 'role', 'created_at', 'branch_id', 'base_salary', 'commission_percentage')
             ->with(['branch:id,name'])
             ->where('role', '!=', 'customer')
             ->get()
@@ -34,6 +36,8 @@ class UserEloquentRepository implements UserRepository
                     'created_at' => $user->created_at,
                     'branch_id' => $user->branch ? $user->branch->id : null,
                     'branch_name' => $user->branch ? $user->branch->name : null,
+                    'base_salary' => $user->base_salary,
+                    'commission_percentage' => $user->commission_percentage,
                 ];
             })
             ->toArray();
@@ -60,6 +64,8 @@ class UserEloquentRepository implements UserRepository
             $user->password = $dto->password ? bcrypt($dto->password) : $user->password;
             $user->role = $dto->role;
             $user->branch_id = $dto->branch_id;
+            $user->base_salary = $dto->base_salary;
+            $user->commission_percentage = $dto->commission_percentage;
             $user->save();
 
             return $user;

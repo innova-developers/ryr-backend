@@ -33,7 +33,9 @@ class UserController extends Controller
             $request->input('email'),
             $request->input('password'),
             $request->input('role'),
-            $request->input('branch_id')
+            $request->input('branch_id'),
+            $request->input('base_salary'),
+            $request->input('commission_percentage')
         );
         $newUser = $useCase($dto);
 
@@ -65,7 +67,9 @@ class UserController extends Controller
                 $request->input('email'),
                 $request->input('password'),
                 $request->input('role'),
-                $request->input('branch_id')
+                $request->input('branch_id'),
+                $request->input('base_salary'),
+                $request->input('commission_percentage')
             );
             $useCase = new UpdateUserUseCase($this->repository);
             $editedUser = $useCase($dto);
