@@ -17,4 +17,4 @@ class CreateExpenseCategoryUseCase
     {
         return $this->repository->create($dto);
     }
-} 
+}

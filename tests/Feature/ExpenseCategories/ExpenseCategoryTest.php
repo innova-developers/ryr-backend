@@ -37,8 +37,8 @@ class ExpenseCategoryTest extends TestCase
                         'is_active',
                         'created_at',
                         'updated_at',
-                    ]
-                ]
+                    ],
+                ],
             ]);
 
         $this->assertCount(3, $response->json('data'));
@@ -73,13 +73,13 @@ class ExpenseCategoryTest extends TestCase
                     'is_active',
                     'created_at',
                     'updated_at',
-                ]
+                ],
             ])
             ->assertJson([
                 'data' => [
                     'id' => $category->id,
                     'name' => $category->name,
-                ]
+                ],
             ]);
     }
 
@@ -117,7 +117,7 @@ class ExpenseCategoryTest extends TestCase
                     'created_at',
                     'updated_at',
                 ],
-                'message'
+                'message',
             ])
             ->assertJson([
                 'data' => [
@@ -176,7 +176,7 @@ class ExpenseCategoryTest extends TestCase
                     'created_at',
                     'updated_at',
                 ],
-                'message'
+                'message',
             ])
             ->assertJson([
                 'data' => [
@@ -242,4 +242,4 @@ class ExpenseCategoryTest extends TestCase
                 'message' => 'Categoría no encontrada',
             ]);
     }
-} 
+}

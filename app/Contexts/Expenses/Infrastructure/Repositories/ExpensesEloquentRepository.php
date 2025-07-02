@@ -3,11 +3,11 @@
 namespace App\Contexts\Expenses\Infrastructure\Repositories;
 
 use App\Contexts\Expenses\Application\DTOs\CreateExpenseDTO;
+use App\Contexts\Expenses\Application\DTOs\ExpenseFilterDTO;
 use App\Contexts\Expenses\Application\DTOs\UpdateExpenseDTO;
 use App\Contexts\Expenses\Domain\Repositories\ExpensesRepository;
 use App\Shared\Models\Expense;
 use Illuminate\Database\Eloquent\Collection;
-use App\Contexts\Expenses\Application\DTOs\ExpenseFilterDTO;
 
 class ExpensesEloquentRepository implements ExpensesRepository
 {
@@ -35,10 +35,11 @@ class ExpensesEloquentRepository implements ExpensesRepository
     {
         $query = Expense::with(['transport', 'category'])
             ->orderBy('date', 'desc')
-            ->when($filterDTO->dateFrom, fn($q) => $q->where('date', '>=', $filterDTO->dateFrom))
-            ->when($filterDTO->dateTo, fn($q) => $q->where('date', '<=', $filterDTO->dateTo))
-            ->when($filterDTO->categoryId, fn($q) => $q->where('expense_category_id', $filterDTO->categoryId))
-            ->when($filterDTO->transportId, fn($q) => $q->where('transport_id', $filterDTO->transportId));
+            ->when($filterDTO->dateFrom, fn ($q) => $q->where('date', '>=', $filterDTO->dateFrom))
+            ->when($filterDTO->dateTo, fn ($q) => $q->where('date', '<=', $filterDTO->dateTo))
+            ->when($filterDTO->categoryId, fn ($q) => $q->where('expense_category_id', $filterDTO->categoryId))
+            ->when($filterDTO->transportId, fn ($q) => $q->where('transport_id', $filterDTO->transportId));
+
         return $query->get();
     }
 

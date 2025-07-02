@@ -10,4 +10,4 @@ class CreateExpenseCategoryDTO
         public readonly bool $isActive = true,
     ) {
     }
-} 
+}

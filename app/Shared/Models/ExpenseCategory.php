@@ -35,4 +35,4 @@ class ExpenseCategory extends Model
     {
         return new ExpenseCategoryFactory();
     }
-} 
+}

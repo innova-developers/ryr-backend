@@ -22,8 +22,8 @@ class ExpenseCategoryEloquentRepository implements ExpenseCategoryRepository
     public function update(int $id, UpdateExpenseCategoryDTO $dto): ExpenseCategory
     {
         $category = $this->findById($id);
-        
-        if (!$category) {
+
+        if (! $category) {
             throw new \Exception('Categoría no encontrada');
         }
 
@@ -39,8 +39,8 @@ class ExpenseCategoryEloquentRepository implements ExpenseCategoryRepository
     public function delete(int $id): bool
     {
         $category = $this->findById($id);
-        
-        if (!$category) {
+
+        if (! $category) {
             return false;
         }
 
@@ -61,4 +61,4 @@ class ExpenseCategoryEloquentRepository implements ExpenseCategoryRepository
     {
         return ExpenseCategory::where('is_active', true)->get();
     }
-} 
+}

@@ -16,6 +16,10 @@ use App\Contexts\Expenses\Domain\Repositories\ExpensesRepository;
 use App\Contexts\Expenses\Infrastructure\Repositories\ExpensesEloquentRepository;
 use App\Contexts\ExtraordinaryCommissions\Domain\Repositories\ExtraordinaryCommissionRepository;
 use App\Contexts\ExtraordinaryCommissions\Infrastructure\Repositories\ExtraordinaryCommissionEloquentRepository;
+use App\Contexts\IncomeCategories\Domain\Repositories\IncomeCategoriesRepository;
+use App\Contexts\IncomeCategories\Infrastructure\Repositories\IncomeCategoriesEloquentRepository;
+use App\Contexts\Incomes\Domain\Repositories\IncomesRepository;
+use App\Contexts\Incomes\Infrastructure\Repositories\IncomesEloquentRepository;
 use App\Contexts\Locations\Domain\Repositories\LocationsRepository;
 use App\Contexts\Locations\Infrastructure\Repositories\LocationsEloquentRepository;
 use App\Contexts\Transports\Domain\Repositories\TransportRepository;
@@ -71,6 +75,15 @@ class AppServiceProvider extends ServiceProvider
             ExpenseCategoryRepository::class,
             ExpenseCategoryEloquentRepository::class
         );
+        $this->app->bind(
+            IncomesRepository::class,
+            IncomesEloquentRepository::class
+        );
+        $this->app->bind(
+            IncomeCategoriesRepository::class,
+            IncomeCategoriesEloquentRepository::class
+        );
+
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Shared\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -59,6 +60,11 @@ class User extends Authenticatable
 
         return $relation;
     }
+    public function incomes(): HasMany
+    {
+        return $this->hasMany(Income::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === UserRole::ADMINISTRADOR->value;

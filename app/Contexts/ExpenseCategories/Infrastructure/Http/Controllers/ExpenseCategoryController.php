@@ -37,7 +37,7 @@ class ExpenseCategoryController extends Controller
     {
         $category = $this->getUseCase->executeById($id);
 
-        if (!$category) {
+        if (! $category) {
             return response()->json([
                 'success' => false,
                 'message' => 'Categoría no encontrada',
@@ -73,7 +73,7 @@ class ExpenseCategoryController extends Controller
             $dto = new UpdateExpenseCategoryDTO(
                 name: $request->validated('name'),
                 description: $request->validated('description'),
-                isActive: $request->validated('is_active'),
+                isActive: true
             );
 
             $category = $this->updateUseCase->execute($id, $dto);
@@ -92,7 +92,7 @@ class ExpenseCategoryController extends Controller
         try {
             $deleted = $this->deleteUseCase->execute($id);
 
-            if (!$deleted) {
+            if (! $deleted) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Categoría no encontrada',

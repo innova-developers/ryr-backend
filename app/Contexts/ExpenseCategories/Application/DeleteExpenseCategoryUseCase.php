@@ -15,4 +15,4 @@ class DeleteExpenseCategoryUseCase
     {
         return $this->repository->delete($id);
     }
-} 
+}

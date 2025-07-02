@@ -27,4 +27,4 @@ class GetExpenseCategoriesUseCase
     {
         return $this->repository->findById($id);
     }
-} 
+}

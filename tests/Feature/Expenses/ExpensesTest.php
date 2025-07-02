@@ -52,7 +52,7 @@ class ExpensesTest extends TestCase
                         'transport',
                         'category',
                     ],
-                ]
+                ],
             ]);
 
         $this->assertCount(3, $response->json('data'));
@@ -87,7 +87,7 @@ class ExpensesTest extends TestCase
                     'transport',
                     'category',
                 ],
-                'message'
+                'message',
             ])
             ->assertJson([
                 'data' => [
@@ -138,7 +138,7 @@ class ExpensesTest extends TestCase
                     'transport',
                     'category',
                 ],
-                'message'
+                'message',
             ])
             ->assertJson([
                 'data' => [
@@ -205,7 +205,7 @@ class ExpensesTest extends TestCase
                         'transport',
                         'category',
                     ],
-                ]
+                ],
             ]);
 
         $this->assertCount(3, $response->json('data'));
@@ -254,7 +254,7 @@ class ExpensesTest extends TestCase
                     'transport',
                     'category',
                 ],
-                'message'
+                'message',
             ])
             ->assertJson([
                 'data' => [

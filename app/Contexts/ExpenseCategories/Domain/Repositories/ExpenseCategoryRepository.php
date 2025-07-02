@@ -15,4 +15,4 @@ interface ExpenseCategoryRepository
     public function findById(int $id): ?ExpenseCategory;
     public function findAll(): Collection;
     public function findActive(): Collection;
-} 
+}
