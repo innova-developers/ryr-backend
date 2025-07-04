@@ -28,7 +28,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission->destination_id = $destinationId;
             $commission->date = $dto->date;
             $commission->status = $dto->status;
-            $commission->user_id = $user->id;
+            $commission->user_id = Auth::id();
             $commission->branch_id = $user->branch_id;
             $commission->total = $dto->total;
             $commission->origin_location_id = $dto->originLocationId;

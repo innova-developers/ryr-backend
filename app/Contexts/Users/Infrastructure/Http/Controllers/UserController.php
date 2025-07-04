@@ -2,6 +2,7 @@
 
 namespace App\Contexts\Users\Infrastructure\Http\Controllers;
 
+use App\Contexts\Users\Application\CalculateSalaryUseCase;
 use App\Contexts\Users\Application\CreateUserUseCase;
 use App\Contexts\Users\Application\DeleteUserUseCase;
 use App\Contexts\Users\Application\DTO\CreateUserDTO;
@@ -12,6 +13,7 @@ use App\Contexts\Users\Domain\Repositories\UserRepository;
 use App\Contexts\Users\Infrastructure\Http\Requests\CreateUserRequest;
 use App\Contexts\Users\Infrastructure\Http\Requests\EditUserRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 class UserController extends Controller
@@ -77,6 +79,24 @@ class UserController extends Controller
             return response()->json($editedUser);
         } catch (\Exception $e) {
             if ($e->getCode() === 404) {
+                return response()->json(['message' => $e->getMessage()], 404);
+            }
+
+            return response()->json(['message' => 'Error interno del servidor'], 500);
+        }
+    }
+
+    public function calculateSalary(Request $request, int $userId): JsonResponse
+    {
+        try {
+            $useCase = new CalculateSalaryUseCase($this->repository);
+            $month = $request->query('month');
+
+            $salaryCalculation = $useCase->execute($userId, $month);
+
+            return response()->json($salaryCalculation);
+        } catch (\Exception $e) {
+            if ($e->getMessage() === 'Usuario no encontrado') {
                 return response()->json(['message' => $e->getMessage()], 404);
             }
 

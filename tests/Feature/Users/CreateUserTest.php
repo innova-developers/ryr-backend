@@ -35,7 +35,7 @@ class CreateUserTest extends TestCase
         $response->assertStatus(201)
             ->assertJsonFragment(['email' => 'nuevo@ejemplo.com', 'branch_id' => $branch->id]);
         $this->assertDatabaseHas('users', [
-            'email' => 'nuevo@ejemplo.com', 
+            'email' => 'nuevo@ejemplo.com',
             'branch_id' => $branch->id,
             'base_salary' => 5000.00,
             'commission_percentage' => 15.50,

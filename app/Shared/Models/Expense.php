@@ -16,6 +16,7 @@ class Expense extends Model
     protected $fillable = [
         'transport_id',
         'expense_category_id',
+        'user_id',
         'date',
         'detail',
         'amount',
@@ -32,6 +33,11 @@ class Expense extends Model
     public function transport(): BelongsTo
     {
         return $this->belongsTo(Transport::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function category(): BelongsTo

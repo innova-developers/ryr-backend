@@ -18,6 +18,7 @@ interface UserRepository
      */
     public function delete(int $id): array;
     public function update(UpdateUserDTO $dto): User;
+    public function findById(int $id): ?User;
     /**
      * @return User[]
      */
