@@ -14,7 +14,7 @@ class ExpensesEloquentRepository implements ExpensesRepository
     public function findByTransportId(int $transportId): array
     {
         return Expense::where('transport_id', $transportId)
-            ->with(['transport', 'category'])
+            ->with(['transport', 'category', 'user'])
             ->orderBy('date', 'desc')
             ->get()
             ->toArray();
@@ -22,7 +22,7 @@ class ExpensesEloquentRepository implements ExpensesRepository
 
     public function findById(int $id): Expense
     {
-        $expense = Expense::with(['transport', 'category'])->find($id);
+        $expense = Expense::with(['transport', 'category', 'user'])->find($id);
 
         if (! $expense) {
             throw new \Exception('Gasto no encontrado');
@@ -33,12 +33,13 @@ class ExpensesEloquentRepository implements ExpensesRepository
 
     public function findAll(ExpenseFilterDTO $filterDTO): Collection
     {
-        $query = Expense::with(['transport', 'category'])
+        $query = Expense::with(['transport', 'category', 'user'])
             ->orderBy('date', 'desc')
             ->when($filterDTO->dateFrom, fn ($q) => $q->where('date', '>=', $filterDTO->dateFrom))
             ->when($filterDTO->dateTo, fn ($q) => $q->where('date', '<=', $filterDTO->dateTo))
             ->when($filterDTO->categoryId, fn ($q) => $q->where('expense_category_id', $filterDTO->categoryId))
-            ->when($filterDTO->transportId, fn ($q) => $q->where('transport_id', $filterDTO->transportId));
+            ->when($filterDTO->transportId, fn ($q) => $q->where('transport_id', $filterDTO->transportId))
+            ->when($filterDTO->userId, fn ($q) => $q->where('user_id', $filterDTO->userId));
 
         return $query->get();
     }
@@ -49,12 +50,13 @@ class ExpensesEloquentRepository implements ExpensesRepository
             $expense = new Expense();
             $expense->transport_id = $dto->transportId;
             $expense->expense_category_id = $dto->expenseCategoryId;
+            $expense->user_id = $dto->userId;
             $expense->date = $dto->date;
             $expense->detail = $dto->detail;
             $expense->amount = $dto->amount;
             $expense->save();
 
-            return $expense->load(['transport', 'category']);
+            return $expense->load(['transport', 'category', 'user']);
         } catch (\Exception $e) {
             throw new \Exception('Error al crear el gasto: ' . $e->getMessage());
         }
@@ -71,12 +73,13 @@ class ExpensesEloquentRepository implements ExpensesRepository
         try {
             $expense->transport_id = $dto->transportId;
             $expense->expense_category_id = $dto->expenseCategoryId;
+            $expense->user_id = $dto->userId;
             $expense->date = $dto->date;
             $expense->detail = $dto->detail;
             $expense->amount = $dto->amount;
             $expense->save();
 
-            return $expense->load(['transport', 'category']);
+            return $expense->load(['transport', 'category', 'user']);
         } catch (\Exception $e) {
             throw new \Exception('Error al actualizar el gasto: ' . $e->getMessage());
         }

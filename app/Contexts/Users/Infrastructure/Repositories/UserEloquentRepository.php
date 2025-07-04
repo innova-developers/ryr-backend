@@ -25,7 +25,7 @@ class UserEloquentRepository implements UserRepository
     {
         return User::select('id', 'name', 'email', 'role', 'created_at', 'branch_id', 'base_salary', 'commission_percentage')
             ->with(['branch:id,name'])
-            ->where('role', '!=', 'customer')
+            ->where('role', '!=', 'cliente')
             ->get()
             ->map(function ($user) {
                 return [
@@ -76,5 +76,10 @@ class UserEloquentRepository implements UserRepository
 
             throw new \Exception('Error al actualizar el usuario: ' . $e->getMessage());
         }
+    }
+
+    public function findById(int $id): ?User
+    {
+        return User::find($id);
     }
 }

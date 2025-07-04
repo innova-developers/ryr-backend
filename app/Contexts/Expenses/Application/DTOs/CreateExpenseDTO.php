@@ -9,6 +9,7 @@ class CreateExpenseDTO
     public function __construct(
         public readonly ?int $transportId,
         public readonly ?int $expenseCategoryId,
+        public readonly ?int $userId,
         public readonly DateTime $date,
         public readonly string $detail,
         public readonly float $amount

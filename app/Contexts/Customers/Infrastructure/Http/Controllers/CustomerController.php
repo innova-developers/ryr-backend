@@ -49,7 +49,7 @@ class CustomerController extends Controller
             $request->input('name'),
             $request->input('email'),
             $request->input('dni'),
-            'customer',
+            'cliente',
             $request->input('branch_id', Auth::user()->branch_id ?? Branch::first()->id)
         );
         $userCreated = $useCaseCreateUser($dtoCreateUser);

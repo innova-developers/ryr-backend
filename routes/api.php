@@ -52,6 +52,7 @@ Route::apiResource('expense-categories', ExpenseCategoryController::class);
 
 // Rutas de gastos generales
 Route::apiResource('expenses', ExpensesController::class);
+Route::get('users/{userId}/expenses', [ExpensesController::class, 'index']);
 
 // Rutas de ingresos
 Route::apiResource('incomes', IncomesController::class);
@@ -68,6 +69,7 @@ Route::get('/users', [UserController::class, 'index']);
 Route::post('/users', [UserController::class, 'store']);
 Route::put('/users/{id}', [UserController::class, 'update']);
 Route::delete('/users/{id}', [UserController::class, 'destroy']);
+Route::get('/users/{userId}/salary', [UserController::class, 'calculateSalary']);
 
 // Rutas de sucursales
 Route::apiResource('branches', BranchController::class);

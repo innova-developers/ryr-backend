@@ -35,7 +35,8 @@ class ExpensesController extends Controller
                     $request->get('dateFrom'),
                     $request->get('dateTo'),
                     $request->get('category'),
-                    $request->get('transport')
+                    $request->get('transport'),
+                    $request->get('user_id')
                 );
                 $expenses = $this->repository->findAll($filterDTO)->toArray();
             }
@@ -55,6 +56,7 @@ class ExpensesController extends Controller
             $dto = new CreateExpenseDTO(
                 transportId: $request->input('transport_id'),
                 expenseCategoryId: $request->input('expense_category_id'),
+                userId: $request->input('user_id'),
                 date: new \DateTime($request->input('date')),
                 detail: $request->input('detail'),
                 amount: $request->input('amount')
@@ -66,11 +68,7 @@ class ExpensesController extends Controller
             // Obtener el modelo completo con relaciones
             $expenseModel = $this->repository->findById($expense['id']);
 
-            return response()->json([
-                'success' => true,
-                'data' => $expenseModel,
-                'message' => 'Gasto creado exitosamente',
-            ], 201);
+            return response()->json($expenseModel, 201);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -86,6 +84,7 @@ class ExpensesController extends Controller
                 id: $expenseId,
                 transportId: $request->input('transport_id'),
                 expenseCategoryId: $request->input('expense_category_id'),
+                userId: $request->input('user_id'),
                 date: new \DateTime($request->input('date')),
                 detail: $request->input('detail'),
                 amount: $request->input('amount')
@@ -165,6 +164,7 @@ class ExpensesController extends Controller
             $dto = new CreateExpenseDTO(
                 transportId: $transportId,
                 expenseCategoryId: $request->input('expense_category_id'),
+                userId: $request->input('user_id'),
                 date: new \DateTime($request->input('date')),
                 detail: $request->input('detail'),
                 amount: $request->input('amount')
@@ -197,6 +197,7 @@ class ExpensesController extends Controller
                 id: $expenseId,
                 transportId: $transportId,
                 expenseCategoryId: $request->input('expense_category_id'),
+                userId: $request->input('user_id'),
                 date: new \DateTime($request->input('date')),
                 detail: $request->input('detail'),
                 amount: $request->input('amount')
