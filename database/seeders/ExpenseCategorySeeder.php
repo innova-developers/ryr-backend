@@ -50,6 +50,11 @@ class ExpenseCategorySeeder extends Seeder
                 'description' => 'Otros gastos varios',
                 'is_active' => true,
             ],
+            [
+                'name' => 'Adelantos',
+                'description' => 'Adelantos de Sueldos',
+                'is_active' => true,
+            ],
         ];
 
         foreach ($categories as $category) {
@@ -59,4 +64,4 @@ class ExpenseCategorySeeder extends Seeder
             );
         }
     }
-} 
+}
