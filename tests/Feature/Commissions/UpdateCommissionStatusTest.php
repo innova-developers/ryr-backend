@@ -24,7 +24,10 @@ class UpdateCommissionStatusTest extends TestCase
     {
         parent::setUp();
         $this->branch = Branch::factory()->create(['name' => 'Sucursal Test']);
-        $this->user = User::factory()->create(['branch_id' => $this->branch->id]);
+        $this->user = User::factory()->create([
+            'branch_id' => $this->branch->id,
+            'role' => 'administrador',
+        ]);
         $this->customer = Customer::factory()->create();
         $this->destination = Destination::factory()->create();
     }

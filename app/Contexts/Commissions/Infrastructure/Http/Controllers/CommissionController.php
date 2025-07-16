@@ -11,6 +11,7 @@ use App\Contexts\Commissions\Application\ListCommissionsUseCase;
 use App\Contexts\Commissions\Application\UpdateCommissionStatusUseCase;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Contexts\Commissions\Infrastructure\Http\Requests\CreateCommissionRequest;
+use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
 use App\Shared\Enums\CommissionStatus;
@@ -25,12 +26,14 @@ class CommissionController extends Controller
     private CommissionsRepository $repository;
     private CustomerRepository $customerRepository;
     private DestinationRepository $destinationRepository;
+    private CurrentAccountRepository $currentAccountRepository;
 
     public function __construct()
     {
         $this->repository = app(CommissionsRepository::class);
         $this->customerRepository = app(CustomerRepository::class);
         $this->destinationRepository = app(DestinationRepository::class);
+        $this->currentAccountRepository = app(CurrentAccountRepository::class);
     }
 
     public function store(CreateCommissionRequest $request): JsonResponse
@@ -40,7 +43,8 @@ class CommissionController extends Controller
             $useCase = new CreateCommissionUseCase(
                 $this->repository,
                 $this->customerRepository,
-                $this->destinationRepository
+                $this->destinationRepository,
+                $this->currentAccountRepository
             );
             $commission = $useCase($dto);
 

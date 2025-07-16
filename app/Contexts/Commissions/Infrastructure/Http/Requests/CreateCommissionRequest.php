@@ -33,6 +33,7 @@ class CreateCommissionRequest extends FormRequest
             'items.*.subtotal' => ['required', 'numeric', 'min:0'],
             'items.*.detail' => ['required_if:items.*.type,extraordinaria', 'string', 'max:255'],
             'total' => ['required', 'numeric', 'min:0'],
+            'a_cuenta' => ['nullable', 'boolean'],
         ];
     }
 
@@ -63,6 +64,7 @@ class CreateCommissionRequest extends FormRequest
             'items.*.detail.required_if' => 'El detalle es requerido para items extraordinarios',
             'total.required' => 'El total es requerido',
             'total.min' => 'El total debe ser mayor a 0',
+            'a_cuenta.boolean' => 'El campo a cuenta debe ser verdadero o falso',
         ];
     }
 }

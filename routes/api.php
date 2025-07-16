@@ -13,15 +13,12 @@ use App\Contexts\Transports\Infrastructure\Http\Controllers\TransportController;
 use App\Contexts\Expenses\Infrastructure\Http\Controllers\ExpensesController;
 use App\Contexts\Incomes\Infrastructure\Http\Controllers\IncomesController;
 use App\Contexts\IncomeCategories\Infrastructure\Http\Controllers\IncomeCategoryController;
+use App\Contexts\CurrentAccount\Infrastructure\Http\Controllers\CurrentAccountController;
 use Illuminate\Support\Facades\Route;
 
 // Rutas públicas
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout']);
-
-// Rutas de clientes
-Route::get('customers/search', [CustomerController::class, 'search']);
-Route::apiResource('customers', CustomerController::class);
 
 // Rutas de destinos
 Route::get('destinations', [DestinationController::class, 'index']);
@@ -37,16 +34,6 @@ Route::delete('destinations/{id}', [DestinationController::class, 'destroy']);
 Route::apiResource('extraordinary-commissions', ExtraordinaryCommissionController::class);
 Route::get('extraordinary-commissions/{origin}/{destination}', [ExtraordinaryCommissionController::class, 'getByOriginAndDestination']);
 
-// Rutas de comisiones
-Route::post('/commissions', [CommissionController::class, 'store']);
-Route::get('/commissions/statuses', [CommissionController::class, 'getStatuses']);
-Route::get('/commissions/{id}', [CommissionController::class, 'show']);
-Route::patch('/commissions/{id}/status', [CommissionController::class, 'updateStatus']);
-
-// Rutas de órdenes
-Route::get('/commissions',  [CommissionController::class, 'index']);
-Route::delete('/commissions/{id}', [CommissionController::class, 'destroy']);
-
 // Rutas de categorías de gastos
 Route::apiResource('expense-categories', ExpenseCategoryController::class);
 
@@ -61,14 +48,43 @@ Route::get('users/{userId}/incomes', [IncomesController::class, 'indexByUser']);
 // Rutas de categorías de ingresos
 Route::apiResource('income-categories', IncomeCategoryController::class);
 
-// Rutas de usuarios
-Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
+// Rutas de cuenta corriente
+Route::prefix('current-accounts')->group(function () {
+    Route::post('/', [CurrentAccountController::class, 'store']);
+    Route::get('/{id}', [CurrentAccountController::class, 'show']);
+    Route::put('/{id}', [CurrentAccountController::class, 'update']);
+    Route::delete('/{id}', [CurrentAccountController::class, 'destroy']);
 });
 
-Route::get('/users', [UserController::class, 'index']);
-Route::post('/users', [UserController::class, 'store']);
-Route::put('/users/{id}', [UserController::class, 'update']);
-Route::delete('/users/{id}', [UserController::class, 'destroy']);
+
+
+// Rutas protegidas para usuarios, comisiones y clientes
+Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
+    // Usuarios
+    Route::get('/users', [UserController::class, 'index']);
+    Route::post('/users', [UserController::class, 'store']);
+    Route::put('/users/{id}', [UserController::class, 'update']);
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
+
+    // Comisiones
+    Route::post('/commissions', [CommissionController::class, 'store']);
+    Route::get('/commissions/statuses', [CommissionController::class, 'getStatuses']);
+    Route::get('/commissions/{id}', [CommissionController::class, 'show']);
+    Route::patch('/commissions/{id}/status', [CommissionController::class, 'updateStatus']);
+    Route::get('/commissions',  [CommissionController::class, 'index']);
+    Route::delete('/commissions/{id}', [CommissionController::class, 'destroy']);
+
+    // Clientes
+    Route::get('customers/search', [CustomerController::class, 'search']);
+    Route::apiResource('customers', CustomerController::class);
+
+    // Cuenta corriente de clientes
+    Route::prefix('customers/{customerId}/current-account')->group(function () {
+        Route::get('/transactions', [CurrentAccountController::class, 'getCustomerTransactions']);
+        Route::get('/balance', [CurrentAccountController::class, 'getCustomerBalance']);
+    });
+});
+
 Route::get('/users/{userId}/salary', [UserController::class, 'calculateSalary']);
 
 // Rutas de sucursales

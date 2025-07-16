@@ -28,7 +28,7 @@ class CommissionTest extends TestCase
     {
         parent::setUp();
 
-        $this->user = User::factory()->create();
+        $this->user = User::factory()->create(['role' => 'administrador']);
         $this->customer = Customer::factory()->create();
         $this->destination = Destination::factory()->create();
         $this->branch = Branch::factory()->create();

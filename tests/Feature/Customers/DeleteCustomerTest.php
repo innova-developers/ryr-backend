@@ -13,7 +13,7 @@ class DeleteCustomerTest extends TestCase
 
     public function test_can_delete_customer(): void
     {
-        $user = User::factory()->create(['role' => 'admin']);
+        $user = User::factory()->create(['role' => 'administrador']);
         $customer = Customer::factory()->create();
         $response = $this->actingAs($user)
             ->deleteJson("/api/customers/{$customer->id}");
@@ -23,7 +23,7 @@ class DeleteCustomerTest extends TestCase
 
     public function test_cannot_delete_nonexistent_customer(): void
     {
-        $user = User::factory()->create(['role' => 'admin']);
+        $user = User::factory()->create(['role' => 'administrador']);
 
         $response = $this->actingAs($user)
             ->deleteJson('/api/customers/999');

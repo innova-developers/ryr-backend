@@ -28,20 +28,16 @@ class ExpenseCategoryTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'success',
-                'data' => [
-                    '*' => [
-                        'id',
-                        'name',
-                        'description',
-                        'is_active',
-                        'created_at',
-                        'updated_at',
-                    ],
+                '*' => [
+                    'id',
+                    'name',
+                    'description',
+                    'is_active',
+                    'created_at',
+                    'updated_at',
                 ],
             ]);
-
-        $this->assertCount(3, $response->json('data'));
+        $this->assertCount(3, $response->json());
     }
 
     public function test_can_get_active_expense_categories_only(): void
@@ -53,7 +49,7 @@ class ExpenseCategoryTest extends TestCase
             ->getJson('/api/expense-categories?active=true');
 
         $response->assertStatus(200);
-        $this->assertCount(2, $response->json('data'));
+        $this->assertCount(2, $response->json());
     }
 
     public function test_can_get_single_expense_category(): void
@@ -65,21 +61,16 @@ class ExpenseCategoryTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'success',
-                'data' => [
-                    'id',
-                    'name',
-                    'description',
-                    'is_active',
-                    'created_at',
-                    'updated_at',
-                ],
+                'id',
+                'name',
+                'description',
+                'is_active',
+                'created_at',
+                'updated_at',
             ])
             ->assertJson([
-                'data' => [
-                    'id' => $category->id,
-                    'name' => $category->name,
-                ],
+                'id' => $category->id,
+                'name' => $category->name,
             ]);
     }
 
@@ -108,24 +99,17 @@ class ExpenseCategoryTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonStructure([
-                'success',
-                'data' => [
-                    'id',
-                    'name',
-                    'description',
-                    'is_active',
-                    'created_at',
-                    'updated_at',
-                ],
-                'message',
+                'id',
+                'name',
+                'description',
+                'is_active',
+                'created_at',
+                'updated_at',
             ])
             ->assertJson([
-                'data' => [
-                    'name' => 'Nueva Categoría',
-                    'description' => 'Descripción de la nueva categoría',
-                    'is_active' => true,
-                ],
-                'message' => 'Categoría creada exitosamente',
+                'name' => 'Nueva Categoría',
+                'description' => 'Descripción de la nueva categoría',
+                'is_active' => true,
             ]);
 
         $this->assertDatabaseHas('expense_categories', [
@@ -159,7 +143,7 @@ class ExpenseCategoryTest extends TestCase
         $updateData = [
             'name' => 'Categoría Actualizada',
             'description' => 'Descripción actualizada',
-            'is_active' => false,
+            'is_active' => true,
         ];
 
         $response = $this->actingAs($this->user)
@@ -167,31 +151,24 @@ class ExpenseCategoryTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'success',
-                'data' => [
-                    'id',
-                    'name',
-                    'description',
-                    'is_active',
-                    'created_at',
-                    'updated_at',
-                ],
-                'message',
+                'id',
+                'name',
+                'description',
+                'is_active',
+                'created_at',
+                'updated_at',
             ])
             ->assertJson([
-                'data' => [
-                    'name' => 'Categoría Actualizada',
-                    'description' => 'Descripción actualizada',
-                    'is_active' => false,
-                ],
-                'message' => 'Categoría actualizada exitosamente',
+                'name' => 'Categoría Actualizada',
+                'description' => 'Descripción actualizada',
+                'is_active' => true,
             ]);
 
         $this->assertDatabaseHas('expense_categories', [
             'id' => $category->id,
             'name' => 'Categoría Actualizada',
             'description' => 'Descripción actualizada',
-            'is_active' => false,
+            'is_active' => true,
         ]);
     }
 

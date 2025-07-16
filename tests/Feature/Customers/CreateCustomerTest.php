@@ -14,8 +14,8 @@ class CreateCustomerTest extends TestCase
 
     public function test_can_create_customer(): void
     {
-        $user = User::factory()->create(['role' => 'admin']);
         $branch = Branch::factory()->create();
+        $user = User::factory()->create(['role' => 'administrador', 'branch_id' => $branch->id]);
 
         $response = $this->actingAs($user)
             ->postJson('/api/customers', [
@@ -31,8 +31,6 @@ class CreateCustomerTest extends TestCase
                 'business_hours' => '9-18',
                 'observations' => 'Test customer',
                 'is_premium' => true,
-                'user_id' => $user->id,
-                'branch_id' => $branch->id,
             ]);
         $response->assertStatus(201)
             ->assertJsonStructure([
@@ -65,14 +63,14 @@ class CreateCustomerTest extends TestCase
         $this->assertDatabaseHas('users', [
             'name' => 'John',
             'email' => 'john@example.com',
-            'role' => 'customer',
+            'role' => 'cliente',
             'branch_id' => $branch->id,
         ]);
     }
 
     public function test_cannot_create_customer_without_required_fields(): void
     {
-        $user = User::factory()->create(['role' => 'admin']);
+        $user = User::factory()->create(['role' => 'administrador']);
 
         $response = $this->actingAs($user)
             ->postJson('/api/customers', []);
@@ -82,8 +80,8 @@ class CreateCustomerTest extends TestCase
 
     public function test_cannot_create_customer_with_duplicate_email(): void
     {
-        $user = User::factory()->create(['role' => 'admin']);
         $branch = Branch::factory()->create();
+        $user = User::factory()->create(['role' => 'administrador', 'branch_id' => $branch->id]);
         $existingCustomer = Customer::factory()->create([
             'email' => "example@test.com",
         ]);
@@ -95,7 +93,6 @@ class CreateCustomerTest extends TestCase
                 'last_name' => 'Doe',
                 'email' => "example@test.com",
                 'is_premium' => false,
-                'branch_id' => $branch->id,
             ]);
 
         $response->assertStatus(422);

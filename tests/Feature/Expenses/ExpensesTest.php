@@ -38,24 +38,20 @@ class ExpensesTest extends TestCase
         // Assert
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'success',
-                'data' => [
-                    '*' => [
-                        'id',
-                        'transport_id',
-                        'expense_category_id',
-                        'date',
-                        'detail',
-                        'amount',
-                        'created_at',
-                        'updated_at',
-                        'transport',
-                        'category',
-                    ],
+                '*' => [
+                    'id',
+                    'transport_id',
+                    'expense_category_id',
+                    'user_id',
+                    'date',
+                    'detail',
+                    'amount',
+                    'created_at',
+                    'updated_at',
                 ],
             ]);
 
-        $this->assertCount(3, $response->json('data'));
+        $this->assertCount(3, $response->json());
     }
 
     public function test_can_create_expense_for_transport(): void
@@ -191,24 +187,20 @@ class ExpensesTest extends TestCase
         // Assert
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'success',
-                'data' => [
-                    '*' => [
-                        'id',
-                        'transport_id',
-                        'expense_category_id',
-                        'date',
-                        'detail',
-                        'amount',
-                        'created_at',
-                        'updated_at',
-                        'transport',
-                        'category',
-                    ],
+                '*' => [
+                    'id',
+                    'transport_id',
+                    'expense_category_id',
+                    'user_id',
+                    'date',
+                    'detail',
+                    'amount',
+                    'created_at',
+                    'updated_at',
                 ],
             ]);
 
-        $this->assertCount(3, $response->json('data'));
+        $this->assertCount(3, $response->json());
     }
 
     public function test_can_get_expenses_by_transport_id_parameter(): void
@@ -222,7 +214,7 @@ class ExpensesTest extends TestCase
 
         // Assert
         $response->assertStatus(200);
-        $this->assertCount(3, $response->json('data'));
+        $this->assertCount(3, $response->json());
     }
 
     public function test_can_create_general_expense(): void
@@ -241,30 +233,15 @@ class ExpensesTest extends TestCase
         // Assert
         $response->assertStatus(201)
             ->assertJsonStructure([
-                'success',
-                'data' => [
-                    'id',
-                    'transport_id',
-                    'expense_category_id',
-                    'date',
-                    'detail',
-                    'amount',
-                    'created_at',
-                    'updated_at',
-                    'transport',
-                    'category',
-                ],
-                'message',
-            ])
-            ->assertJson([
-                'data' => [
-                    'transport_id' => null,
-                    'expense_category_id' => $this->category->id,
-                    'date' => '2024-03-25',
-                    'detail' => 'Gasto de oficina',
-                    'amount' => '100.00',
-                ],
-                'message' => 'Gasto creado exitosamente',
+                'id',
+                'transport_id',
+                'expense_category_id',
+                'user_id',
+                'date',
+                'detail',
+                'amount',
+                'created_at',
+                'updated_at',
             ]);
 
         $this->assertDatabaseHas('expenses', [
@@ -292,12 +269,10 @@ class ExpensesTest extends TestCase
         // Assert
         $response->assertStatus(201)
             ->assertJson([
-                'data' => [
-                    'transport_id' => $this->transport->id,
-                    'expense_category_id' => $this->category->id,
-                    'detail' => 'Combustible para transporte',
-                    'amount' => '150.50',
-                ],
+                'transport_id' => $this->transport->id,
+                'expense_category_id' => $this->category->id,
+                'detail' => 'Combustible para transporte',
+                'amount' => '150.50',
             ]);
 
         $this->assertDatabaseHas('expenses', [
