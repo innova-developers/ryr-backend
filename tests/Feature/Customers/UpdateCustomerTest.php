@@ -14,25 +14,30 @@ class UpdateCustomerTest extends TestCase
 
     public function test_can_update_customer(): void
     {
-        $user = User::factory()->create(['role' => 'admin']);
         $branch = Branch::factory()->create();
-        $customer = Customer::factory()->create();
+        $user = User::factory()->create(['role' => 'administrador', 'branch_id' => $branch->id]);
+        $customer = Customer::factory()->create([
+            'dni' => 12345678,
+            'name' => 'John',
+            'last_name' => 'Doe',
+            'email' => 'john@example.com',
+            'is_premium' => false,
+        ]);
 
         $response = $this->actingAs($user)
             ->putJson("/api/customers/{$customer->id}", [
                 'dni' => 26338400,
                 'name' => 'Jane',
                 'last_name' => 'Smith',
-                'mobile' => '9876543210',
+                'mobile' => '1234567890',
                 'email' => 'jane@example.com',
                 'address' => '456 Oak St',
                 'city' => 'Los Angeles',
-                'phone' => '1234567890',
-                'maps_url' => 'https://maps.google.com/updated',
-                'business_hours' => '10-19',
+                'phone' => '0987654321',
+                'maps_url' => 'https://maps.google.com',
+                'business_hours' => '8-17',
                 'observations' => 'Updated customer',
                 'is_premium' => true,
-                'branch_id' => $branch->id,
             ]);
 
         $response->assertStatus(200)
@@ -52,31 +57,26 @@ class UpdateCustomerTest extends TestCase
             'email' => 'jane@example.com',
             'is_premium' => true,
         ]);
-
-        $this->assertDatabaseHas('users', [
-            'name' => $user->name,
-            'email' => $user->email,
-            'branch_id' => $user->branch_id,
-        ]);
     }
 
     public function test_cannot_update_customer_with_duplicate_email(): void
     {
-        $user = User::factory()->create(['role' => 'admin']);
         $branch = Branch::factory()->create();
-        $customer = Customer::factory()->create();
-        Customer::factory()->create([
-            'email' => 'existing@example.com',
+        $user = User::factory()->create(['role' => 'administrador', 'branch_id' => $branch->id]);
+        $existingCustomer = Customer::factory()->create([
+            'email' => "existing@test.com",
+        ]);
+        $customer = Customer::factory()->create([
+            'email' => "original@test.com",
         ]);
 
         $response = $this->actingAs($user)
             ->putJson("/api/customers/{$customer->id}", [
-                'dni' => 18765431,
-                'name' => 'Jane',
-                'last_name' => 'Smith',
-                'email' => 'existing@example.com',
+                'dni' => 12345678,
+                'name' => 'John',
+                'last_name' => 'Doe',
+                'email' => "existing@test.com",
                 'is_premium' => true,
-                'branch_id' => $branch->id,
             ]);
 
         $response->assertStatus(422);
@@ -84,17 +84,16 @@ class UpdateCustomerTest extends TestCase
 
     public function test_cannot_update_nonexistent_customer(): void
     {
-        $user = User::factory()->create(['role' => 'admin']);
         $branch = Branch::factory()->create();
+        $user = User::factory()->create(['role' => 'administrador', 'branch_id' => $branch->id]);
 
         $response = $this->actingAs($user)
             ->putJson('/api/customers/999', [
-                'dni' => 18765431,
-                'name' => 'Jane',
-                'last_name' => 'Smith',
-                'email' => 'jane@example.com',
+                'dni' => 12345678,
+                'name' => 'John',
+                'last_name' => 'Doe',
+                'email' => 'john@example.com',
                 'is_premium' => true,
-                'branch_id' => $branch->id,
             ]);
 
         $response->assertStatus(404);

@@ -6,6 +6,8 @@ use App\Contexts\Commissions\Application\DTOs\CreateCommissionDTO;
 use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Contexts\Commissions\Infrastructure\Mappers\CommissionMapper;
+use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
+use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
 use App\Shared\Models\Destination;
@@ -18,7 +20,8 @@ readonly class CreateCommissionUseCase
     public function __construct(
         private CommissionsRepository $commissionRepository,
         private CustomerRepository    $customerRepository,
-        private DestinationRepository $destinationRepository
+        private DestinationRepository $destinationRepository,
+        private CurrentAccountRepository $currentAccountRepository
     ) {
     }
 
@@ -35,6 +38,11 @@ readonly class CreateCommissionUseCase
 
             $commission = $this->commissionRepository->create($dto, $destination->id);
             $this->commissionRepository->addItems($commission->id, $dto->items);
+
+            // Si a_cuenta es true, crear transacción en cuenta corriente
+            if ($dto->aCuenta) {
+                $this->createCurrentAccountTransaction($dto, $commission->id);
+            }
 
             $dto = new CreateCommissionLogDTO(
                 commissionId: $commission->id,
@@ -92,5 +100,25 @@ readonly class CreateCommissionUseCase
         if (! $destinationLocation) {
             throw new \Exception('La ubicación de destino no existe');
         }
+    }
+
+    /**
+     * Crea una transacción en cuenta corriente por el monto de la comisión
+     */
+    private function createCurrentAccountTransaction(CreateCommissionDTO $dto, int $commissionId): void
+    {
+        $currentAccountDTO = new CreateCurrentAccountDTO(
+            customerId: $dto->clientId,
+            type: 'debit', // Saldo negativo (deuda)
+            amount: $dto->total,
+            description: "Comisión #{$commissionId} - {$dto->origin} a {$dto->destination}",
+            reference: "COM-{$commissionId}",
+            transactionDate: $dto->date->format('Y-m-d'),
+            paymentMethod: null,
+            observations: "Comisión registrada a cuenta corriente",
+            userId: Auth::id(),
+        );
+
+        $this->currentAccountRepository->create($currentAccountDTO);
     }
 }

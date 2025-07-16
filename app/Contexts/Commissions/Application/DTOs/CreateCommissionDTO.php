@@ -16,7 +16,8 @@ class CreateCommissionDTO
         public readonly array $items,
         public readonly float $total,
         public readonly int $originLocationId,
-        public readonly int $destinationLocationId
+        public readonly int $destinationLocationId,
+        public readonly bool $aCuenta = false
     ) {
     }
 
@@ -34,7 +35,8 @@ class CreateCommissionDTO
             items: array_map(fn ($item) => CommissionItemDTO::fromArray($item), $data['items']),
             total: $data['total'],
             originLocationId: $data['origin_location_id'],
-            destinationLocationId: $data['destination_location_id']
+            destinationLocationId: $data['destination_location_id'],
+            aCuenta: $data['a_cuenta'] ?? false
         );
     }
 
@@ -50,6 +52,7 @@ class CreateCommissionDTO
             'total' => $this->total,
             'origin_location_id' => $this->originLocationId,
             'destination_location_id' => $this->destinationLocationId,
+            'a_cuenta' => $this->aCuenta,
         ];
     }
 }

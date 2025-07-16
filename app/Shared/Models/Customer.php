@@ -6,6 +6,7 @@ use Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Customer extends Model
@@ -48,6 +49,21 @@ class Customer extends Model
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function currentAccounts(): HasMany
+    {
+        return $this->hasMany(CurrentAccount::class);
+    }
+
+    public function getCurrentBalanceAttribute(): float
+    {
+        $lastTransaction = $this->currentAccounts()
+            ->orderBy('transaction_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        return $lastTransaction ? $lastTransaction->balance : 0;
     }
 
     public static function newFactory(): CustomerFactory

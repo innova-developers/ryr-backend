@@ -25,7 +25,7 @@ class HandleCors extends Middleware
         }
 
         $origin = $request->header('Origin');
-        
+
         // Si el origen está en la lista de permitidos, lo usamos
         if (in_array($origin, $this->allowedOrigins)) {
             $response->headers->set('Access-Control-Allow-Origin', $origin);

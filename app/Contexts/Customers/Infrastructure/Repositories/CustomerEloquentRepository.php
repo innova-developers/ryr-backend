@@ -7,7 +7,6 @@ use App\Contexts\Customers\Application\DTO\UpdateCustomerDTO;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Shared\Models\Customer;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Support\Facades\Auth;
 
 class CustomerEloquentRepository implements CustomerRepository
 {
@@ -29,6 +28,7 @@ class CustomerEloquentRepository implements CustomerRepository
                     'is_premium' => $customer->is_premium,
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),
+                    'balance' => $customer->current_balance,
                     'created_at' => $customer->created_at,
                 ];
             })
@@ -52,7 +52,7 @@ class CustomerEloquentRepository implements CustomerRepository
             $customer->observations = $dto->observations;
             $customer->is_premium = $dto->isPremium;
             $customer->user_id = $dto->userId;
-            $customer->branch_id = Auth::user()->branch_id;
+            $customer->branch_id = $dto->branchId;
             $customer->save();
 
             return $customer;
@@ -132,6 +132,7 @@ class CustomerEloquentRepository implements CustomerRepository
                     'is_premium' => $customer->is_premium,
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),
+                    'balance' => $customer->current_balance,
                     'created_at' => $customer->created_at,
                 ];
             })
