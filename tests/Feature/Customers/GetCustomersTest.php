@@ -13,11 +13,13 @@ class GetCustomersTest extends TestCase
 
     public function test_can_get_customers_list(): void
     {
-        $user = User::factory()->create(['role' => 'admin']);
+        $user = User::factory()->create(['role' => 'administrador']);
+        $token = $user->createToken('test-token')->plainTextToken;
         Customer::factory()->count(3)->create();
 
-        $response = $this->actingAs($user)
-            ->getJson('/api/customers');
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+        ])->getJson('/api/customers');
 
         $response->assertStatus(200)
             ->assertJsonCount(3)

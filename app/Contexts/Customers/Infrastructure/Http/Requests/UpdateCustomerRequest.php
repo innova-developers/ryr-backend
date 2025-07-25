@@ -17,12 +17,14 @@ class UpdateCustomerRequest extends FormRequest
      */
     public function rules(): array
     {
+        $customerId = $this->route('customer');
+        
         return [
-            'dni' => 'required|int|max:99999999|min:1000000|unique:customers,dni',
+            'dni' => 'required|int|max:99999999|min:1000000|unique:customers,dni,' . $customerId,
             'name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'mobile' => 'nullable|string|max:20',
-            'email' => 'required|email|unique:customers,email',
+            'email' => 'required|email|unique:customers,email,' . $customerId,
             'address' => 'nullable|string|max:255',
             'city' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',

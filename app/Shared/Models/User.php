@@ -25,7 +25,9 @@ class User extends Authenticatable
         'role',
         'branch_id',
         'base_salary',
+        'income_percentage',
         'commission_percentage',
+        'contract_type',
     ];
 
     protected $hidden = [
@@ -37,6 +39,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'deleted_at' => 'datetime',
         'base_salary' => 'decimal:2',
+        'income_percentage' => 'decimal:2',
         'commission_percentage' => 'decimal:2',
     ];
 

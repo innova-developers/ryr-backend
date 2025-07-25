@@ -13,12 +13,14 @@ class CustomerBalanceTest extends TestCase
 
     private User $user;
     private Customer $customer;
+    private string $token;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->user = User::factory()->create();
+        $this->user = User::factory()->create(['role' => 'administrador']);
+        $this->token = $this->user->createToken('test-token')->plainTextToken;
         $this->customer = Customer::factory()->create([
             'user_id' => $this->user->id,
         ]);
@@ -56,7 +58,9 @@ class CustomerBalanceTest extends TestCase
         );
         $currentAccountRepo->create($createDTO2);
 
-        $response = $this->getJson('/api/customers');
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->getJson('/api/customers');
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -100,7 +104,9 @@ class CustomerBalanceTest extends TestCase
         );
         $currentAccountRepo->create($createDTO);
 
-        $response = $this->getJson('/api/customers/search?q=' . $this->customer->name);
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->getJson('/api/customers/search?q=' . $this->customer->name);
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -128,7 +134,9 @@ class CustomerBalanceTest extends TestCase
 
     public function test_customer_without_transactions_has_zero_balance(): void
     {
-        $response = $this->getJson('/api/customers');
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->getJson('/api/customers');
 
         $response->assertStatus(200);
 
@@ -186,7 +194,9 @@ class CustomerBalanceTest extends TestCase
         );
         $currentAccountRepo->create($createDTO3);
 
-        $response = $this->getJson('/api/customers');
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->getJson('/api/customers');
 
         $response->assertStatus(200);
 

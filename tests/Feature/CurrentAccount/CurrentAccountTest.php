@@ -14,12 +14,14 @@ class CurrentAccountTest extends TestCase
 
     private User $user;
     private Customer $customer;
+    private string $token;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->user = User::factory()->create();
+        $this->user = User::factory()->create(['role' => 'administrador']);
+        $this->token = $this->user->createToken('test-token')->plainTextToken;
         $this->customer = Customer::factory()->create([
             'user_id' => $this->user->id,
         ]);
@@ -165,7 +167,9 @@ class CurrentAccountTest extends TestCase
             'customer_id' => $this->customer->id,
         ]);
 
-        $response = $this->getJson("/api/customers/{$this->customer->id}/current-account/transactions");
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->getJson("/api/customers/{$this->customer->id}/current-account/transactions");
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
@@ -219,7 +223,9 @@ class CurrentAccountTest extends TestCase
         );
         $currentAccountRepo->create($createDTO2);
 
-        $response = $this->getJson("/api/customers/{$this->customer->id}/current-account/balance");
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->getJson("/api/customers/{$this->customer->id}/current-account/balance");
 
         $response->assertStatus(200);
         $response->assertJson([
@@ -240,7 +246,9 @@ class CurrentAccountTest extends TestCase
             'customer_id' => $this->customer->id,
         ]);
 
-        $response = $this->getJson("/api/customers/{$this->customer->id}/current-account/transactions?type=credit");
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->getJson("/api/customers/{$this->customer->id}/current-account/transactions?type=credit");
 
         $response->assertStatus(200);
         $this->assertCount(3, $response->json('data'));
@@ -264,7 +272,9 @@ class CurrentAccountTest extends TestCase
             'transaction_date' => '2024-02-01',
         ]);
 
-        $response = $this->getJson("/api/customers/{$this->customer->id}/current-account/transactions?start_date=2024-01-15&end_date=2024-01-25");
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->getJson("/api/customers/{$this->customer->id}/current-account/transactions?start_date=2024-01-15&end_date=2024-01-25");
 
         $response->assertStatus(200);
         $this->assertCount(2, $response->json('data'));
@@ -328,7 +338,9 @@ class CurrentAccountTest extends TestCase
 
     public function test_returns_404_for_nonexistent_customer(): void
     {
-        $response = $this->getJson('/api/customers/99999/current-account/balance');
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $this->token,
+        ])->getJson('/api/customers/99999/current-account/balance');
 
         $response->assertStatus(200);
         $response->assertJson([

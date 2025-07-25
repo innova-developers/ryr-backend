@@ -22,6 +22,7 @@ class CreateBranchRequest extends FormRequest
             'address' => 'nullable|string|max:255',
             'schedule' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:255',
+            'secondary_phone' => 'nullable|string|max:255',
         ];
     }
 

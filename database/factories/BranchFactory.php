@@ -16,6 +16,7 @@ class BranchFactory extends Factory
             'address' => $this->faker->address,
             'schedule' => $this->faker->time(),
             'phone' => $this->faker->phoneNumber,
+            'secondary_phone' => $this->faker->optional(0.3)->phoneNumber,
         ];
     }
 

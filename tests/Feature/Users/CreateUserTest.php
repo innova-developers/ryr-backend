@@ -28,7 +28,9 @@ class CreateUserTest extends TestCase
             'role' => UserRole::ADMINISTRADOR->value,
             'branch_id' => $branch->id,
             'base_salary' => 5000.00,
-            'commission_percentage' => 15.50,
+            'income_percentage' => 15.50,
+            'commission_percentage' => 10.00,
+            'contract_type' => 'fixed_salary',
         ];
 
         $response = $this->actingAs($admin)->postJson('/api/users', $payload);
@@ -38,7 +40,7 @@ class CreateUserTest extends TestCase
             'email' => 'nuevo@ejemplo.com',
             'branch_id' => $branch->id,
             'base_salary' => 5000.00,
-            'commission_percentage' => 15.50,
+            'commission_percentage' => 10.00,
         ]);
     }
 
@@ -53,7 +55,9 @@ class CreateUserTest extends TestCase
             'role' => UserRole::MOSTRADOR->value,
             'branch_id' => $branch->id,
             'base_salary' => 3000.00,
-            'commission_percentage' => 10.00,
+            'income_percentage' => 10.00,
+            'commission_percentage' => 15.00,
+            'contract_type' => 'commission_based',
         ];
 
         $response = $this->actingAs($user)->postJson('/api/users', $payload);
@@ -77,7 +81,7 @@ class CreateUserTest extends TestCase
 
         $response->assertStatus(422);
         $response->assertJsonFragment([
-            'message' => 'Datos inválidos: The name field is required., The email field must be a valid email address., The password field is required., The selected role is invalid., The selected branch id is invalid.',
+            'message' => 'Datos inválidos: The name field is required., The email field must be a valid email address., The password field is required., The selected role is invalid., The selected branch id is invalid., The contract type field is required.',
         ]);
     }
 
@@ -91,6 +95,7 @@ class CreateUserTest extends TestCase
             'password' => 'password123',
             'role' => UserRole::MOSTRADOR->value,
             'branch_id' => $branch->id,
+            'contract_type' => 'fixed_salary',
             // Sin base_salary ni commission_percentage
         ];
 
@@ -114,13 +119,15 @@ class CreateUserTest extends TestCase
             'role' => UserRole::MOSTRADOR->value,
             'branch_id' => $branch->id,
             'base_salary' => -1000, // Valor negativo
+            'income_percentage' => 150, // Porcentaje mayor a 100
             'commission_percentage' => 150, // Porcentaje mayor a 100
+            'contract_type' => 'invalid_type', // Tipo inválido
         ];
 
         $response = $this->actingAs($admin)->postJson('/api/users', $payload);
         $response->assertStatus(422);
         $response->assertJsonFragment([
-            'message' => 'Datos inválidos: The base salary field must be at least 0., The commission percentage field must not be greater than 100.',
+            'message' => 'Datos inválidos: The base salary field must be at least 0., The income percentage field must not be greater than 100., The commission percentage field must not be greater than 100., The selected contract type is invalid.',
         ]);
     }
 }

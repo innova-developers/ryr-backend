@@ -35,6 +35,7 @@ class BranchsTest extends TestCase
             'name' => 'Sucursal Test',
             'address' => 'Calle 123',
             'phone' => '123456',
+            'secondary_phone' => '654321',
             'schedule' => 'Lun a Vie 9-18',
         ];
         $response = $this->postJson('/api/branches', $data);
@@ -56,6 +57,7 @@ class BranchsTest extends TestCase
             'name' => 'Sucursal Editada',
             'address' => 'Nueva dirección',
             'phone' => '654321',
+            'secondary_phone' => '123456',
             'schedule' => 'Sab 10-14',
         ];
         $response = $this->putJson("/api/branches/{$branch->id}", $data);
@@ -69,5 +71,45 @@ class BranchsTest extends TestCase
         $response = $this->deleteJson("/api/branches/{$branch->id}");
         $response->assertOk()->assertJson(['message' => 'Sucursal eliminada']);
         $this->assertDatabaseMissing('branches', ['id' => $branch->id]);
+    }
+
+    public function test_can_create_branch_with_secondary_phone()
+    {
+        $data = [
+            'name' => 'Sucursal con Teléfono Secundario',
+            'address' => 'Calle Secundaria 456',
+            'phone' => '111111111',
+            'secondary_phone' => '222222222',
+            'schedule' => 'Lun a Dom 24h',
+        ];
+        
+        $response = $this->postJson('/api/branches', $data);
+        $response->assertCreated();
+        
+        $this->assertDatabaseHas('branches', [
+            'name' => 'Sucursal con Teléfono Secundario',
+            'secondary_phone' => '222222222',
+        ]);
+    }
+
+    public function test_can_update_branch_secondary_phone()
+    {
+        $branch = Branch::factory()->create(['secondary_phone' => '111111111']);
+        
+        $data = [
+            'name' => $branch->name,
+            'address' => $branch->address,
+            'phone' => $branch->phone,
+            'secondary_phone' => '999999999',
+            'schedule' => $branch->schedule,
+        ];
+        
+        $response = $this->putJson("/api/branches/{$branch->id}", $data);
+        $response->assertOk();
+        
+        $this->assertDatabaseHas('branches', [
+            'id' => $branch->id,
+            'secondary_phone' => '999999999',
+        ]);
     }
 }
