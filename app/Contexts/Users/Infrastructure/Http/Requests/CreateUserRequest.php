@@ -26,7 +26,9 @@ class CreateUserRequest extends FormRequest
             'role' => ['required', new Enum(UserRole::class)],
             'branch_id' => ['required', 'exists:branches,id'],
             'base_salary' => ['nullable', 'numeric', 'min:0', 'max:9999999.99'],
+            'income_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'commission_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'contract_type' => ['required', 'in:fixed_salary,commission_based'],
         ];
     }
 

@@ -39,7 +39,8 @@ class BranchController extends Controller
             $request->input('name'),
             $request->input('address'),
             $request->input('phone'),
-            $request->input('schedule')
+            $request->input('schedule'),
+            $request->input('secondary_phone')
         );
         $useCase = new CreateBranchUseCase(
             $this->repository
@@ -66,7 +67,8 @@ class BranchController extends Controller
             $request->input('name'),
             $request->input('address'),
             $request->input('phone'),
-            $request->input('schedule')
+            $request->input('schedule'),
+            $request->input('secondary_phone')
         );
         $useCase = new UpdateBranchUseCase(
             $this->repository

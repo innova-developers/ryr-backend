@@ -13,7 +13,7 @@ class BranchEloquentRepository implements BranchRepository
 {
     public function get(): array
     {
-        return Branch::select('id', 'name', 'address', 'schedule', 'phone')->get()->toArray();
+        return Branch::select('id', 'name', 'address', 'schedule', 'phone', 'secondary_phone')->get()->toArray();
     }
 
     public function findById(int $id): ?Branch
@@ -35,6 +35,7 @@ class BranchEloquentRepository implements BranchRepository
             $branch->address = $dto->address;
             $branch->phone = $dto->phone;
             $branch->schedule = $dto->schedule;
+            $branch->secondary_phone = $dto->secondary_phone;
             $branch->save();
 
             return $branch;
@@ -57,6 +58,7 @@ class BranchEloquentRepository implements BranchRepository
             $branch->address = $dto->address;
             $branch->phone = $dto->phone;
             $branch->schedule = $dto->schedule;
+            $branch->secondary_phone = $dto->secondary_phone;
             $branch->save();
 
             return $branch;

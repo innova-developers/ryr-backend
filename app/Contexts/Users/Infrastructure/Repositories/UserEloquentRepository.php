@@ -18,12 +18,14 @@ class UserEloquentRepository implements UserRepository
             'role' => $dto->role,
             'branch_id' => $dto->branch_id,
             'base_salary' => $dto->base_salary,
+            'income_percentage' => $dto->income_percentage,
             'commission_percentage' => $dto->commission_percentage,
+            'contract_type' => $dto->contract_type,
         ]);
     }
     public function get(): array
     {
-        return User::select('id', 'name', 'email', 'role', 'created_at', 'branch_id', 'base_salary', 'commission_percentage')
+        return User::select('id', 'name', 'email', 'role', 'created_at', 'branch_id', 'base_salary', 'income_percentage', 'commission_percentage', 'contract_type')
             ->with(['branch:id,name'])
             ->where('role', '!=', 'cliente')
             ->get()
@@ -37,7 +39,9 @@ class UserEloquentRepository implements UserRepository
                     'branch_id' => $user->branch ? $user->branch->id : null,
                     'branch_name' => $user->branch ? $user->branch->name : null,
                     'base_salary' => $user->base_salary,
+                    'income_percentage' => $user->income_percentage,
                     'commission_percentage' => $user->commission_percentage,
+                    'contract_type' => $user->contract_type,
                 ];
             })
             ->toArray();
@@ -65,7 +69,9 @@ class UserEloquentRepository implements UserRepository
             $user->role = $dto->role;
             $user->branch_id = $dto->branch_id;
             $user->base_salary = $dto->base_salary;
+            $user->income_percentage = $dto->income_percentage;
             $user->commission_percentage = $dto->commission_percentage;
+            $user->contract_type = $dto->contract_type;
             $user->save();
 
             return $user;

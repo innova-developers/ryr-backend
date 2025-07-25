@@ -36,7 +36,9 @@ class UpdateUserTest extends TestCase
             'role' => 'cadete',
             'branch_id' => $newBranch->id,
             'base_salary' => 6000.00,
+            'income_percentage' => 15.00,
             'commission_percentage' => 20.00,
+            'contract_type' => 'fixed_salary',
         ];
 
         $response = $this->putJson("/api/users/{$user->id}", $payload);
@@ -55,7 +57,9 @@ class UpdateUserTest extends TestCase
             'email' => 'editado@example.com',
             'branch_id' => $newBranch->id,
             'base_salary' => 6000.00,
+            'income_percentage' => 15.00,
             'commission_percentage' => 20.00,
+            'contract_type' => 'fixed_salary',
         ]);
     }
 
@@ -70,7 +74,9 @@ class UpdateUserTest extends TestCase
             'role' => 'cadete',
             'branch_id' => $branch->id,
             'base_salary' => 4000.00,
-            'commission_percentage' => 12.50,
+            'income_percentage' => 12.50,
+            'commission_percentage' => 10.00,
+            'contract_type' => 'commission_based',
         ]);
 
         $response->assertStatus(404)
@@ -86,7 +92,9 @@ class UpdateUserTest extends TestCase
             'role' => 'administrador',
             'branch_id' => $branch->id,
             'base_salary' => 3000.00,
+            'income_percentage' => 10.00,
             'commission_percentage' => 10.00,
+            'contract_type' => 'fixed_salary',
         ]);
 
         $payload = [
@@ -95,7 +103,9 @@ class UpdateUserTest extends TestCase
             'role' => 'administrador', // Mantener el mismo rol
             'branch_id' => $branch->id, // Mantener la misma sucursal
             'base_salary' => 4500.00, // Actualizar solo el salario
-            'commission_percentage' => 18.50, // Actualizar solo el porcentaje
+            'income_percentage' => 15.00, // Actualizar solo el porcentaje de ingresos
+            'commission_percentage' => 18.50, // Actualizar solo el porcentaje de comisiones
+            'contract_type' => 'fixed_salary',
         ];
 
         $response = $this->putJson("/api/users/{$user->id}", $payload);
@@ -106,7 +116,9 @@ class UpdateUserTest extends TestCase
             'name' => 'Usuario Original',
             'email' => 'original@example.com',
             'base_salary' => 4500.00,
+            'income_percentage' => 15.00,
             'commission_percentage' => 18.50,
+            'contract_type' => 'fixed_salary',
         ]);
     }
 }

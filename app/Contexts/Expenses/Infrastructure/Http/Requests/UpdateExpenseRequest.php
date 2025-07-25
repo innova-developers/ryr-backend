@@ -16,7 +16,6 @@ class UpdateExpenseRequest extends FormRequest
         return [
             'transport_id' => 'nullable|integer|exists:transports,id',
             'expense_category_id' => 'nullable|integer|exists:expense_categories,id',
-            'user_id' => 'nullable|integer|exists:users,id',
             'date' => ['required', 'date'],
             'detail' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'min:0'],
@@ -30,8 +29,6 @@ class UpdateExpenseRequest extends FormRequest
             'transport_id.exists' => 'El transporte especificado no existe',
             'expense_category_id.integer' => 'El ID de la categoría debe ser un número entero',
             'expense_category_id.exists' => 'La categoría especificada no existe',
-            'user_id.integer' => 'El ID del usuario debe ser un número entero',
-            'user_id.exists' => 'El usuario especificado no existe',
             'date.required' => 'La fecha es requerida',
             'date.date' => 'La fecha debe ser una fecha válida',
             'detail.required' => 'El detalle es requerido',

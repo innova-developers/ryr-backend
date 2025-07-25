@@ -28,22 +28,31 @@ class CalculateSalaryUseCase
         $startOfMonth = $targetMonth->copy()->startOfMonth();
         $endOfMonth = $targetMonth->copy()->endOfMonth();
 
-        // A: Sueldo fijo
-        $baseSalary = $user->base_salary ?? 0;
-
         // B: Monto en comisiones
         $commissionsTotal = Commission::where('user_id', $userId)
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
             ->sum('total');
-
-        $commissionAmount = $commissionsTotal * ($user->commission_percentage / 100);
 
         // C: Monto en ingresos
         $incomesTotal = Income::where('user_id', $userId)
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
             ->sum('amount');
 
-        $incomeAmount = $incomesTotal * ($user->commission_percentage / 100);
+        // Calcular sueldo base según el tipo de contratación
+        $baseSalary = 0;
+        $commissionAmount = 0;
+        $incomeAmount = 0;
+
+        if ($user->contract_type === 'fixed_salary') {
+            // Modalidad 1: Sueldo fijo + % de ingresos (NO % de comisiones)
+            $baseSalary = $user->base_salary ?? 0;
+            $commissionAmount = 0; // No hay % de comisiones en este modo
+            $incomeAmount = $incomesTotal * ($user->income_percentage / 100);
+        } else {
+            // Modalidad 2: % de comisiones + % de ingresos (sin sueldo fijo)
+            $commissionAmount = $commissionsTotal * ($user->commission_percentage / 100);
+            $incomeAmount = $incomesTotal * ($user->income_percentage / 100);
+        }
 
         // Subtotal antes de gastos
         $subtotalBeforeExpenses = $baseSalary + $commissionAmount + $incomeAmount;
@@ -62,6 +71,7 @@ class CalculateSalaryUseCase
         return [
             'user_id' => $userId,
             'month' => $targetMonth->format('Y-m'),
+            'contract_type' => $user->contract_type,
             'base_salary' => $baseSalary,
             'commissions_total' => $commissionsTotal,
             'commission_amount' => $commissionAmount,
@@ -73,6 +83,7 @@ class CalculateSalaryUseCase
             'available_for_advances' => $availableForAdvances,
             'user_name' => $user->name,
             'commission_percentage' => $user->commission_percentage,
+            'income_percentage' => $user->income_percentage,
         ];
     }
 }

@@ -2,18 +2,17 @@
 
 namespace App\Contexts\Users\Infrastructure\Http\Controllers;
 
-use App\Contexts\Users\Application\CalculateSalaryUseCase;
 use App\Contexts\Users\Application\CreateUserUseCase;
 use App\Contexts\Users\Application\DeleteUserUseCase;
 use App\Contexts\Users\Application\DTO\CreateUserDTO;
 use App\Contexts\Users\Application\DTO\UpdateUserDTO;
 use App\Contexts\Users\Application\GetUsersUseCase;
 use App\Contexts\Users\Application\UpdateUserUseCase;
+use App\Contexts\Users\Application\CalculateSalaryUseCase;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
 use App\Contexts\Users\Infrastructure\Http\Requests\CreateUserRequest;
 use App\Contexts\Users\Infrastructure\Http\Requests\EditUserRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 class UserController extends Controller
@@ -37,7 +36,9 @@ class UserController extends Controller
             $request->input('role'),
             $request->input('branch_id'),
             $request->input('base_salary'),
-            $request->input('commission_percentage')
+            $request->input('income_percentage'),
+            $request->input('commission_percentage'),
+            $request->input('contract_type')
         );
         $newUser = $useCase($dto);
 
@@ -71,7 +72,9 @@ class UserController extends Controller
                 $request->input('role'),
                 $request->input('branch_id'),
                 $request->input('base_salary'),
-                $request->input('commission_percentage')
+                $request->input('income_percentage'),
+                $request->input('commission_percentage'),
+                $request->input('contract_type')
             );
             $useCase = new UpdateUserUseCase($this->repository);
             $editedUser = $useCase($dto);
@@ -86,21 +89,20 @@ class UserController extends Controller
         }
     }
 
-    public function calculateSalary(Request $request, int $userId): JsonResponse
+    public function calculateSalary(int $userId): JsonResponse
     {
         try {
+            $month = request()->query('month');
             $useCase = new CalculateSalaryUseCase($this->repository);
-            $month = $request->query('month');
+            $salaryData = $useCase->execute($userId, $month);
 
-            $salaryCalculation = $useCase->execute($userId, $month);
-
-            return response()->json($salaryCalculation);
+            return response()->json($salaryData);
         } catch (\Exception $e) {
             if ($e->getMessage() === 'Usuario no encontrado') {
                 return response()->json(['message' => $e->getMessage()], 404);
             }
 
-            return response()->json(['message' => 'Error interno del servidor'], 500);
+            return response()->json(['message' => 'Error al calcular el salario: ' . $e->getMessage()], 500);
         }
     }
 }
