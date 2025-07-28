@@ -61,28 +61,30 @@ Route::prefix('current-accounts')->group(function () {
 // Rutas protegidas para usuarios, comisiones y clientes
 Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
     // Usuarios
-    Route::get('/users', [UserController::class, 'index']);
-    Route::post('/users', [UserController::class, 'store']);
-    Route::put('/users/{id}', [UserController::class, 'update']);
-    Route::delete('/users/{id}', [UserController::class, 'destroy']);
 
-    // Comisiones
-    Route::post('/commissions', [CommissionController::class, 'store']);
-    Route::get('/commissions/statuses', [CommissionController::class, 'getStatuses']);
-    Route::get('/commissions/{id}', [CommissionController::class, 'show']);
-    Route::patch('/commissions/{id}/status', [CommissionController::class, 'updateStatus']);
-    Route::get('/commissions',  [CommissionController::class, 'index']);
-    Route::delete('/commissions/{id}', [CommissionController::class, 'destroy']);
+});
 
-    // Clientes
-    Route::get('customers/search', [CustomerController::class, 'search']);
-    Route::apiResource('customers', CustomerController::class);
+Route::get('/users', [UserController::class, 'index']);
+Route::post('/users', [UserController::class, 'store']);
+Route::put('/users/{id}', [UserController::class, 'update']);
+Route::delete('/users/{id}', [UserController::class, 'destroy']);
 
-    // Cuenta corriente de clientes
-    Route::prefix('customers/{customerId}/current-account')->group(function () {
-        Route::get('/transactions', [CurrentAccountController::class, 'getCustomerTransactions']);
-        Route::get('/balance', [CurrentAccountController::class, 'getCustomerBalance']);
-    });
+// Comisiones
+Route::post('/commissions', [CommissionController::class, 'store']);
+Route::get('/commissions/statuses', [CommissionController::class, 'getStatuses']);
+Route::get('/commissions/{id}', [CommissionController::class, 'show']);
+Route::patch('/commissions/{id}/status', [CommissionController::class, 'updateStatus']);
+Route::get('/commissions',  [CommissionController::class, 'index']);
+Route::delete('/commissions/{id}', [CommissionController::class, 'destroy']);
+
+// Clientes
+Route::get('customers/search', [CustomerController::class, 'search']);
+Route::apiResource('customers', CustomerController::class);
+
+// Cuenta corriente de clientes
+Route::prefix('customers/{customerId}/current-account')->group(function () {
+    Route::get('/transactions', [CurrentAccountController::class, 'getCustomerTransactions']);
+    Route::get('/balance', [CurrentAccountController::class, 'getCustomerBalance']);
 });
 
 Route::get('/users/{userId}/salary', [UserController::class, 'calculateSalary']);
