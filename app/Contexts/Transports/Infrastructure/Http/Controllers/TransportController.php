@@ -5,12 +5,14 @@ namespace App\Contexts\Transports\Infrastructure\Http\Controllers;
 use App\Contexts\Transports\Application\CreateTransportUseCase;
 use App\Contexts\Transports\Application\DeleteTransportUseCase;
 use App\Contexts\Transports\Application\DTOs\CreateTransportDTO;
+use App\Contexts\Transports\Application\DTOs\GetTransportsFiltersDTO;
 use App\Contexts\Transports\Application\DTOs\UpdateTransportDTO;
 use App\Contexts\Transports\Application\ListTransportsUseCase;
 use App\Contexts\Transports\Application\UpdateTransportUseCase;
 use App\Contexts\Transports\Domain\Repositories\TransportRepository;
 use App\Contexts\Transports\Infrastructure\Http\Requests\CreateTransportRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use InvalidArgumentException;
 
@@ -21,11 +23,12 @@ class TransportController extends Controller
     ) {
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         try {
+            $filters = GetTransportsFiltersDTO::fromArray($request->all());
             $useCase = new ListTransportsUseCase($this->repository);
-            $transports = $useCase();
+            $transports = $useCase($filters);
 
             return response()->json($transports, 200);
         } catch (\Exception $e) {

@@ -2,17 +2,19 @@
 
 namespace App\Contexts\Users\Infrastructure\Http\Controllers;
 
+use App\Contexts\Users\Application\CalculateSalaryUseCase;
 use App\Contexts\Users\Application\CreateUserUseCase;
 use App\Contexts\Users\Application\DeleteUserUseCase;
 use App\Contexts\Users\Application\DTO\CreateUserDTO;
+use App\Contexts\Users\Application\DTO\GetUsersFiltersDTO;
 use App\Contexts\Users\Application\DTO\UpdateUserDTO;
 use App\Contexts\Users\Application\GetUsersUseCase;
 use App\Contexts\Users\Application\UpdateUserUseCase;
-use App\Contexts\Users\Application\CalculateSalaryUseCase;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
 use App\Contexts\Users\Infrastructure\Http\Requests\CreateUserRequest;
 use App\Contexts\Users\Infrastructure\Http\Requests\EditUserRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 class UserController extends Controller
@@ -45,10 +47,11 @@ class UserController extends Controller
         return response()->json($newUser, 201);
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        $filters = GetUsersFiltersDTO::fromArray($request->all());
         $useCase = new GetUsersUseCase($this->repository);
-        $users = $useCase();
+        $users = $useCase($filters);
 
         return response()->json($users);
     }

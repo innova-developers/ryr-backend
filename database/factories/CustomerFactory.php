@@ -25,7 +25,7 @@ class CustomerFactory extends Factory
             'business_hours' => '9-18',
             'observations' => $this->faker->sentence(),
             'is_premium' => $this->faker->boolean(),
-            'user_id' => User::factory()->create(['role' => 'customer'])->id
+            'user_id' => User::factory()->create(['role' => 'cliente'])->id
         ];
     }
 } 

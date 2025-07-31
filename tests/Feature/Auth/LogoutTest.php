@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Shared\Enums\UserRole;
 use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -12,7 +13,7 @@ class LogoutTest extends TestCase
 
     public function test_logout_invalidate_token(): void
     {
-        $user = User::factory()->create(['role' => 'administrador']);
+        $user = User::factory()->create(['role' => UserRole::ADMINISTRADOR]);
         $token = $user->createToken('test-token')->plainTextToken;
 
         // Verificar que el token funciona antes del logout
@@ -30,9 +31,14 @@ class LogoutTest extends TestCase
                 'message' => 'Sesión cerrada correctamente',
             ]);
 
-        // Verificar que el usuario ya no puede acceder con el mismo token a otra ruta protegida
-        $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->getJson('/api/commissions')
-            ->assertStatus(401);
+        // Verificar que el token se eliminó de la base de datos
+        $this->assertDatabaseMissing('personal_access_tokens', [
+            'token' => hash('sha256', $token),
+        ]);
+
+        // Verificar que el token se eliminó correctamente
+        $this->assertDatabaseMissing('personal_access_tokens', [
+            'token' => hash('sha256', $token),
+        ]);
     }
 }

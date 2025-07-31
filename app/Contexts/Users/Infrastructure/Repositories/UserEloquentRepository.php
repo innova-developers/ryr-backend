@@ -3,6 +3,7 @@
 namespace App\Contexts\Users\Infrastructure\Repositories;
 
 use App\Contexts\Users\Application\DTO\CreateUserDTO;
+use App\Contexts\Users\Application\DTO\GetUsersFiltersDTO;
 use App\Contexts\Users\Application\DTO\UpdateUserDTO;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
 use App\Shared\Models\User;
@@ -23,12 +24,67 @@ class UserEloquentRepository implements UserRepository
             'contract_type' => $dto->contract_type,
         ]);
     }
-    public function get(): array
+    public function get(?GetUsersFiltersDTO $filters = null): array
     {
-        return User::select('id', 'name', 'email', 'role', 'created_at', 'branch_id', 'base_salary', 'income_percentage', 'commission_percentage', 'contract_type')
+        $query = User::select('id', 'name', 'email', 'role', 'created_at', 'branch_id', 'base_salary', 'income_percentage', 'commission_percentage', 'contract_type')
             ->with(['branch:id,name'])
-            ->where('role', '!=', 'cliente')
-            ->get()
+            ->where('role', '!=', 'cliente');
+
+        // Aplicar filtro de búsqueda
+        if ($filters && $filters->search) {
+            $query->where(function ($q) use ($filters) {
+                $q->where('name', 'like', '%' . $filters->search . '%')
+                  ->orWhere('email', 'like', '%' . $filters->search . '%');
+            });
+        }
+
+        // Aplicar ordenamiento
+        if ($filters && $filters->sortBy) {
+            $allowedSortFields = ['name', 'email', 'role', 'created_at', 'base_salary'];
+            if (in_array($filters->sortBy, $allowedSortFields)) {
+                $query->orderBy($filters->sortBy, $filters->sortDirection);
+            }
+        } else {
+            $query->orderBy('name', 'asc');
+        }
+
+        // Aplicar paginación
+        if ($filters) {
+            $perPage = min($filters->perPage, 100); // Limitar a máximo 100 por página
+            $users = $query->paginate($perPage, ['*'], 'page', $filters->page);
+
+            $data = $users->items();
+            $formattedData = collect($data)->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'created_at' => $user->created_at,
+                    'branch_id' => $user->branch ? $user->branch->id : null,
+                    'branch_name' => $user->branch ? $user->branch->name : null,
+                    'base_salary' => $user->base_salary,
+                    'income_percentage' => $user->income_percentage,
+                    'commission_percentage' => $user->commission_percentage,
+                    'contract_type' => $user->contract_type,
+                ];
+            })->toArray();
+
+            return [
+                'data' => $formattedData,
+                'pagination' => [
+                    'current_page' => $users->currentPage(),
+                    'per_page' => $users->perPage(),
+                    'total' => $users->total(),
+                    'last_page' => $users->lastPage(),
+                    'from' => $users->firstItem(),
+                    'to' => $users->lastItem(),
+                ],
+            ];
+        }
+
+        // Sin filtros, devolver todos los usuarios
+        return $query->get()
             ->map(function ($user) {
                 return [
                     'id' => $user->id,

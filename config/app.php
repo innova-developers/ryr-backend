@@ -43,6 +43,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Disable WhatsApp Messages
+    |--------------------------------------------------------------------------
+    |
+    | When this is set to true, WhatsApp messages will not be sent.
+    | This is useful for testing and development environments.
+    |
+    */
+
+    'disable_whatsapp' => (bool) env('DISABLE_WHATSAPP', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application URL
     |--------------------------------------------------------------------------
     |

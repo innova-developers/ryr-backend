@@ -2,6 +2,7 @@
 
 namespace App\Contexts\Locations\Application;
 
+use App\Contexts\Locations\Application\DTOs\GetLocationsFiltersDTO;
 use App\Contexts\Locations\Domain\Repositories\LocationsRepository;
 
 class ListLocationsUseCase
@@ -11,8 +12,8 @@ class ListLocationsUseCase
     ) {
     }
 
-    public function __invoke(): array
+    public function __invoke(?GetLocationsFiltersDTO $filters = null): array
     {
-        return $this->repository->findAll();
+        return $this->repository->findAll($filters);
     }
 }

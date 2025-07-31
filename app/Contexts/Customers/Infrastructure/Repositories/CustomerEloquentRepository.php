@@ -3,6 +3,7 @@
 namespace App\Contexts\Customers\Infrastructure\Repositories;
 
 use App\Contexts\Customers\Application\DTO\CreateCustomerDTO;
+use App\Contexts\Customers\Application\DTO\GetCustomersFiltersDTO;
 use App\Contexts\Customers\Application\DTO\UpdateCustomerDTO;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Shared\Models\Customer;
@@ -10,11 +11,68 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class CustomerEloquentRepository implements CustomerRepository
 {
-    public function get(): array
+    public function get(?GetCustomersFiltersDTO $filters = null): array
     {
-        return Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id', 'created_at')
-            ->with(['user:id,name'])
-            ->get()
+        $query = Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id', 'created_at')
+            ->with(['user:id,name']);
+
+        // Aplicar filtro de búsqueda
+        if ($filters && $filters->search) {
+            $query->where(function ($q) use ($filters) {
+                $q->where('name', 'like', '%' . $filters->search . '%')
+                  ->orWhere('last_name', 'like', '%' . $filters->search . '%')
+                  ->orWhere('email', 'like', '%' . $filters->search . '%')
+                  ->orWhere('dni', 'like', '%' . $filters->search . '%')
+                  ->orWhere('city', 'like', '%' . $filters->search . '%');
+            });
+        }
+
+        // Aplicar ordenamiento
+        if ($filters && $filters->sortBy) {
+            $allowedSortFields = ['name', 'last_name', 'email', 'dni', 'city', 'created_at', 'is_premium'];
+            if (in_array($filters->sortBy, $allowedSortFields)) {
+                $query->orderBy($filters->sortBy, $filters->sortDirection);
+            }
+        } else {
+            $query->orderBy('name', 'asc');
+        }
+
+        // Aplicar paginación
+        if ($filters) {
+            $perPage = min($filters->perPage, 100); // Limitar a máximo 100 por página
+            $customers = $query->paginate($perPage, ['*'], 'page', $filters->page);
+
+            return [
+                'data' => $customers->map(function (Customer $customer) {
+                    return [
+                        'id' => $customer->id,
+                        'dni' => $customer->dni,
+                        'name' => $customer->name,
+                        'email' => $customer->email,
+                        'last_name' => $customer->last_name,
+                        'address' => $customer->address,
+                        'city' => $customer->city,
+                        'phone' => $customer->phone,
+                        'is_premium' => $customer->is_premium,
+                        'user' => optional($customer->user),
+                        'branch' => optional($customer->branch),
+                        'balance' => $customer->current_balance,
+                        'created_at' => $customer->created_at,
+                    ];
+                })->toArray(),
+                'pagination' => [
+                    'current_page' => $customers->currentPage(),
+                    'per_page' => $customers->perPage(),
+                    'total' => $customers->total(),
+                    'last_page' => $customers->lastPage(),
+                    'from' => $customers->firstItem(),
+                    'to' => $customers->lastItem(),
+                ],
+            ];
+        }
+
+        // Sin filtros, devolver todos los customers
+        return $query->get()
             ->map(function (Customer $customer) {
                 return [
                     'id' => $customer->id,

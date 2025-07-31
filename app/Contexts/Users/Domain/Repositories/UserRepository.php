@@ -3,6 +3,7 @@
 namespace App\Contexts\Users\Domain\Repositories;
 
 use App\Contexts\Users\Application\DTO\CreateUserDTO;
+use App\Contexts\Users\Application\DTO\GetUsersFiltersDTO;
 use App\Contexts\Users\Application\DTO\UpdateUserDTO;
 use App\Shared\Models\User;
 
@@ -10,16 +11,13 @@ interface UserRepository
 {
     public function create(CreateUserDTO $dto): User;
     /**
-     * @return User[]
+     * @return array
      */
-    public function get(): array;
+    public function get(?GetUsersFiltersDTO $filters = null): array;
     /**
      * @return User[]
      */
     public function delete(int $id): array;
     public function update(UpdateUserDTO $dto): User;
     public function findById(int $id): ?User;
-    /**
-     * @return User[]
-     */
 }

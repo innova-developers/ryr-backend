@@ -2,6 +2,7 @@
 
 namespace App\Contexts\Customers\Application;
 
+use App\Contexts\Customers\Application\DTO\GetCustomersFiltersDTO;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Shared\Models\Customer;
 
@@ -17,8 +18,8 @@ class GetCustomersUseCase
     /**
      * @return Customer[]
      */
-    public function __invoke(): array
+    public function __invoke(?GetCustomersFiltersDTO $filters = null): array
     {
-        return $this->repository->get();
+        return $this->repository->get($filters);
     }
 }

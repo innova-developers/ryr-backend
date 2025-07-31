@@ -41,6 +41,7 @@ class User extends Authenticatable
         'base_salary' => 'decimal:2',
         'income_percentage' => 'decimal:2',
         'commission_percentage' => 'decimal:2',
+        'role' => UserRole::class,
     ];
 
 
@@ -79,7 +80,7 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->role === UserRole::ADMINISTRADOR->value;
+        return $this->role === UserRole::ADMINISTRADOR;
     }
 
 

@@ -5,6 +5,7 @@ namespace App\Contexts\Locations\Infrastructure\Http\Controllers;
 use App\Contexts\Locations\Application\CreateLocationUseCase;
 use App\Contexts\Locations\Application\DeleteLocationUseCase;
 use App\Contexts\Locations\Application\DTOs\CreateLocationDTO;
+use App\Contexts\Locations\Application\DTOs\GetLocationsFiltersDTO;
 use App\Contexts\Locations\Application\DTOs\UpdateLocationDTO;
 use App\Contexts\Locations\Application\GetLocationsByOriginUseCase;
 use App\Contexts\Locations\Application\ListLocationsUseCase;
@@ -13,6 +14,7 @@ use App\Contexts\Locations\Domain\Repositories\LocationsRepository;
 use App\Contexts\Locations\Infrastructure\Http\Requests\CreateLocationRequest;
 use App\Contexts\Locations\Infrastructure\Http\Requests\UpdateLocationRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 class LocationsController extends Controller
@@ -22,10 +24,11 @@ class LocationsController extends Controller
     ) {
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        $filters = GetLocationsFiltersDTO::fromArray($request->all());
         $useCase = new ListLocationsUseCase($this->repository);
-        $locations = $useCase();
+        $locations = $useCase($filters);
 
         return response()->json($locations);
     }
