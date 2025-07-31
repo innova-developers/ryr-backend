@@ -31,7 +31,7 @@ class ClientDashboardIntegrationTest extends TestCase
             'email' => 'cliente@test.com',
             'name' => 'Juan',
             'last_name' => 'Pérez',
-            'mobile' => '2915662430',
+            'phone' => '2915662430',
         ]);
 
         // Generar token
@@ -53,7 +53,7 @@ class ClientDashboardIntegrationTest extends TestCase
                     'name' => 'Juan',
                     'last_name' => 'Pérez',
                     'email' => 'cliente@test.com',
-                    'mobile' => '2915662430',
+                    'phone' => '2915662430',
                 ],
                 'user' => [
                     'id' => $this->clientUser->id,
@@ -69,7 +69,7 @@ class ClientDashboardIntegrationTest extends TestCase
             'name' => 'María',
             'last_name' => 'González',
             'email' => 'maria@test.com',
-            'mobile' => '2915662431',
+            'phone' => '2915662431',
         ];
 
         $response = $this->withHeaders([
@@ -86,7 +86,7 @@ class ClientDashboardIntegrationTest extends TestCase
                     'name' => 'María',
                     'last_name' => 'González',
                     'email' => 'maria@test.com',
-                    'mobile' => '2915662431',
+                    'phone' => '2915662431',
                 ],
             ]);
     }

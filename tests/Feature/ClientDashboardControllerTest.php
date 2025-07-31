@@ -35,7 +35,7 @@ class ClientDashboardControllerTest extends TestCase
             'email' => 'cliente@test.com',
             'name' => 'Juan',
             'last_name' => 'Pérez',
-            'mobile' => '2915662430',
+            'phone' => '2915662430',
         ]);
     }
 
@@ -56,7 +56,7 @@ class ClientDashboardControllerTest extends TestCase
         $this->assertEquals('Juan', $data['customer']['name']);
         $this->assertEquals('Pérez', $data['customer']['last_name']);
         $this->assertEquals('cliente@test.com', $data['customer']['email']);
-        $this->assertEquals('2915662430', $data['customer']['mobile']);
+        $this->assertEquals('2915662430', $data['customer']['phone']);
     }
 
     public function test_update_profile_updates_customer_data()
@@ -65,7 +65,7 @@ class ClientDashboardControllerTest extends TestCase
             'name' => 'María',
             'last_name' => 'González',
             'email' => 'maria@test.com',
-            'mobile' => '2915662431',
+            'phone' => '2915662431',
         ];
 
         $request = Request::create('/api/client/profile', 'PUT', $updateData);
@@ -85,7 +85,7 @@ class ClientDashboardControllerTest extends TestCase
         $this->assertEquals('María', $data['customer']['name']);
         $this->assertEquals('González', $data['customer']['last_name']);
         $this->assertEquals('maria@test.com', $data['customer']['email']);
-        $this->assertEquals('2915662431', $data['customer']['mobile']);
+        $this->assertEquals('2915662431', $data['customer']['phone']);
 
         // Verificar que se actualizó en la base de datos
         $this->assertDatabaseHas('customers', [
@@ -93,7 +93,7 @@ class ClientDashboardControllerTest extends TestCase
             'name' => 'María',
             'last_name' => 'González',
             'email' => 'maria@test.com',
-            'mobile' => '2915662431',
+            'phone' => '2915662431',
         ]);
     }
 }

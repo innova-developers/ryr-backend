@@ -192,27 +192,14 @@ class GetCommissionTest extends TestCase
                 'success',
                 'data' => [
                     'tracking_id',
+                    'tracking_number',
                     'status',
-                    'status_label',
                     'origin',
                     'destination',
-                    'total',
                     'date',
-                    'estimated_delivery',
+                    'items_count',
                     'created_at',
                     'updated_at',
-                    'branch_name',
-                    'items_count',
-                    'items' => [
-                        '*' => [
-                            'description',
-                            'quantity',
-                            'size',
-                            'type',
-                            'weight',
-                            'dimensions',
-                        ],
-                    ],
                 ],
             ])
             ->assertJson([

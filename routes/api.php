@@ -126,7 +126,7 @@ Route::middleware(['auth:sanctum'])->prefix('client')->group(function () {
     Route::put('/profile', [App\Http\Controllers\Client\ClientDashboardController::class, 'updateProfile']);
     Route::get('/shipments', [App\Http\Controllers\Client\ClientDashboardController::class, 'getShipments']);
     Route::get('/account-balance', [App\Http\Controllers\Client\ClientDashboardController::class, 'getAccountBalance']);
-    
+
     // Rutas de cuenta corriente del cliente
     Route::get('/current-account/transactions', [App\Http\Controllers\Client\ClientDashboardController::class, 'getCurrentAccountTransactions']);
     Route::get('/current-account/balance', [App\Http\Controllers\Client\ClientDashboardController::class, 'getCurrentAccountBalance']);
