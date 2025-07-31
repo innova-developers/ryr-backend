@@ -37,7 +37,7 @@ class ClientDashboardTest extends TestCase
             'email' => 'cliente@test.com',
             'name' => 'Juan',
             'last_name' => 'Pérez',
-            'mobile' => '2915662430',
+            'phone' => '2915662430',
         ]);
     }
 
@@ -55,7 +55,7 @@ class ClientDashboardTest extends TestCase
                     'name' => 'Juan',
                     'last_name' => 'Pérez',
                     'email' => 'cliente@test.com',
-                    'mobile' => '2915662430',
+                    'phone' => '2915662430',
                 ],
                 'user' => [
                     'id' => $this->clientUser->id,
@@ -73,7 +73,7 @@ class ClientDashboardTest extends TestCase
             'name' => 'María',
             'last_name' => 'González',
             'email' => 'maria@test.com',
-            'mobile' => '2915662431',
+            'phone' => '2915662431',
         ];
 
         $response = $this->putJson('/api/client/profile', $updateData);
@@ -87,7 +87,7 @@ class ClientDashboardTest extends TestCase
                     'name' => 'María',
                     'last_name' => 'González',
                     'email' => 'maria@test.com',
-                    'mobile' => '2915662431',
+                    'phone' => '2915662431',
                 ],
             ]);
 
@@ -97,7 +97,7 @@ class ClientDashboardTest extends TestCase
             'name' => 'María',
             'last_name' => 'González',
             'email' => 'maria@test.com',
-            'mobile' => '2915662431',
+                    'phone' => '2915662431',
         ]);
     }
 
@@ -169,8 +169,8 @@ class ClientDashboardTest extends TestCase
                                 'id',
                                 'type',
                                 'quantity',
-                                'price',
-                                'total',
+                                'unit_price',
+                                'subtotal',
                             ],
                         ],
                     ],
@@ -279,7 +279,7 @@ class ClientDashboardTest extends TestCase
             'name' => '',
             'last_name' => '',
             'email' => 'invalid-email',
-            'mobile' => '',
+            'phone' => '',
         ]);
 
         $response->assertStatus(422)
@@ -287,6 +287,6 @@ class ClientDashboardTest extends TestCase
                 'success' => false,
                 'message' => 'Datos inválidos',
             ])
-            ->assertJsonValidationErrors(['name', 'last_name', 'email', 'mobile']);
+            ->assertJsonValidationErrors(['name', 'last_name', 'email', 'phone']);
     }
 }
