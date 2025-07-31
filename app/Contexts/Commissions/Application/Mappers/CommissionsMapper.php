@@ -97,7 +97,7 @@ class CommissionsMapper
                     'address' => optional($commission->originLocation)->address,
                     'origin' => optional($commission->originLocation)->origin,
                     'phone' => optional($commission->originLocation)->phone,
-
+                    'schedule' => optional($commission->originLocation)->schedule,
                 ],
                 'destination_location' => [
                     'id' => optional($commission->destinationLocation)->id,
@@ -105,6 +105,7 @@ class CommissionsMapper
                     'address' => optional($commission->destinationLocation)->address,
                     'origin' => optional($commission->destinationLocation)->origin,
                     'phone' => optional($commission->destinationLocation)->phone,
+                    'schedule' => optional($commission->destinationLocation)->schedule,
                 ],
                 'branch_id' => $commission->branch_id ?? null,
                 'branch' => [

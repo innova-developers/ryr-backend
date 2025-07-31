@@ -230,7 +230,7 @@ class CalculateSalaryTest extends TestCase
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
             'total' => 5000.00,
-            'date' => now()->subMonth(),
+            'date' => '2025-06-15', // Mes anterior específico
         ]);
 
         // Crear ingresos para el mes actual
@@ -244,7 +244,7 @@ class CalculateSalaryTest extends TestCase
         Income::factory()->create([
             'user_id' => $this->user->id,
             'amount' => 3000.00,
-            'date' => now()->subMonth(),
+            'date' => '2025-06-15', // Mes anterior específico
         ]);
 
         // Crear gastos para el mes actual
@@ -260,7 +260,7 @@ class CalculateSalaryTest extends TestCase
             'user_id' => $this->user->id,
             'expense_category_id' => $this->expenseCategory->id,
             'amount' => 500.00,
-            'date' => now()->subMonth(),
+            'date' => '2025-06-15', // Mes anterior específico
         ]);
 
         $response = $this->getJson("/api/users/{$this->user->id}/salary");

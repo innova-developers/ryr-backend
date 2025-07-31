@@ -14,4 +14,10 @@ enum CommissionStatus: string
 
     case PRESUPUESTO = 'PRESUPUESTO';
 
+    case PENDIENTE = 'PENDIENTE';
+    case PAGADO = 'PAGADO';
+    case CANCELADO = 'CANCELADO';
+    case RECHAZADO = 'RECHAZADO';
+    case ACEPTADO = 'ACEPTADO';
+
 }

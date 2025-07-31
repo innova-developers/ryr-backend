@@ -5,6 +5,7 @@ namespace App\Contexts\Branchs\Infrastructure\Http\Controllers;
 use App\Contexts\Branchs\Application\CreateBranchUseCase;
 use App\Contexts\Branchs\Application\DeleteBranchUseCase;
 use App\Contexts\Branchs\Application\DTO\CreateBranchDTO;
+use App\Contexts\Branchs\Application\DTO\GetBranchesFiltersDTO;
 use App\Contexts\Branchs\Application\DTO\UpdateBranchDTO;
 use App\Contexts\Branchs\Application\GetBranchsUseCase;
 use App\Contexts\Branchs\Application\GetBranchUseCase;
@@ -13,6 +14,7 @@ use App\Contexts\Branchs\Domain\Repositories\BranchRepository;
 use App\Contexts\Branchs\Infrastructure\Http\Requests\CreateBranchRequest;
 use App\Contexts\Branchs\Infrastructure\Http\Requests\UpdateBranchRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 class BranchController extends Controller
@@ -23,12 +25,11 @@ class BranchController extends Controller
     {
         $this->repository = app(BranchRepository::class);
     }
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $useCase = new GetBranchsUseCase(
-            $this->repository
-        );
-        $branches = $useCase();
+        $filters = GetBranchesFiltersDTO::fromArray($request->all());
+        $useCase = new GetBranchsUseCase($this->repository);
+        $branches = $useCase($filters);
 
         return response()->json($branches);
     }

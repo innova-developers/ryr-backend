@@ -178,4 +178,65 @@ class GetCommissionTest extends TestCase
 
         $response->assertStatus(401);
     }
+
+    public function test_it_can_access_public_tracking_without_authentication(): void
+    {
+        $commission = Commission::factory()->create([
+            'status' => CommissionStatus::PENDIENTE->value,
+        ]);
+
+        $response = $this->getJson("/api/commissions/{$commission->id}/tracking");
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'success',
+                'data' => [
+                    'tracking_id',
+                    'status',
+                    'status_label',
+                    'origin',
+                    'destination',
+                    'total',
+                    'date',
+                    'estimated_delivery',
+                    'created_at',
+                    'updated_at',
+                    'branch_name',
+                    'items_count',
+                    'items' => [
+                        '*' => [
+                            'description',
+                            'quantity',
+                            'size',
+                            'type',
+                            'weight',
+                            'dimensions',
+                        ],
+                    ],
+                ],
+            ])
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'tracking_id' => $commission->id,
+                    'status' => CommissionStatus::PENDIENTE->value,
+                ],
+            ]);
+
+        // Verificar que NO incluye información sensible
+        $response->assertJsonMissing([
+            'data' => [
+                'client_id',
+                'user_id',
+                'branch_id',
+                'customer' => [
+                    'id',
+                    'dni',
+                    'email',
+                    'phone',
+                    'address',
+                ],
+            ],
+        ]);
+    }
 }

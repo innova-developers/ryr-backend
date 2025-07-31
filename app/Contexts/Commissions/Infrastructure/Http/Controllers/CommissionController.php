@@ -98,6 +98,52 @@ class CommissionController extends Controller
             ], 404);
         }
     }
+
+    public function showPublic(int $id): JsonResponse
+    {
+        try {
+            $useCase = new GetCommissionUseCase($this->repository);
+            $commission = $useCase($id);
+
+            // Información pública limitada para tracking
+            $publicData = [
+                'tracking_id' => $commission['id'],
+                'tracking_number' => 'RYR' . str_pad($commission['id'], 9, '0', STR_PAD_LEFT),
+                'status' => $commission['status'],
+                'status_label' => $commission['status_label'] ?? null,
+                'origin' => [
+                    'name' => $commission['origin_location']['name'] ?? null,
+                    'address' => $commission['origin_location']['address'] ?? null,
+                    'city' => $commission['origin_location']['origin'] ?? null,
+                    'phone' => $commission['origin_location']['phone'] ?? null,
+                    'schedule' => $commission['origin_location']['schedule'] ?? null,
+                ],
+                'destination' => [
+                    'name' => $commission['destination_location']['name'] ?? null,
+                    'address' => $commission['destination_location']['address'] ?? null,
+                    'city' => $commission['destination_location']['origin'] ?? null,
+                    'phone' => $commission['destination_location']['phone'] ?? null,
+                    'schedule' => $commission['destination_location']['schedule'] ?? null,
+                ],
+                'date' => $commission['date'],
+                'created_at' => $commission['created_at'],
+                'updated_at' => $commission['updated_at'],
+                'items_count' => count($commission['items'] ?? []),
+                'message' => 'Para más información, inicia sesión en tu cuenta de cliente.',
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $publicData,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Comisión no encontrada',
+                'message' => 'No se encontró la comisión con el ID proporcionado',
+            ], 404);
+        }
+    }
     public function destroy(int $id): JsonResponse
     {
         try {
@@ -120,10 +166,16 @@ class CommissionController extends Controller
             $validated = $request->validate([
                 'status' => ['required', 'string', Rule::enum(CommissionStatus::class)],
                 'details' => ['nullable', 'string'],
+                'a_cuenta' => ['nullable', 'boolean'],
             ]);
 
-            $useCase = new UpdateCommissionStatusUseCase($this->repository);
-            $useCase($id, CommissionStatus::from($validated['status']), $validated['details'] ?? null);
+            $useCase = app(UpdateCommissionStatusUseCase::class);
+            $useCase(
+                $id,
+                CommissionStatus::from($validated['status']),
+                $validated['details'] ?? null,
+                $validated['a_cuenta'] ?? false
+            );
 
             $commission = $this->repository->findById($id);
             $user = Auth::user();

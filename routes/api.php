@@ -20,6 +20,10 @@ use Illuminate\Support\Facades\Route;
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout']);
 
+// Rutas públicas para validación de clientes
+Route::post('/validate-identifier', [App\Http\Controllers\Auth\ValidateIdentifierController::class, 'validateIdentifier']);
+Route::post('/verify-code', [App\Http\Controllers\Auth\ValidateIdentifierController::class, 'verifyCode']);
+
 // Rutas de destinos
 Route::get('destinations', [DestinationController::class, 'index']);
 Route::post('destinations', [DestinationController::class, 'store']);
@@ -56,35 +60,38 @@ Route::prefix('current-accounts')->group(function () {
     Route::delete('/{id}', [CurrentAccountController::class, 'destroy']);
 });
 
+// Rutas públicas para comisiones
+Route::get('/commissions/{id}/tracking', [CommissionController::class, 'showPublic']);
+Route::post('/commissions/public', [App\Http\Controllers\Public\PublicCommissionController::class, 'store']);
 
+// Rutas públicas para clientes
+Route::post('/customers/public', [App\Http\Controllers\Public\PublicCustomerController::class, 'store']);
 
 // Rutas protegidas para usuarios, comisiones y clientes
 Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
     // Usuarios
+    Route::get('/users', [UserController::class, 'index']);
+    Route::post('/users', [UserController::class, 'store']);
+    Route::put('/users/{id}', [UserController::class, 'update']);
+    Route::delete('/users/{id}', [UserController::class, 'destroy']);
 
-});
+    // Comisiones (excepto show que ya está pública)
+    Route::post('/commissions', [CommissionController::class, 'store']);
+    Route::get('/commissions/statuses', [CommissionController::class, 'getStatuses']);
+    Route::get('/commissions/{id}', [CommissionController::class, 'show']);
+    Route::patch('/commissions/{id}/status', [CommissionController::class, 'updateStatus']);
+    Route::get('/commissions',  [CommissionController::class, 'index']);
+    Route::delete('/commissions/{id}', [CommissionController::class, 'destroy']);
 
-Route::get('/users', [UserController::class, 'index']);
-Route::post('/users', [UserController::class, 'store']);
-Route::put('/users/{id}', [UserController::class, 'update']);
-Route::delete('/users/{id}', [UserController::class, 'destroy']);
+    // Clientes
+    Route::get('customers/search', [CustomerController::class, 'search']);
+    Route::apiResource('customers', CustomerController::class);
 
-// Comisiones
-Route::post('/commissions', [CommissionController::class, 'store']);
-Route::get('/commissions/statuses', [CommissionController::class, 'getStatuses']);
-Route::get('/commissions/{id}', [CommissionController::class, 'show']);
-Route::patch('/commissions/{id}/status', [CommissionController::class, 'updateStatus']);
-Route::get('/commissions',  [CommissionController::class, 'index']);
-Route::delete('/commissions/{id}', [CommissionController::class, 'destroy']);
-
-// Clientes
-Route::get('customers/search', [CustomerController::class, 'search']);
-Route::apiResource('customers', CustomerController::class);
-
-// Cuenta corriente de clientes
-Route::prefix('customers/{customerId}/current-account')->group(function () {
-    Route::get('/transactions', [CurrentAccountController::class, 'getCustomerTransactions']);
-    Route::get('/balance', [CurrentAccountController::class, 'getCustomerBalance']);
+    // Cuenta corriente de clientes
+    Route::prefix('customers/{customerId}/current-account')->group(function () {
+        Route::get('/transactions', [CurrentAccountController::class, 'getCustomerTransactions']);
+        Route::get('/balance', [CurrentAccountController::class, 'getCustomerBalance']);
+    });
 });
 
 Route::get('/users/{userId}/salary', [UserController::class, 'calculateSalary']);
@@ -113,5 +120,14 @@ Route::prefix('transports')->group(function () {
     Route::delete('/{transportId}/expenses/{expenseId}', [ExpensesController::class, 'destroyForTransport']);
 });
 
-
-
+// Rutas del Dashboard de Clientes (protegidas con autenticación de cliente)
+Route::middleware(['auth:sanctum'])->prefix('client')->group(function () {
+    Route::get('/profile', [App\Http\Controllers\Client\ClientDashboardController::class, 'getProfile']);
+    Route::put('/profile', [App\Http\Controllers\Client\ClientDashboardController::class, 'updateProfile']);
+    Route::get('/shipments', [App\Http\Controllers\Client\ClientDashboardController::class, 'getShipments']);
+    Route::get('/account-balance', [App\Http\Controllers\Client\ClientDashboardController::class, 'getAccountBalance']);
+    
+    // Rutas de cuenta corriente del cliente
+    Route::get('/current-account/transactions', [App\Http\Controllers\Client\ClientDashboardController::class, 'getCurrentAccountTransactions']);
+    Route::get('/current-account/balance', [App\Http\Controllers\Client\ClientDashboardController::class, 'getCurrentAccountBalance']);
+});

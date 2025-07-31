@@ -5,6 +5,7 @@ namespace App\Contexts\Customers\Infrastructure\Http\Controllers;
 use App\Contexts\Customers\Application\CreateCustomerUseCase;
 use App\Contexts\Customers\Application\DeleteCustomerUseCase;
 use App\Contexts\Customers\Application\DTO\CreateCustomerDTO;
+use App\Contexts\Customers\Application\DTO\GetCustomersFiltersDTO;
 use App\Contexts\Customers\Application\DTO\UpdateCustomerDTO;
 use App\Contexts\Customers\Application\GetCustomersUseCase;
 use App\Contexts\Customers\Application\GetCustomerUseCase;
@@ -16,8 +17,6 @@ use App\Contexts\Customers\Infrastructure\Http\Requests\UpdateCustomerRequest;
 use App\Contexts\Users\Application\CreateUserUseCase;
 use App\Contexts\Users\Application\DTO\CreateUserDTO;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
-use App\Shared\Models\Branch;
-use App\Shared\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,46 +34,57 @@ class CustomerController extends Controller
         $this->repository = app(CustomerRepository::class);
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        $filters = GetCustomersFiltersDTO::fromArray($request->all());
         $useCase = new GetCustomersUseCase($this->repository);
-        $customers = $useCase();
+        $customers = $useCase($filters);
 
         return response()->json($customers);
     }
 
     public function store(CreateCustomerRequest $request): JsonResponse
     {
-        $useCaseCreateUser = new CreateUserUseCase($this->userRepository);
-        $user = User::find(Auth::id());
-        $dtoCreateUser = new CreateUserDTO(
-            $request->input('name'),
-            $request->input('email'),
-            $request->input('dni'),
-            'cliente',
-            $user->branch_id
-        );
-        $userCreated = $useCaseCreateUser($dtoCreateUser);
-        $useCase = new CreateCustomerUseCase($this->repository);
-        $dto = new CreateCustomerDTO(
-            $request->input('dni'),
-            $request->input('name'),
-            $request->input('last_name'),
-            $request->input('mobile'),
-            $request->input('email'),
-            $request->input('address'),
-            $request->input('city'),
-            $request->input('phone'),
-            $request->input('maps_url'),
-            $request->input('business_hours'),
-            $request->input('observations'),
-            $request->boolean('is_premium', false),
-            $userCreated->id,
-            $user->branch_id
-        );
-        $customer = $useCase($dto);
+        try {
+            $user = Auth::user();
 
-        return response()->json($customer, 201);
+            if (! $user) {
+                return response()->json(['message' => 'Usuario no autenticado'], 401);
+            }
+
+            $useCaseCreateUser = new CreateUserUseCase($this->userRepository);
+            $dtoCreateUser = new CreateUserDTO(
+                $request->input('name'),
+                $request->input('email'),
+                $request->input('dni'),
+                'cliente',
+                $user->branch_id
+            );
+            $userCreated = $useCaseCreateUser($dtoCreateUser);
+
+            $useCase = new CreateCustomerUseCase($this->repository);
+            $dto = new CreateCustomerDTO(
+                $request->input('dni'),
+                $request->input('name'),
+                $request->input('last_name'),
+                $request->input('mobile'),
+                $request->input('email'),
+                $request->input('address'),
+                $request->input('city'),
+                $request->input('phone'),
+                $request->input('maps_url'),
+                $request->input('business_hours'),
+                $request->input('observations'),
+                $request->boolean('is_premium', false),
+                $userCreated->id,
+                $user->branch_id
+            );
+            $customer = $useCase($dto);
+
+            return response()->json($customer, 201);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al crear el cliente: ' . $e->getMessage()], 500);
+        }
     }
 
     public function show(int $id): JsonResponse
@@ -92,6 +102,12 @@ class CustomerController extends Controller
     public function update(UpdateCustomerRequest $request, int $id): JsonResponse
     {
         try {
+            $user = Auth::user();
+
+            if (! $user) {
+                return response()->json(['message' => 'Usuario no autenticado'], 401);
+            }
+
             $useCase = new UpdateCustomerUseCase($this->repository);
             $dto = new UpdateCustomerDTO(
                 $id,
@@ -108,13 +124,15 @@ class CustomerController extends Controller
                 $request->input('observations'),
                 $request->boolean('is_premium', false),
                 $request->input('user_id', null),
-                Auth::user()->branch_id ?? Branch::first()->id
+                $user->branch_id
             );
             $customer = $useCase($dto);
 
             return response()->json($customer);
         } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'Customer not found'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al actualizar el cliente: ' . $e->getMessage()], 500);
         }
     }
 
