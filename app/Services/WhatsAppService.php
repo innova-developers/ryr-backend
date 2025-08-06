@@ -21,26 +21,15 @@ class WhatsAppService
     public function sendMessage(string $phone, string $message): bool
     {
         try {
-            // Limpiar el número de teléfono (remover espacios, guiones, etc.)
             $cleanPhone = $this->cleanPhoneNumber($phone);
 
-            // Agregar código de país si no está presente
-            if (! str_starts_with($cleanPhone, '54')) {
-                $cleanPhone = '54' . $cleanPhone;
-            }
-
-            // Evitar enviar mensajes en entornos de prueba o a números de prueba
-            if ($this->shouldSkipSending($cleanPhone)) {
-                Log::info('WhatsApp message skipped (test environment or test number)', [
-                    'phone' => $cleanPhone,
-                    'environment' => app()->environment(),
-                ]);
-
-                return true; // Simular éxito para no romper el flujo
-            }
-
-            $response = Http::post("{$this->baseUrl}/waInstance{$this->instanceId}/SendMessage/{$this->token}", [
+            /*$response = Http::post("{$this->baseUrl}/waInstance{$this->instanceId}/SendMessage/{$this->token}", [
                 'chatId' => $cleanPhone . '@c.us',
+                'message' => $message,
+            ]);*/
+
+            $response = Http::post("http://147.182.174.231/wa-whatsapp-demo1/send", [
+                'to' => $cleanPhone . '@c.us',
                 'message' => $message,
             ]);
 
@@ -72,47 +61,16 @@ class WhatsAppService
 
     private function cleanPhoneNumber(string $phone): string
     {
-        // Remover todos los caracteres no numéricos
         $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
-        if (str_starts_with($cleanPhone, '54')) {
+        if (str_starts_with($cleanPhone, '549')) {
             return $cleanPhone;
         }
-
-        return '549' . $cleanPhone;
+        if (str_starts_with($cleanPhone, '54')) {
+            return '9' . $cleanPhone;
+        }
+        return '549'.$cleanPhone;
     }
 
-    private function shouldSkipSending(string $phone): bool
-    {
-        // No enviar si está deshabilitado por variable de entorno
-        if (config('app.disable_whatsapp', false)) {
-            return true;
-        }
-
-        // No enviar en entornos de prueba
-        if (app()->environment(['testing', 'local'])) {
-            return true;
-        }
-
-        // No enviar a números de prueba comunes
-        $testNumbers = [
-            '5491111111111',
-            '5492222222222',
-            '5493333333333',
-            '5494444444444',
-            '5495555555555',
-            '5496666666666',
-            '5497777777777',
-            '5498888888888',
-            '5499999999999',
-            '5490000000000',
-            '5491234567890',
-            '5499876543210',
-            '5492915123456', // Número de prueba común
-            '549291738293',  // Número de prueba del test
-        ];
-
-        return in_array($phone, $testNumbers);
-    }
 
     public function sendCommissionStatusNotification(
         string $phone,
