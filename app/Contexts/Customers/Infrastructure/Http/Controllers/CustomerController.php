@@ -108,6 +108,12 @@ class CustomerController extends Controller
                 return response()->json(['message' => 'Usuario no autenticado'], 401);
             }
 
+            // Obtener el customer actual para preservar user_id si no se proporciona
+            $currentCustomer = $this->repository->findById($id);
+            if (!$currentCustomer) {
+                return response()->json(['message' => 'Customer not found'], 404);
+            }
+
             $useCase = new UpdateCustomerUseCase($this->repository);
             $dto = new UpdateCustomerDTO(
                 $id,
@@ -123,7 +129,7 @@ class CustomerController extends Controller
                 $request->input('business_hours'),
                 $request->input('observations'),
                 $request->boolean('is_premium', false),
-                $request->input('user_id', null),
+                $request->input('user_id', $currentCustomer->user_id), // Preservar user_id existente si no se proporciona
                 $user->branch_id
             );
             $customer = $useCase($dto);

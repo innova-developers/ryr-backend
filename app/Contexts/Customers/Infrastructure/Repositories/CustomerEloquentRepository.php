@@ -132,6 +132,10 @@ class CustomerEloquentRepository implements CustomerRepository
     {
         try {
             $customer = Customer::findOrFail($dto->id);
+            
+            // Guardar el email anterior para comparar
+            $oldEmail = $customer->email;
+            
             $customer->dni = $dto->dni;
             $customer->name = $dto->name;
             $customer->last_name = $dto->lastName;
@@ -147,6 +151,15 @@ class CustomerEloquentRepository implements CustomerRepository
             $customer->user_id = $dto->userId;
             $customer->branch_id = $dto->branchId;
             $customer->save();
+
+            // Si el email cambió, actualizar también el usuario asociado
+            if ($oldEmail !== $dto->email && $customer->user_id) {
+                $user = \App\Shared\Models\User::find($customer->user_id);
+                if ($user && $user->role === \App\Shared\Enums\UserRole::CLIENTE) {
+                    $user->email = $dto->email;
+                    $user->save();
+                }
+            }
 
             return $customer;
         } catch (ModelNotFoundException $exception) {

@@ -5,6 +5,7 @@ namespace Tests\Feature\Customers;
 use App\Shared\Models\Branch;
 use App\Shared\Models\Customer;
 use App\Shared\Models\User;
+use App\Shared\Enums\UserRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -97,5 +98,106 @@ class UpdateCustomerTest extends TestCase
             ]);
 
         $response->assertStatus(404);
+    }
+
+    public function test_updates_user_email_when_customer_email_changes(): void
+    {
+        $branch = Branch::factory()->create();
+        $adminUser = User::factory()->create(['role' => UserRole::ADMINISTRADOR, 'branch_id' => $branch->id]);
+        
+        // Crear un usuario cliente
+        $clientUser = User::factory()->create([
+            'email' => 'cliente@example.com',
+            'role' => UserRole::CLIENTE,
+            'branch_id' => null
+        ]);
+        
+        // Crear un cliente asociado al usuario
+        $customer = Customer::factory()->create([
+            'email' => 'cliente@example.com',
+            'user_id' => $clientUser->id,
+        ]);
+
+        // Actualizar el email del cliente
+        $newEmail = 'nuevo-email@example.com';
+        $response = $this->actingAs($adminUser)
+            ->putJson("/api/customers/{$customer->id}", [
+                'dni' => $customer->dni,
+                'name' => $customer->name,
+                'last_name' => $customer->last_name,
+                'mobile' => $customer->mobile,
+                'email' => $newEmail,
+                'address' => $customer->address,
+                'city' => $customer->city,
+                'phone' => $customer->phone,
+                'is_premium' => $customer->is_premium,
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'email' => $newEmail,
+            ]);
+
+        // Verificar que el email se actualizó en la tabla customers
+        $this->assertDatabaseHas('customers', [
+            'id' => $customer->id,
+            'email' => $newEmail,
+        ]);
+
+        // Verificar que el email también se actualizó en la tabla users
+        $this->assertDatabaseHas('users', [
+            'id' => $clientUser->id,
+            'email' => $newEmail,
+            'role' => UserRole::CLIENTE->value,
+        ]);
+
+        // Verificar que el email anterior ya no existe en users
+        $this->assertDatabaseMissing('users', [
+            'id' => $clientUser->id,
+            'email' => 'cliente@example.com',
+        ]);
+    }
+
+    public function test_does_not_update_user_email_when_customer_has_no_associated_user(): void
+    {
+        $branch = Branch::factory()->create();
+        $adminUser = User::factory()->create(['role' => UserRole::ADMINISTRADOR, 'branch_id' => $branch->id]);
+        
+        // Crear un cliente sin usuario asociado
+        $customer = Customer::factory()->create([
+            'email' => 'cliente@example.com',
+            'user_id' => null,
+        ]);
+
+        // Actualizar el email del cliente
+        $newEmail = 'nuevo-email@example.com';
+        $response = $this->actingAs($adminUser)
+            ->putJson("/api/customers/{$customer->id}", [
+                'dni' => $customer->dni,
+                'name' => $customer->name,
+                'last_name' => $customer->last_name,
+                'mobile' => $customer->mobile,
+                'email' => $newEmail,
+                'address' => $customer->address,
+                'city' => $customer->city,
+                'phone' => $customer->phone,
+                'is_premium' => $customer->is_premium,
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'email' => $newEmail,
+            ]);
+
+        // Verificar que el email se actualizó en la tabla customers
+        $this->assertDatabaseHas('customers', [
+            'id' => $customer->id,
+            'email' => $newEmail,
+        ]);
+
+        // No debería existir ningún usuario con este email
+        $this->assertDatabaseMissing('users', [
+            'email' => $newEmail,
+        ]);
     }
 }
