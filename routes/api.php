@@ -131,3 +131,12 @@ Route::middleware(['auth:sanctum'])->prefix('client')->group(function () {
     Route::get('/current-account/transactions', [App\Http\Controllers\Client\ClientDashboardController::class, 'getCurrentAccountTransactions']);
     Route::get('/current-account/balance', [App\Http\Controllers\Client\ClientDashboardController::class, 'getCurrentAccountBalance']);
 });
+
+// Rutas para cadetes y cadetes externos
+Route::prefix('cadete')->middleware(['auth:sanctum', \App\Http\Middleware\CadeteMiddleware::class])->group(function () {
+    Route::get('/profile', [App\Http\Controllers\Cadete\CadeteController::class, 'profile']);
+    Route::get('/shipments', [App\Http\Controllers\Cadete\CadeteController::class, 'shipments']);
+    Route::put('/shipments/{id}', [App\Http\Controllers\Cadete\CadeteController::class, 'updateShipmentStatus']);
+    Route::post('/shipments/{id}/location', [App\Http\Controllers\Cadete\CadeteController::class, 'sendLocation']);
+    Route::get('/stats', [App\Http\Controllers\Cadete\CadeteController::class, 'stats']);
+});

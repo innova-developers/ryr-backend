@@ -5,6 +5,7 @@ namespace App\Shared\Models;
 use Database\Factories\TransportFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -20,6 +21,7 @@ class Transport extends Model
         'insurance',
         'usage',
         'observation',
+        'cadete_id',
     ];
 
     protected $casts = [
@@ -31,6 +33,16 @@ class Transport extends Model
     public function expenses(): HasMany
     {
         return $this->hasMany(Expense::class);
+    }
+
+    public function cadete(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cadete_id');
+    }
+
+    public function commissions(): HasMany
+    {
+        return $this->hasMany(Commission::class);
     }
 
     public static function newFactory(): TransportFactory
