@@ -25,6 +25,7 @@ class Commission extends Model
         'user_id',
         'origin_location_id',
         'destination_location_id',
+        'transport_id',
     ];
 
     protected $casts = [
@@ -71,6 +72,11 @@ class Commission extends Model
     public function logs(): HasMany
     {
         return $this->hasMany(CommissionLog::class);
+    }
+
+    public function transport(): BelongsTo
+    {
+        return $this->belongsTo(Transport::class);
     }
 
     public static function newFactory(): CommissionFactory
