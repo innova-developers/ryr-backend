@@ -48,7 +48,7 @@ class GetCommissionTest extends TestCase
             'branch_id' => $this->branch->id,
             'user_id' => $this->user->id,
             'date' => '2024-03-21',
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'total' => '1000.00',
             'origin_location_id' => $this->location->id,
             'destination_location_id' => $this->location->id,
@@ -68,7 +68,7 @@ class GetCommissionTest extends TestCase
             'commission_id' => $commission->id,
             'user_id' => $this->user->id,
             'previous_status' => "",
-            'new_status' => CommissionStatus::DEPOSITO->value,
+            'new_status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'details' => 'Comisión creada',
         ]);
 
@@ -142,7 +142,7 @@ class GetCommissionTest extends TestCase
                         'name' => $this->branch->name,
                     ],
                     'date' => $commission->date->format('Y-m-d H:i:s'),
-                    'status' => CommissionStatus::DEPOSITO->value,
+                    'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
                     'user_id' => $this->user->id,
                     'user' => [
                         'id' => $this->user->id,
@@ -152,7 +152,7 @@ class GetCommissionTest extends TestCase
                     'logs' => [
                         [
                             'previous_status' => "",
-                            'new_status' => CommissionStatus::DEPOSITO->value,
+                            'new_status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
                             'details' => 'Comisión creada',
                             'user' => $this->user->name,
                         ],
@@ -182,7 +182,7 @@ class GetCommissionTest extends TestCase
     public function test_it_can_access_public_tracking_without_authentication(): void
     {
         $commission = Commission::factory()->create([
-            'status' => CommissionStatus::PENDIENTE->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
         ]);
 
         $response = $this->getJson("/api/commissions/{$commission->id}/tracking");
@@ -206,7 +206,7 @@ class GetCommissionTest extends TestCase
                 'success' => true,
                 'data' => [
                     'tracking_id' => $commission->id,
-                    'status' => CommissionStatus::PENDIENTE->value,
+                    'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
                 ],
             ]);
 

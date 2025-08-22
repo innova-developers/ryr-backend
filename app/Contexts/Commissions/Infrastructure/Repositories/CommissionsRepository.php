@@ -10,7 +10,7 @@ class CommissionsRepository
 {
     public function findWithAllItems(array $filters = [], ?string $sortBy = null, ?string $sortDirection = 'asc'): LengthAwarePaginator
     {
-        $query = Commission::with(['items', 'client', 'destination', 'branch', 'user', 'logs.user'])
+        $query = Commission::with(['items', 'client', 'destination', 'branch', 'user', 'logs.user', 'deliverySignature'])
             ->when($filters['client_id'] ?? null, function ($query, $clientId) {
                 return $query->where('client_id', $clientId);
             })
@@ -41,7 +41,7 @@ class CommissionsRepository
 
     public function findAllWithItems(ListCommissionsFiltersDTO $filters): LengthAwarePaginator
     {
-        $query = Commission::with(['items', 'client', 'destination', 'branch', 'user', 'logs.user'])
+        $query = Commission::with(['items', 'client', 'destination', 'branch', 'user', 'logs.user', 'deliverySignature'])
             ->when($filters->clientId, function ($query, $clientId) {
                 return $query->where('client_id', $clientId);
             })

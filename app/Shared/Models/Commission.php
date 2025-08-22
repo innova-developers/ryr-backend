@@ -3,11 +3,13 @@
 namespace App\Shared\Models;
 
 use App\Shared\Enums\CommissionStatus;
+use App\DeliverySignature;
 use Database\Factories\CommissionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Commission extends Model
@@ -26,6 +28,7 @@ class Commission extends Model
         'origin_location_id',
         'destination_location_id',
         'transport_id',
+        'cadete_id',
     ];
 
     protected $casts = [
@@ -77,6 +80,16 @@ class Commission extends Model
     public function transport(): BelongsTo
     {
         return $this->belongsTo(Transport::class);
+    }
+
+    public function cadete(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cadete_id');
+    }
+
+    public function deliverySignature(): HasOne
+    {
+        return $this->hasOne(DeliverySignature::class);
     }
 
     public static function newFactory(): CommissionFactory

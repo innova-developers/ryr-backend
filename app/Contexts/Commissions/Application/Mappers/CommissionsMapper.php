@@ -51,6 +51,12 @@ class CommissionsMapper
                         'phone' => $commission->destinationLocation->phone ?? null,
                     ],
                     'current_branch' => $commission->logs->last()->user->branch->name ?? null,
+                    'cadete' => $commission->cadete ? [
+                        'id' => $commission->cadete->id,
+                        'name' => $commission->cadete->name,
+                        'email' => $commission->cadete->email,
+                        'role' => $commission->cadete->role->value,
+                    ] : null,
                     'items' => $items->map(function ($item) {
                         return [
                             'id' => $item->id ?? null,
@@ -65,6 +71,13 @@ class CommissionsMapper
                             'updated_at' => $item->updated_at,
                         ];
                     })->toArray(),
+                    'signature_data' => $commission->deliverySignature ? [
+                        'receiver_name' => $commission->deliverySignature->receiver_name,
+                        'receiver_phone' => $commission->deliverySignature->receiver_phone,
+                        'notes' => $commission->deliverySignature->notes,
+                        'signature_image' => \DB::table('delivery_signatures')->where('commission_id', $commission->id)->value('signature_image'),
+                        'delivery_timestamp' => $commission->deliverySignature->delivery_timestamp->toISOString(),
+                    ] : null,
                 ];
             })->toArray();
         } catch (\Exception $e) {
@@ -120,6 +133,12 @@ class CommissionsMapper
                     'id' => optional($commission->user)->id,
                     'name' => optional($commission->user)->name,
                 ],
+                'cadete' => $commission->cadete ? [
+                    'id' => $commission->cadete->id,
+                    'name' => $commission->cadete->name,
+                    'email' => $commission->cadete->email,
+                    'role' => $commission->cadete->role->value,
+                ] : null,
                 'total' => $commission->total ?? null,
                 'items' => optional($commission->items)->map(function ($item) {
                     return [
@@ -146,6 +165,13 @@ class CommissionsMapper
                         'user' => optional($item->user)->name,
                     ];
                 })->toArray() ?? [],
+                'signature_data' => $commission->deliverySignature ? [
+                    'receiver_name' => $commission->deliverySignature->receiver_name,
+                    'receiver_phone' => $commission->deliverySignature->receiver_phone,
+                    'notes' => $commission->deliverySignature->notes,
+                    'signature_image' => \DB::table('delivery_signatures')->where('commission_id', $commission->id)->value('signature_image'),
+                    'delivery_timestamp' => $commission->deliverySignature->delivery_timestamp->toISOString(),
+                ] : null,
                 'created_at' => $commission->created_at ?? null,
                 'updated_at' => $commission->updated_at ?? null,
             ];

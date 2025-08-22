@@ -40,13 +40,13 @@ class UpdateCommissionStatusTest extends TestCase
             'destination_id' => $this->destination->id,
             'branch_id' => $this->branch->id,
             'user_id' => $this->user->id,
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
         ]);
 
         // Act
         $response = $this->actingAs($this->user)
             ->patchJson("/api/commissions/{$commission->id}/status", [
-                'status' => CommissionStatus::ENTREGAR_Y_RETIRAR->value,
+                'status' => CommissionStatus::EN_PROCESO_ENTREGA->value,
                 'details' => 'Cambio de estado por prueba',
             ]);
 
@@ -56,7 +56,7 @@ class UpdateCommissionStatusTest extends TestCase
                 'message' => 'Estado de la comisión actualizado correctamente',
                 'commission' => [
                     'id' => $commission->id,
-                    'status' => CommissionStatus::ENTREGAR_Y_RETIRAR->value,
+                    'status' => CommissionStatus::EN_PROCESO_ENTREGA->value,
                     'branch' => [
                         'id' => $this->branch->id,
                         'name' => 'Sucursal Test',
@@ -66,14 +66,14 @@ class UpdateCommissionStatusTest extends TestCase
 
         $this->assertDatabaseHas('commissions', [
             'id' => $commission->id,
-            'status' => CommissionStatus::ENTREGAR_Y_RETIRAR->value,
+            'status' => CommissionStatus::EN_PROCESO_ENTREGA->value,
         ]);
 
         $this->assertDatabaseHas('commission_logs', [
             'commission_id' => $commission->id,
             'user_id' => $this->user->id,
-            'previous_status' => CommissionStatus::DEPOSITO->value,
-            'new_status' => CommissionStatus::ENTREGAR_Y_RETIRAR->value,
+            'previous_status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
+            'new_status' => CommissionStatus::EN_PROCESO_ENTREGA->value,
             'details' => 'Cambio de estado por prueba',
         ]);
     }
@@ -83,7 +83,7 @@ class UpdateCommissionStatusTest extends TestCase
         // Act
         $response = $this->actingAs($this->user)
             ->patchJson('/api/commissions/999/status', [
-                'status' => CommissionStatus::LAS_ROSAS->value,
+                'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             ]);
 
         // Assert
@@ -94,7 +94,7 @@ class UpdateCommissionStatusTest extends TestCase
     {
         // Act
         $response = $this->patchJson('/api/commissions/1/status', [
-            'status' => CommissionStatus::LAS_ROSAS->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
         ]);
 
         // Assert

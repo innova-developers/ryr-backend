@@ -180,7 +180,7 @@ class ClientDashboardController
             }
 
             // Obtener las comisiones (envíos) del cliente
-            $commissions = Commission::with(['items', 'client', 'destination'])
+            $commissions = Commission::with(['items', 'client', 'destination', 'deliverySignature'])
                 ->where('client_id', $customer->id)
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -204,6 +204,13 @@ class ClientDashboardController
                             'subtotal' => $item->subtotal ?? 0,
                         ];
                     })->toArray() : [],
+                    'signature_data' => $commission->deliverySignature ? [
+                        'receiver_name' => $commission->deliverySignature->receiver_name,
+                        'receiver_phone' => $commission->deliverySignature->receiver_phone,
+                        'notes' => $commission->deliverySignature->notes,
+                        'signature_image' => \DB::table('delivery_signatures')->where('commission_id', $commission->id)->value('signature_image'),
+                        'delivery_timestamp' => $commission->deliverySignature->delivery_timestamp->toISOString(),
+                    ] : null,
                 ];
             });
 

@@ -48,7 +48,7 @@ class CommissionCurrentAccountTest extends TestCase
             'date' => '2024-03-21',
             'origin' => $this->destination->origin,
             'destination' => $this->destination->destination,
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
             'items' => [
@@ -71,7 +71,7 @@ class CommissionCurrentAccountTest extends TestCase
         // Verificar que se creó la comisión
         $this->assertDatabaseHas('commissions', [
             'client_id' => $this->customer->id,
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'total' => 1000,
         ]);
 
@@ -98,7 +98,7 @@ class CommissionCurrentAccountTest extends TestCase
             'date' => '2024-03-21',
             'origin' => $this->destination->origin,
             'destination' => $this->destination->destination,
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
             'items' => [
@@ -121,7 +121,7 @@ class CommissionCurrentAccountTest extends TestCase
         // Verificar que se creó la comisión
         $this->assertDatabaseHas('commissions', [
             'client_id' => $this->customer->id,
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'total' => 1000,
         ]);
 
@@ -146,7 +146,7 @@ class CommissionCurrentAccountTest extends TestCase
             'date' => '2024-03-21',
             'origin' => $this->destination->origin,
             'destination' => $this->destination->destination,
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
             'items' => [
@@ -169,7 +169,7 @@ class CommissionCurrentAccountTest extends TestCase
         // Verificar que se creó la comisión
         $this->assertDatabaseHas('commissions', [
             'client_id' => $this->customer->id,
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'total' => 1000,
         ]);
 
@@ -195,7 +195,7 @@ class CommissionCurrentAccountTest extends TestCase
             'date' => '2024-03-21',
             'origin' => $this->destination->origin,
             'destination' => $this->destination->destination,
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
             'items' => [
@@ -220,7 +220,7 @@ class CommissionCurrentAccountTest extends TestCase
             'date' => '2024-03-22',
             'origin' => $this->destination->origin,
             'destination' => $this->destination->destination,
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
             'items' => [
@@ -266,7 +266,7 @@ class CommissionCurrentAccountTest extends TestCase
             'date' => '2024-03-21',
             'origin' => $this->destination->origin,
             'destination' => $this->destination->destination,
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
             'items' => [

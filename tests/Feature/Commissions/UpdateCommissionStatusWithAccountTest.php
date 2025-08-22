@@ -47,7 +47,7 @@ class UpdateCommissionStatusWithAccountTest extends TestCase
             'destination_id' => $destination->id,
             'origin_location_id' => $originLocation->id,
             'destination_location_id' => $destinationLocation->id,
-            'status' => CommissionStatus::PENDIENTE,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA,
             'total' => 5000.00,
         ]);
 

@@ -60,7 +60,7 @@ class CommissionStatusNotificationTest extends TestCase
             'user_id' => $this->adminUser->id,
             'origin_location_id' => $originLocation->id,
             'destination_location_id' => $destinationLocation->id,
-            'status' => CommissionStatus::PENDIENTE,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA,
         ]);
     }
 
@@ -71,7 +71,7 @@ class CommissionStatusNotificationTest extends TestCase
         $this->assertEquals('cliente@example.com', $this->customer->email, 'Customer email should match');
 
         $response = $this->patchJson("/api/commissions/{$this->commission->id}/status", [
-            'status' => CommissionStatus::ACEPTADO->value,
+            'status' => CommissionStatus::CADETE_ASIGNADO->value,
             'details' => 'Presupuesto aceptado por el cliente',
         ]);
 
@@ -84,7 +84,7 @@ class CommissionStatusNotificationTest extends TestCase
     public function test_sends_notifications_when_status_changes_to_retirado(): void
     {
         $response = $this->patchJson("/api/commissions/{$this->commission->id}/status", [
-            'status' => CommissionStatus::RETIRADO->value,
+            'status' => CommissionStatus::ENCOMIENDA_RETIRADA->value,
             'details' => 'Envío retirado para transporte',
         ]);
 
@@ -123,7 +123,7 @@ class CommissionStatusNotificationTest extends TestCase
     public function test_sends_notifications_when_status_changes_to_pagado(): void
     {
         $response = $this->patchJson("/api/commissions/{$this->commission->id}/status", [
-            'status' => CommissionStatus::PAGADO->value,
+            'status' => CommissionStatus::PAGO_CONFIRMADO->value,
             'details' => 'Pago confirmado',
         ]);
 
@@ -136,7 +136,7 @@ class CommissionStatusNotificationTest extends TestCase
     public function test_does_not_send_notifications_for_unimportant_statuses(): void
     {
         $response = $this->patchJson("/api/commissions/{$this->commission->id}/status", [
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'details' => 'En depósito',
         ]);
 
@@ -163,11 +163,11 @@ class CommissionStatusNotificationTest extends TestCase
             'user_id' => $this->adminUser->id,
             'origin_location_id' => $this->commission->origin_location_id,
             'destination_location_id' => $this->commission->destination_location_id,
-            'status' => CommissionStatus::PENDIENTE,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA,
         ]);
 
         $response = $this->patchJson("/api/commissions/{$commission->id}/status", [
-            'status' => CommissionStatus::ACEPTADO->value,
+            'status' => CommissionStatus::CADETE_ASIGNADO->value,
         ]);
 
         $response->assertStatus(200);
@@ -184,7 +184,7 @@ class CommissionStatusNotificationTest extends TestCase
                 ->with(
                     '2915123456',
                     $this->commission->id,
-                    CommissionStatus::ACEPTADO->value,
+                    CommissionStatus::CADETE_ASIGNADO->value,
                     $this->customer->full_name,
                     null,
                     \Mockery::type('object')
@@ -193,7 +193,7 @@ class CommissionStatusNotificationTest extends TestCase
         });
 
         $response = $this->patchJson("/api/commissions/{$this->commission->id}/status", [
-            'status' => CommissionStatus::ACEPTADO->value,
+            'status' => CommissionStatus::CADETE_ASIGNADO->value,
         ]);
 
         $response->assertStatus(200);
@@ -209,7 +209,7 @@ class CommissionStatusNotificationTest extends TestCase
         });
 
         $response = $this->patchJson("/api/commissions/{$this->commission->id}/status", [
-            'status' => CommissionStatus::ACEPTADO->value,
+            'status' => CommissionStatus::CADETE_ASIGNADO->value,
         ]);
 
         $response->assertStatus(200);
@@ -224,7 +224,7 @@ class CommissionStatusNotificationTest extends TestCase
         });
 
         $response = $this->patchJson("/api/commissions/{$this->commission->id}/status", [
-            'status' => CommissionStatus::ACEPTADO->value,
+            'status' => CommissionStatus::CADETE_ASIGNADO->value,
         ]);
 
         $response->assertStatus(200);

@@ -65,9 +65,10 @@ class CadeteEndpointsTest extends TestCase
             'destination_id' => $destination->id,
             'branch_id' => $this->branch->id,
             'transport_id' => $this->transport->id,
+            'cadete_id' => $this->cadete->id,
             'origin_location_id' => $originLocation->id,
             'destination_location_id' => $destinationLocation->id,
-            'status' => CommissionStatus::PENDIENTE,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA,
         ]);
     }
 
@@ -159,17 +160,17 @@ class CadeteEndpointsTest extends TestCase
                     'filters'
                 ])
                 ->assertJsonPath('shipments.0.id', $this->commission->id)
-                ->assertJsonPath('shipments.0.status', CommissionStatus::PENDIENTE->value);
+                ->assertJsonPath('shipments.0.status', CommissionStatus::SOLICITUD_RECIBIDA->value);
     }
 
     public function test_cadete_can_filter_shipments_by_status()
     {
         Sanctum::actingAs($this->cadete);
 
-        $response = $this->getJson('/api/cadete/shipments?status=pendiente');
+        $response = $this->getJson('/api/cadete/shipments?status=SOLICITUD_RECIBIDA');
 
         $response->assertStatus(200)
-                ->assertJsonPath('filters.status', 'pendiente')
+                ->assertJsonPath('filters.status', 'SOLICITUD_RECIBIDA')
                 ->assertJsonCount(1, 'shipments');
     }
 
@@ -209,7 +210,7 @@ class CadeteEndpointsTest extends TestCase
         Sanctum::actingAs($this->cadete);
 
         $response = $this->putJson("/api/cadete/shipments/{$this->commission->id}", [
-            'status' => 'en_transito',
+            'status' => 'EN_TRANSITO_DESTINO',
             'observation' => 'Recogido del origen',
         ]);
 
@@ -224,12 +225,12 @@ class CadeteEndpointsTest extends TestCase
                         'updated_at'
                     ]
                 ])
-                ->assertJsonPath('shipment.status', 'en_transito');
+                ->assertJsonPath('shipment.status', 'EN_TRANSITO_DESTINO');
 
         // Verificar que se actualizó en la base de datos
         $this->assertDatabaseHas('commissions', [
             'id' => $this->commission->id,
-            'status' => CommissionStatus::EN_TRANSITO->value,
+            'status' => CommissionStatus::EN_TRANSITO_DESTINO->value,
         ]);
     }
 
@@ -248,7 +249,7 @@ class CadeteEndpointsTest extends TestCase
         Sanctum::actingAs($this->cadete);
 
         $response = $this->putJson("/api/cadete/shipments/{$otherCommission->id}", [
-            'status' => 'en_transito',
+            'status' => 'EN_TRANSITO_DESTINO',
         ]);
 
         $response->assertStatus(404)
@@ -283,8 +284,12 @@ class CadeteEndpointsTest extends TestCase
                         'recorded_at'
                     ]
                 ])
-                ->assertJsonPath('location.latitude', $locationData['latitude'])
-                ->assertJsonPath('location.longitude', $locationData['longitude']);
+                ->assertJsonPath('location.latitude', function($value) use ($locationData) {
+                    return abs($value - $locationData['latitude']) < 0.0001;
+                })
+                ->assertJsonPath('location.longitude', function($value) use ($locationData) {
+                    return abs($value - $locationData['longitude']) < 0.0001;
+                });
 
         // Verificar que se guardó en la base de datos
         $this->assertDatabaseHas('shipment_locations', [

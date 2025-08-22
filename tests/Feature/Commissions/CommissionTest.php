@@ -45,7 +45,7 @@ class CommissionTest extends TestCase
             'date' => '2024-03-21',
             'origin' => $this->destination->origin,
             'destination' => $this->destination->destination,
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
             'items' => [
@@ -80,7 +80,7 @@ class CommissionTest extends TestCase
 
         $this->assertDatabaseHas('commissions', [
             'client_id' => $this->customer->id,
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
         ]);
@@ -107,6 +107,29 @@ class CommissionTest extends TestCase
             array_map(fn ($status) => $status->value, CommissionStatus::cases()),
             $statuses
         );
+
+        // Verificar que las etiquetas sean las del admin
+        $statuses = $response->json();
+        $this->assertEquals('Solicitud recibida', $statuses[0]['label']);
+    }
+
+    public function test_can_get_client_commission_statuses(): void
+    {
+        $this->actingAs($this->user);
+
+        $response = $this->getJson('/api/commissions/statuses/client');
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                '*' => [
+                    'value',
+                    'label',
+                ],
+            ]);
+
+        // Verificar que las etiquetas sean las del cliente
+        $statuses = $response->json();
+        $this->assertEquals('Solicitud recibida', $statuses[0]['label']);
     }
 
     public function test_validates_required_fields(): void

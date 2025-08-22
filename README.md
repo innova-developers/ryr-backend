@@ -417,6 +417,156 @@ Authorization: Bearer {token}
 }
 ```
 
+### 🚚 Dashboard de Cadetes
+
+| Método | Endpoint | Descripción | Autenticación |
+|--------|----------|-------------|---------------|
+| `GET` | `/api/cadete/home` | Dashboard principal | Cadete |
+| `GET` | `/api/cadete/profile` | Perfil del cadete | Cadete |
+| `PUT` | `/api/cadete/profile` | Actualizar perfil | Cadete |
+| `GET` | `/api/cadete/deliveries` | Lista de entregas | Cadete |
+| `PUT` | `/api/cadete/deliveries/{id}` | Actualizar estado de entrega | Cadete |
+| `POST` | `/api/cadete/deliveries/{id}/location` | Enviar ubicación GPS | Cadete |
+| `GET` | `/api/cadete/stats` | Estadísticas básicas | Cadete |
+| `GET` | `/api/cadete/earnings` | Ganancias detalladas | Cadete |
+
+**Ejemplo - Obtener ganancias del mes:**
+```bash
+GET /api/cadete/earnings?period=month
+Authorization: Bearer {token}
+```
+
+**Respuesta:**
+```json
+{
+  "success": true,
+  "message": "Ganancias obtenidas correctamente",
+  "data": {
+    "summary": {
+      "total_earnings": 600.00,
+      "total_deliveries": 4,
+      "commission_percentage": 15.0,
+      "total_commission_amount": 4000.00,
+      "currency": "ARS",
+      "period_label": "Este mes",
+      "formatted_total": "$600",
+      "formatted_commission_amount": "$4.000"
+    },
+    "breakdown": {
+      "cash_earnings": 600.00,
+      "card_earnings": 0.00,
+      "transfer_earnings": 0.00,
+      "bonuses": 0.00,
+      "deductions": 0.00,
+      "net_earnings": 600.00,
+      "total_commission_amount": 4000.00,
+      "commission_percentage": 15.0
+    },
+    "payment_status": {
+      "paid": {
+        "commission_amount": 4000.00,
+        "earnings": 600.00,
+        "count": 4,
+        "percentage": 100.0
+      },
+      "pending": {
+        "commission_amount": 0.00,
+        "earnings": 0.00,
+        "count": 0,
+        "percentage": 0.0
+      },
+      "cancelled": {
+        "commission_amount": 0.00,
+        "earnings": 0.00,
+        "count": 0,
+        "percentage": 0.0
+      }
+    },
+    "daily_breakdown": [
+      {
+        "date": "2025-08-22",
+        "commission_amount": 1000.00,
+        "earnings": 150.00,
+        "deliveries": 1,
+        "hours_worked": 0.5,
+        "formatted_commission_amount": "$1.000",
+        "formatted_earnings": "$150"
+      }
+    ],
+    "top_routes": [
+      {
+        "route": "CABA → Zona Norte",
+        "commission_amount": 2000.00,
+        "earnings": 300.00,
+        "deliveries": 2,
+        "average_per_delivery": 150.00,
+        "percentage": 50.0
+      }
+    ],
+    "performance_metrics": {
+      "delivery_success_rate": 100.0,
+      "customer_rating": 4.8,
+      "on_time_percentage": 87.5,
+      "earnings_growth": {
+        "percentage": 0.0,
+        "compared_to": "período_anterior",
+        "trend": "up"
+      },
+      "commission_growth": {
+        "current_period_commission": 4000.00,
+        "previous_period_commission": 0.00,
+        "current_period_earnings": 600.00,
+        "previous_period_earnings": 0.00
+      }
+    },
+    "recent_payments": [
+      {
+        "id": 123,
+        "date": "2025-08-22T15:30:00.000Z",
+        "commission_amount": 1000.00,
+        "earnings": 150.00,
+        "method": "cash",
+        "status": "paid",
+        "reference": "TXN-123",
+        "deliveries_count": 1,
+        "formatted_commission_amount": "$1.000",
+        "formatted_earnings": "$150"
+      }
+    ],
+    "pagination": {
+      "current_page": 1,
+      "per_page": 20,
+      "total": 1,
+      "last_page": 1,
+      "from": 1,
+      "to": 1
+    },
+    "commission_info": {
+      "cadete_commission_percentage": 15.0,
+      "explanation": "El cadete recibe el 15.00% del total de cada comisión entregada"
+    }
+  }
+}
+```
+
+**Parámetros disponibles:**
+- `period`: `today`, `week`, `month`, `year`, `custom`
+- `date_from`: Fecha desde (requerido si `period=custom`)
+- `date_to`: Fecha hasta (requerido si `period=custom`)
+- `status`: `all`, `paid`, `pending`, `cancelled`
+- `payment_method`: `all`, `cash`, `card`, `transfer`
+- `delivery_type`: `all`, `standard`, `express`, `urgent`
+- `page`: Número de página (default: 1)
+- `per_page`: Elementos por página (default: 20, max: 100)
+
+**💡 Sistema de Cálculo de Ganancias:**
+El cadete recibe un porcentaje específico de cada comisión entregada, definido en el campo `commission_percentage` de su perfil de usuario. Por ejemplo:
+- **Comisión total**: $1,000
+- **Porcentaje del cadete**: 15%
+- **Ganancia del cadete**: $150
+
+Todas las métricas de ganancias se calculan aplicando este porcentaje a las comisiones completadas (estados `ENTREGADO` y `RETIRADO_SUCURSAL`).
+
 ## 🏗️ Estructura del Proyecto
 
 ```

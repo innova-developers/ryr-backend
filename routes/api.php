@@ -14,6 +14,7 @@ use App\Contexts\Expenses\Infrastructure\Http\Controllers\ExpensesController;
 use App\Contexts\Incomes\Infrastructure\Http\Controllers\IncomesController;
 use App\Contexts\IncomeCategories\Infrastructure\Http\Controllers\IncomeCategoryController;
 use App\Contexts\CurrentAccount\Infrastructure\Http\Controllers\CurrentAccountController;
+use App\Http\Middleware\CadeteMiddleware;
 use Illuminate\Support\Facades\Route;
 
 // Rutas públicas
@@ -74,14 +75,23 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
     Route::post('/users', [UserController::class, 'store']);
     Route::put('/users/{id}', [UserController::class, 'update']);
     Route::delete('/users/{id}', [UserController::class, 'destroy']);
+    Route::get('/users/{id}', [UserController::class, 'show']);
 
     // Comisiones (excepto show que ya está pública)
     Route::post('/commissions', [CommissionController::class, 'store']);
     Route::get('/commissions/statuses', [CommissionController::class, 'getStatuses']);
+    Route::get('/commissions/statuses/client', [CommissionController::class, 'getClientStatuses']);
+    Route::get('/commissions',  [CommissionController::class, 'index']);
     Route::get('/commissions/{id}', [CommissionController::class, 'show']);
     Route::patch('/commissions/{id}/status', [CommissionController::class, 'updateStatus']);
-    Route::get('/commissions',  [CommissionController::class, 'index']);
     Route::delete('/commissions/{id}', [CommissionController::class, 'destroy']);
+
+    // Gestión de cadetes en comisiones
+    Route::post('/commissions/{commission}/assign-cadete', [App\Http\Controllers\CommissionCadeteController::class, 'assignCadete']);
+    Route::delete('/commissions/{commission}/unassign-cadete', [App\Http\Controllers\CommissionCadeteController::class, 'unassignCadete']);
+    Route::patch('/commissions/{commission}/change-cadete', [App\Http\Controllers\CommissionCadeteController::class, 'changeCadete']);
+    Route::get('/commissions/{commission}/assigned-cadete', [App\Http\Controllers\CommissionCadeteController::class, 'getAssignedCadete']);
+    Route::get('/cadetes/{cadete}/commissions', [App\Http\Controllers\CommissionCadeteController::class, 'getCommissionsByCadete']);
 
     // Clientes
     Route::get('customers/search', [CustomerController::class, 'search']);
@@ -133,10 +143,41 @@ Route::middleware(['auth:sanctum'])->prefix('client')->group(function () {
 });
 
 // Rutas para cadetes y cadetes externos
-Route::prefix('cadete')->middleware(['auth:sanctum', \App\Http\Middleware\CadeteMiddleware::class])->group(function () {
+Route::prefix('cadete')->middleware(['auth:sanctum', CadeteMiddleware::class])->group(function () {
+    Route::get('/home', [App\Http\Controllers\Cadete\DashboardController::class, 'home']);
     Route::get('/profile', [App\Http\Controllers\Cadete\CadeteController::class, 'profile']);
-    Route::get('/shipments', [App\Http\Controllers\Cadete\CadeteController::class, 'shipments']);
-    Route::put('/shipments/{id}', [App\Http\Controllers\Cadete\CadeteController::class, 'updateShipmentStatus']);
-    Route::post('/shipments/{id}/location', [App\Http\Controllers\Cadete\CadeteController::class, 'sendLocation']);
+    Route::put('/profile', [App\Http\Controllers\Cadete\CadeteController::class, 'updateProfile']);
+    Route::get('/deliveries', [App\Http\Controllers\Cadete\CadeteController::class, 'deliveries']);
+    Route::get('/shipments', [App\Http\Controllers\Cadete\CadeteController::class, 'shipments']); // Alias para compatibilidad
+    Route::put('/deliveries/{id}', [App\Http\Controllers\Cadete\CadeteController::class, 'updateShipmentStatus']);
+    Route::put('/shipments/{id}', [App\Http\Controllers\Cadete\CadeteController::class, 'updateShipmentStatus']); // Alias para compatibilidad
+    Route::post('/deliveries/{id}/location', [App\Http\Controllers\Cadete\CadeteController::class, 'sendLocation']);
+    Route::post('/shipments/{id}/location', [App\Http\Controllers\Cadete\CadeteController::class, 'sendLocation']); // Alias para compatibilidad
     Route::get('/stats', [App\Http\Controllers\Cadete\CadeteController::class, 'stats']);
+    Route::get('/earnings', [App\Http\Controllers\Cadete\CadeteController::class, 'earnings']);
+    
+    // Rutas para pagos del cadete
+    Route::prefix('payments')->group(function () {
+        Route::get('/', [App\Http\Controllers\Cadete\CadetePaymentController::class, 'index']);
+        Route::get('/summary', [App\Http\Controllers\Cadete\CadetePaymentController::class, 'getPaymentsSummary']);
+        Route::get('/next-payment', [App\Http\Controllers\Cadete\CadetePaymentController::class, 'getNextPayment']);
+        Route::get('/recent', [App\Http\Controllers\Cadete\CadetePaymentController::class, 'getRecentPayments']);
+        Route::get('/{id}', [App\Http\Controllers\Cadete\CadetePaymentController::class, 'show']);
+    });
+});
+
+// Rutas para administradores - Gestión de pagos de cadetes
+Route::middleware(['auth:sanctum', 'isAdmin'])->prefix('admin')->group(function () {
+    Route::prefix('cadete-payments')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\CadetePaymentController::class, 'index']);
+        Route::post('/', [App\Http\Controllers\Admin\CadetePaymentController::class, 'store']);
+        Route::get('/summary', [App\Http\Controllers\Admin\CadetePaymentController::class, 'getPaymentsSummary']);
+        Route::post('/calculate', [App\Http\Controllers\Admin\CadetePaymentController::class, 'calculate']);
+        Route::get('/{id}', [App\Http\Controllers\Admin\CadetePaymentController::class, 'show']);
+        Route::put('/{id}', [App\Http\Controllers\Admin\CadetePaymentController::class, 'update']);
+        Route::delete('/{id}', [App\Http\Controllers\Admin\CadetePaymentController::class, 'destroy']);
+        Route::patch('/{id}/mark-as-paid', [App\Http\Controllers\Admin\CadetePaymentController::class, 'markAsPaid']);
+        Route::patch('/{id}/mark-as-cancelled', [App\Http\Controllers\Admin\CadetePaymentController::class, 'markAsCancelled']);
+        Route::get('/cadete/{cadeteId}', [App\Http\Controllers\Admin\CadetePaymentController::class, 'getPaymentsByCadete']);
+    });
 });
