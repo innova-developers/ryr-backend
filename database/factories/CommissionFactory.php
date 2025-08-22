@@ -20,9 +20,10 @@ class CommissionFactory extends Factory
             'user_id' => 1,
             'origin_location_id' => Location::factory(),
             'destination_location_id' => Location::factory(),
-            'date' => $this->faker->dateTimeBetween('-1 year', 'now'),
-            'status' => $this->faker->randomElement([CommissionStatus::DEPOSITO->value, CommissionStatus::ENTREGADO->value, CommissionStatus::ENTREGAR_Y_RETIRAR->value]),
+            'date' => $this->faker->dateTimeBetween('-1 year', 'now')->format('Y-m-d'),
+            'status' => $this->faker->randomElement([CommissionStatus::SOLICITUD_RECIBIDA->value, CommissionStatus::ENTREGADO->value, CommissionStatus::EN_PROCESO_ENTREGA->value]),
             'total' => $this->faker->randomFloat(2, 100, 10000),
+            'cadete_id' => null, // Por defecto sin cadete asignado
             'created_at' => now(),
             'updated_at' => now(),
         ];

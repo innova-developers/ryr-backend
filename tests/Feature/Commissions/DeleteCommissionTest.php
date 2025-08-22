@@ -52,7 +52,7 @@ class DeleteCommissionTest extends TestCase
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
             'date' => '2024-03-21',
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'total' => '1000.00',
         ]);
 

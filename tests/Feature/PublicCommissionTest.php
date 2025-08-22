@@ -6,6 +6,7 @@ use App\Shared\Models\Commission;
 use App\Shared\Models\Customer;
 use App\Shared\Models\Destination;
 use App\Shared\Models\Location;
+use App\Shared\Enums\CommissionStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -57,7 +58,7 @@ class PublicCommissionTest extends TestCase
             'destination' => 'Torres',
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
-            'status' => 'PENDIENTE',
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'a_cuenta' => false,
             'items' => [
                 [
@@ -97,7 +98,7 @@ class PublicCommissionTest extends TestCase
         $this->assertDatabaseHas('commissions', [
             'client_id' => $this->customer->id,
             'destination_id' => $this->destination->id,
-            'status' => 'PENDIENTE',
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'total' => 2.00,
             // user_id puede ser null o el ID del usuario encontrado por email
         ]);
@@ -139,7 +140,7 @@ class PublicCommissionTest extends TestCase
             'destination' => 'Torres',
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
-            'status' => 'PENDIENTE',
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'a_cuenta' => false,
             'items' => [
                 [
@@ -178,7 +179,7 @@ class PublicCommissionTest extends TestCase
             'destination' => 'DestinoInexistente',
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
-            'status' => 'PENDIENTE',
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'a_cuenta' => false,
             'items' => [
                 [
@@ -210,7 +211,7 @@ class PublicCommissionTest extends TestCase
             'destination' => 'Torres',
             'origin_location_id' => 999, // Ubicación que no existe
             'destination_location_id' => $this->destinationLocation->id,
-            'status' => 'PENDIENTE',
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'a_cuenta' => false,
             'items' => [
                 [
@@ -249,7 +250,7 @@ class PublicCommissionTest extends TestCase
             'destination' => 'Torres',
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
-            'status' => 'PENDIENTE',
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'a_cuenta' => false,
             'items' => [
                 [
@@ -301,7 +302,7 @@ class PublicCommissionTest extends TestCase
             'destination' => 'Torres',
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
-            'status' => 'PENDIENTE',
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'a_cuenta' => false,
             'items' => [
                 [
@@ -327,7 +328,7 @@ class PublicCommissionTest extends TestCase
         $this->assertDatabaseHas('commissions', [
             'client_id' => $this->customer->id,
             'destination_id' => $this->destination->id,
-            'status' => 'PENDIENTE',
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'total' => 2.00,
             'user_id' => $user->id, // Debe usar el user_id proporcionado (tiene prioridad)
         ]);
@@ -343,7 +344,7 @@ class PublicCommissionTest extends TestCase
             'destination' => 'Torres',
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
-            'status' => 'PENDIENTE',
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'a_cuenta' => false,
             'items' => [
                 [
@@ -390,7 +391,7 @@ class PublicCommissionTest extends TestCase
             'destination' => 'Torres',
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
-            'status' => 'PENDIENTE',
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'a_cuenta' => false,
             'items' => [
                 [
@@ -416,7 +417,7 @@ class PublicCommissionTest extends TestCase
         $this->assertDatabaseHas('commissions', [
             'client_id' => $this->customer->id,
             'destination_id' => $this->destination->id,
-            'status' => 'PENDIENTE',
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'total' => 2.00,
             'user_id' => $user->id, // Debe usar el usuario encontrado por email
         ]);

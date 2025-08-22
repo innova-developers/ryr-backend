@@ -46,7 +46,7 @@ class ListCommissionsTest extends TestCase
             'destination_id' => $this->destination->id,
             'branch_id' => $this->branch->id,
             'user_id' => $this->user->id,
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'origin_location_id' => $this->location->id,
             'destination_location_id' => $this->location->id,
         ]);
@@ -75,7 +75,7 @@ class ListCommissionsTest extends TestCase
             'commission_id' => $commission->id,
             'user_id' => $this->user->id,
             'previous_status' => "",
-            'new_status' => CommissionStatus::DEPOSITO->value,
+            'new_status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'details' => 'Comisión creada',
         ]);
 
@@ -117,7 +117,7 @@ class ListCommissionsTest extends TestCase
             'destination_id' => $this->destination->id,
             'branch_id' => $this->branch->id,
             'user_id' => $this->user->id,
-            'status' => CommissionStatus::DEPOSITO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'origin_location_id' => $this->location->id,
             'destination_location_id' => $this->location->id,
         ]);
@@ -126,13 +126,13 @@ class ListCommissionsTest extends TestCase
             'commission_id' => $commission->id,
             'user_id' => $this->user->id,
             'previous_status' => "",
-            'new_status' => CommissionStatus::DEPOSITO->value,
+            'new_status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
             'details' => 'Comisión creada',
         ]);
 
         // Act
         $response = $this->actingAs($this->user)
-            ->getJson('/api/commissions?status=' . CommissionStatus::DEPOSITO->value);
+            ->getJson('/api/commissions?status=' . CommissionStatus::SOLICITUD_RECIBIDA->value);
 
         // Assert
         $response->assertStatus(200)
@@ -140,7 +140,7 @@ class ListCommissionsTest extends TestCase
                 'data' => [
                     [
                         'id' => $commission->id,
-                        'status' => CommissionStatus::DEPOSITO->value,
+                        'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
                     ],
                 ],
                 'meta' => [

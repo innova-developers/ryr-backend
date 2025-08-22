@@ -126,7 +126,7 @@ class ClientDashboardTest extends TestCase
             'client_id' => $this->customer->id,
             'origin_location_id' => $originLocation->id,
             'destination_location_id' => $destinationLocation->id,
-            'status' => CommissionStatus::PENDIENTE,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA,
             'total' => 8000.00,
         ]);
 

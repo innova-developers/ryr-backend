@@ -108,4 +108,10 @@ class UserController extends Controller
             return response()->json(['message' => 'Error al calcular el salario: ' . $e->getMessage()], 500);
         }
     }
+
+    public function show(int $id): JsonResponse
+    {
+        $user = $this->repository->findById($id);
+        return response()->json($user);
+    }
 }

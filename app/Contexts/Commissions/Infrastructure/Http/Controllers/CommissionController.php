@@ -61,7 +61,17 @@ class CommissionController extends Controller
     {
         $statuses = array_map(fn ($status) => [
             'value' => $status->value,
-            'label' => $status->name,
+            'label' => $status->getAdminStatus(),
+        ], CommissionStatus::cases());
+
+        return response()->json($statuses, 200);
+    }
+
+    public function getClientStatuses(): JsonResponse
+    {
+        $statuses = array_map(fn ($status) => [
+            'value' => $status->value,
+            'label' => $status->getClienteStatus(),
         ], CommissionStatus::cases());
 
         return response()->json($statuses, 200);

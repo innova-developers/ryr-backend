@@ -27,7 +27,7 @@ class PublicCommissionController
                 'destination' => 'required|string|max:255',
                 'origin_location_id' => 'required|integer|exists:locations,id',
                 'destination_location_id' => 'required|integer|exists:locations,id',
-                'status' => 'required|string|in:PENDIENTE,EN_PROCESO,ENTREGADO,CANCELADO',
+                'status' => 'required|string|in:' . implode(',', array_map(fn($status) => $status->value, \App\Shared\Enums\CommissionStatus::cases())),
                 'a_cuenta' => 'boolean',
                 'items' => 'required|array|min:1',
                 'items.*.type' => 'required|string|max:255',

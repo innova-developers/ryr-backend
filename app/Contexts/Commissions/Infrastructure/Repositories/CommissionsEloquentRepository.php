@@ -74,6 +74,8 @@ class CommissionsEloquentRepository implements CommissionsRepository
             'originLocation',
             'destinationLocation',
             'logs.user',
+            'cadete',
+            'deliverySignature',
         ])->find($id);
 
         if (! $commission) {
@@ -99,6 +101,8 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 'destinationLocation',
                 'logs.user',
                 'logs.user.branch',
+                'cadete',
+                'deliverySignature',
             ]);
 
             if ($filters->client) {
