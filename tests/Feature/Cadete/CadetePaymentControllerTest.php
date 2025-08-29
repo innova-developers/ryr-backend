@@ -154,23 +154,65 @@ class CadetePaymentControllerTest extends TestCase
     /** @test */
     public function cadete_can_get_payments_summary()
     {
-        // Crear pagos con diferentes estados
-        CadetePayment::factory()->count(2)->create([
-            'cadete_id' => $this->cadete->id,
-            'admin_id' => $this->admin->id,
-            'status' => CadetePayment::STATUS_PENDING
-        ]);
+        // Crear pagos pendientes con fechas únicas
+        for ($i = 0; $i < 2; $i++) {
+            $date = now()->subYears($i + 1);
+            CadetePayment::create([
+                'cadete_id' => $this->cadete->id,
+                'admin_id' => $this->admin->id,
+                'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
+                'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+                'base_salary' => 50000.00,
+                'commission_amount' => 0,
+                'bonus_amount' => 0,
+                'deduction_amount' => 0,
+                'net_amount' => 50000.00,
+                'status' => CadetePayment::STATUS_PENDING,
+                'payment_date' => $date->format('Y-m-d'),
+                'period_start' => $date->startOfMonth()->format('Y-m-d'),
+                'period_end' => $date->endOfMonth()->format('Y-m-d'),
+                'description' => "Pago pendiente {$i}"
+            ]);
+        }
 
-        CadetePayment::factory()->count(3)->create([
-            'cadete_id' => $this->cadete->id,
-            'admin_id' => $this->admin->id,
-            'status' => CadetePayment::STATUS_PAID
-        ]);
+        // Crear pagos pagados con fechas únicas
+        for ($i = 0; $i < 3; $i++) {
+            $date = now()->subYears($i + 3);
+            CadetePayment::create([
+                'cadete_id' => $this->cadete->id,
+                'admin_id' => $this->admin->id,
+                'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
+                'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+                'base_salary' => 50000.00,
+                'commission_amount' => 0,
+                'bonus_amount' => 0,
+                'deduction_amount' => 0,
+                'net_amount' => 50000.00,
+                'status' => CadetePayment::STATUS_PAID,
+                'payment_date' => $date->format('Y-m-d'),
+                'period_start' => $date->startOfMonth()->format('Y-m-d'),
+                'period_end' => $date->endOfMonth()->format('Y-m-d'),
+                'description' => "Pago pagado {$i}"
+            ]);
+        }
 
-        CadetePayment::factory()->create([
+        // Crear un pago cancelado con fecha única
+        $date = now()->subYears(6);
+        CadetePayment::create([
             'cadete_id' => $this->cadete->id,
             'admin_id' => $this->admin->id,
-            'status' => CadetePayment::STATUS_CANCELLED
+            'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
+            'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+            'base_salary' => 50000.00,
+            'commission_amount' => 0,
+            'bonus_amount' => 0,
+            'deduction_amount' => 0,
+            'net_amount' => 50000.00,
+            'status' => CadetePayment::STATUS_CANCELLED,
+            'payment_date' => $date->format('Y-m-d'),
+            'period_start' => $date->startOfMonth()->format('Y-m-d'),
+            'period_end' => $date->endOfMonth()->format('Y-m-d'),
+            'description' => "Pago cancelado"
         ]);
 
         $response = $this->getJson('/api/cadete/payments/summary');
@@ -196,19 +238,42 @@ class CadetePaymentControllerTest extends TestCase
     /** @test */
     public function cadete_can_get_next_payment()
     {
-        // Crear un pago pendiente para el futuro
-        $nextPayment = CadetePayment::factory()->create([
+        // Crear un pago pendiente para el futuro con fecha única
+        $date = now()->subYears(1);
+        $nextPayment = CadetePayment::create([
             'cadete_id' => $this->cadete->id,
             'admin_id' => $this->admin->id,
+            'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
+            'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+            'base_salary' => 50000.00,
+            'commission_amount' => 0,
+            'bonus_amount' => 0,
+            'deduction_amount' => 0,
+            'net_amount' => 50000.00,
             'status' => CadetePayment::STATUS_PENDING,
-            'payment_date' => now()->addDays(5)
+            'payment_date' => now()->addDays(5)->format('Y-m-d'),
+            'period_start' => $date->startOfMonth()->format('Y-m-d'),
+            'period_end' => $date->endOfMonth()->format('Y-m-d'),
+            'description' => "Pago pendiente futuro"
         ]);
 
-        // Crear un pago pagado (no debería aparecer)
-        CadetePayment::factory()->create([
+        // Crear un pago pagado (no debería aparecer) con fecha única
+        $date2 = now()->subYears(2);
+        CadetePayment::create([
             'cadete_id' => $this->cadete->id,
             'admin_id' => $this->admin->id,
-            'status' => CadetePayment::STATUS_PAID
+            'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
+            'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+            'base_salary' => 50000.00,
+            'commission_amount' => 0,
+            'bonus_amount' => 0,
+            'deduction_amount' => 0,
+            'net_amount' => 50000.00,
+            'status' => CadetePayment::STATUS_PAID,
+            'payment_date' => $date2->format('Y-m-d'),
+            'period_start' => $date2->startOfMonth()->format('Y-m-d'),
+            'period_end' => $date2->endOfMonth()->format('Y-m-d'),
+            'description' => "Pago pagado"
         ]);
 
         $response = $this->getJson('/api/cadete/payments/next-payment');
@@ -226,12 +291,26 @@ class CadetePaymentControllerTest extends TestCase
     /** @test */
     public function cadete_gets_null_when_no_pending_payments()
     {
-        // Solo crear pagos pagados
-        CadetePayment::factory()->count(3)->create([
-            'cadete_id' => $this->cadete->id,
-            'admin_id' => $this->admin->id,
-            'status' => CadetePayment::STATUS_PAID
-        ]);
+        // Solo crear pagos pagados con fechas únicas
+        for ($i = 0; $i < 3; $i++) {
+            $date = now()->subYears($i + 1);
+            CadetePayment::create([
+                'cadete_id' => $this->cadete->id,
+                'admin_id' => $this->admin->id,
+                'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
+                'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+                'base_salary' => 50000.00,
+                'commission_amount' => 0,
+                'bonus_amount' => 0,
+                'deduction_amount' => 0,
+                'net_amount' => 50000.00,
+                'status' => CadetePayment::STATUS_PAID,
+                'payment_date' => $date->format('Y-m-d'),
+                'period_start' => $date->startOfMonth()->format('Y-m-d'),
+                'period_end' => $date->endOfMonth()->format('Y-m-d'),
+                'description' => "Pago pagado {$i}"
+            ]);
+        }
 
         $response = $this->getJson('/api/cadete/payments/next-payment');
 
@@ -246,11 +325,26 @@ class CadetePaymentControllerTest extends TestCase
     /** @test */
     public function cadete_can_get_recent_payments()
     {
-        // Crear varios pagos
-        CadetePayment::factory()->count(5)->create([
-            'cadete_id' => $this->cadete->id,
-            'admin_id' => $this->admin->id
-        ]);
+        // Crear varios pagos con fechas únicas
+        for ($i = 0; $i < 5; $i++) {
+            $date = now()->subYears($i + 1);
+            CadetePayment::create([
+                'cadete_id' => $this->cadete->id,
+                'admin_id' => $this->admin->id,
+                'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
+                'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+                'base_salary' => 50000.00,
+                'commission_amount' => 0,
+                'bonus_amount' => 0,
+                'deduction_amount' => 0,
+                'net_amount' => 50000.00,
+                'status' => CadetePayment::STATUS_PENDING,
+                'payment_date' => $date->format('Y-m-d'),
+                'period_start' => $date->startOfMonth()->format('Y-m-d'),
+                'period_end' => $date->endOfMonth()->format('Y-m-d'),
+                'description' => "Pago mensual {$i}"
+            ]);
+        }
 
         $response = $this->getJson('/api/cadete/payments/recent?limit=3');
 
@@ -273,17 +367,47 @@ class CadetePaymentControllerTest extends TestCase
     /** @test */
     public function cadete_can_filter_payments_by_payment_type()
     {
-        CadetePayment::factory()->count(2)->create([
-            'cadete_id' => $this->cadete->id,
-            'admin_id' => $this->admin->id,
-            'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY
-        ]);
+        // Crear pagos mensuales con fechas únicas
+        for ($i = 0; $i < 2; $i++) {
+            $date = now()->subYears($i + 1);
+            CadetePayment::create([
+                'cadete_id' => $this->cadete->id,
+                'admin_id' => $this->admin->id,
+                'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
+                'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+                'base_salary' => 50000.00,
+                'commission_amount' => 0,
+                'bonus_amount' => 0,
+                'deduction_amount' => 0,
+                'net_amount' => 50000.00,
+                'status' => CadetePayment::STATUS_PENDING,
+                'payment_date' => $date->format('Y-m-d'),
+                'period_start' => $date->startOfMonth()->format('Y-m-d'),
+                'period_end' => $date->endOfMonth()->format('Y-m-d'),
+                'description' => "Pago mensual {$i}"
+            ]);
+        }
 
-        CadetePayment::factory()->count(3)->create([
-            'cadete_id' => $this->cadete->id,
-            'admin_id' => $this->admin->id,
-            'payment_type' => CadetePayment::PAYMENT_TYPE_BONUS
-        ]);
+        // Crear pagos de bonificación con fechas únicas
+        for ($i = 0; $i < 3; $i++) {
+            $date = now()->subYears($i + 3);
+            CadetePayment::create([
+                'cadete_id' => $this->cadete->id,
+                'admin_id' => $this->admin->id,
+                'payment_type' => CadetePayment::PAYMENT_TYPE_BONUS,
+                'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+                'base_salary' => 0,
+                'commission_amount' => 0,
+                'bonus_amount' => 10000.00,
+                'deduction_amount' => 0,
+                'net_amount' => 10000.00,
+                'status' => CadetePayment::STATUS_PENDING,
+                'payment_date' => $date->format('Y-m-d'),
+                'period_start' => $date->startOfMonth()->format('Y-m-d'),
+                'period_end' => $date->endOfMonth()->format('Y-m-d'),
+                'description' => "Pago bonificación {$i}"
+            ]);
+        }
 
         $response = $this->getJson('/api/cadete/payments?payment_type=monthly');
 
@@ -294,17 +418,47 @@ class CadetePaymentControllerTest extends TestCase
     /** @test */
     public function cadete_can_filter_payments_by_status()
     {
-        CadetePayment::factory()->count(2)->create([
-            'cadete_id' => $this->cadete->id,
-            'admin_id' => $this->admin->id,
-            'status' => CadetePayment::STATUS_PENDING
-        ]);
+        // Crear pagos pendientes con fechas únicas
+        for ($i = 0; $i < 2; $i++) {
+            $date = now()->subYears($i + 1);
+            CadetePayment::create([
+                'cadete_id' => $this->cadete->id,
+                'admin_id' => $this->admin->id,
+                'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
+                'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+                'base_salary' => 50000.00,
+                'commission_amount' => 0,
+                'bonus_amount' => 0,
+                'deduction_amount' => 0,
+                'net_amount' => 50000.00,
+                'status' => CadetePayment::STATUS_PENDING,
+                'payment_date' => $date->format('Y-m-d'),
+                'period_start' => $date->startOfMonth()->format('Y-m-d'),
+                'period_end' => $date->endOfMonth()->format('Y-m-d'),
+                'description' => "Pago pendiente {$i}"
+            ]);
+        }
 
-        CadetePayment::factory()->count(3)->create([
-            'cadete_id' => $this->cadete->id,
-            'admin_id' => $this->admin->id,
-            'status' => CadetePayment::STATUS_PAID
-        ]);
+        // Crear pagos pagados con fechas únicas
+        for ($i = 0; $i < 3; $i++) {
+            $date = now()->subYears($i + 3);
+            CadetePayment::create([
+                'cadete_id' => $this->cadete->id,
+                'admin_id' => $this->admin->id,
+                'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
+                'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+                'base_salary' => 50000.00,
+                'commission_amount' => 0,
+                'bonus_amount' => 0,
+                'deduction_amount' => 0,
+                'net_amount' => 50000.00,
+                'status' => CadetePayment::STATUS_PAID,
+                'payment_date' => $date->format('Y-m-d'),
+                'period_start' => $date->startOfMonth()->format('Y-m-d'),
+                'period_end' => $date->endOfMonth()->format('Y-m-d'),
+                'description' => "Pago pagado {$i}"
+            ]);
+        }
 
         $response = $this->getJson('/api/cadete/payments?status=pending');
 
@@ -362,7 +516,7 @@ class CadetePaymentControllerTest extends TestCase
     {
         // Crear más pagos de los que caben en una página con datos específicos
         for ($i = 0; $i < 25; $i++) {
-            $date = now()->subMonths($i);
+            $date = now()->subYears($i + 1); // Usar años completamente diferentes
             CadetePayment::create([
                 'cadete_id' => $this->cadete->id,
                 'admin_id' => $this->admin->id,
@@ -397,7 +551,7 @@ class CadetePaymentControllerTest extends TestCase
     {
         // Crear pagos en diferentes fechas con datos específicos
         for ($i = 0; $i < 2; $i++) {
-            $date = now()->subMonths(2 + $i);
+            $date = now()->subYears($i + 2); // Usar años completamente diferentes
             CadetePayment::create([
                 'cadete_id' => $this->cadete->id,
                 'admin_id' => $this->admin->id,
@@ -417,7 +571,7 @@ class CadetePaymentControllerTest extends TestCase
         }
 
         for ($i = 0; $i < 3; $i++) {
-            $date = now()->subWeeks($i);
+            $date = now()->subYears($i + 3); // Usar años completamente diferentes
             CadetePayment::create([
                 'cadete_id' => $this->cadete->id,
                 'admin_id' => $this->admin->id,
@@ -436,7 +590,7 @@ class CadetePaymentControllerTest extends TestCase
             ]);
         }
 
-        $response = $this->getJson('/api/cadete/payments/summary?date_from=' . now()->subMonth()->format('Y-m-d') . '&date_to=' . now()->format('Y-m-d'));
+        $response = $this->getJson('/api/cadete/payments/summary?date_from=' . now()->subYears(3)->format('Y-m-d') . '&date_to=' . now()->subYears(2)->format('Y-m-d'));
 
         $response->assertStatus(200);
         
@@ -449,7 +603,7 @@ class CadetePaymentControllerTest extends TestCase
     {
         // Crear varios pagos con datos específicos para evitar conflictos
         for ($i = 0; $i < 15; $i++) {
-            $date = now()->subMonths($i);
+            $date = now()->subYears($i + 1); // Usar años completamente diferentes
             CadetePayment::create([
                 'cadete_id' => $this->cadete->id,
                 'admin_id' => $this->admin->id,
@@ -481,7 +635,7 @@ class CadetePaymentControllerTest extends TestCase
     {
         // Crear varios pagos con datos específicos para evitar conflictos
         for ($i = 0; $i < 20; $i++) {
-            $date = now()->subWeeks($i);
+            $date = now()->subYears($i + 1); // Usar años completamente diferentes
             CadetePayment::create([
                 'cadete_id' => $this->cadete->id,
                 'admin_id' => $this->admin->id,

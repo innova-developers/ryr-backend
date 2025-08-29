@@ -136,6 +136,10 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 $query->where('status', $filters->status->value);
             }
 
+            if ($filters->method) {
+                $query->where('payment_method', $filters->method->value);
+            }
+
             switch ($filters->sort) {
                 case 'id':
                     $query->orderBy('commissions.id', $filters->sortDirection);

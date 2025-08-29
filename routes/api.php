@@ -155,7 +155,7 @@ Route::prefix('cadete')->middleware(['auth:sanctum', CadeteMiddleware::class])->
     Route::post('/shipments/{id}/location', [App\Http\Controllers\Cadete\CadeteController::class, 'sendLocation']); // Alias para compatibilidad
     Route::get('/stats', [App\Http\Controllers\Cadete\CadeteController::class, 'stats']);
     Route::get('/earnings', [App\Http\Controllers\Cadete\CadeteController::class, 'earnings']);
-    
+
     // Rutas para pagos del cadete
     Route::prefix('payments')->group(function () {
         Route::get('/', [App\Http\Controllers\Cadete\CadetePaymentController::class, 'index']);
@@ -178,6 +178,16 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->prefix('admin')->group(function 
         Route::delete('/{id}', [App\Http\Controllers\Admin\CadetePaymentController::class, 'destroy']);
         Route::patch('/{id}/mark-as-paid', [App\Http\Controllers\Admin\CadetePaymentController::class, 'markAsPaid']);
         Route::patch('/{id}/mark-as-cancelled', [App\Http\Controllers\Admin\CadetePaymentController::class, 'markAsCancelled']);
+        Route::get('/{id}/download-proof', [App\Http\Controllers\Admin\CadetePaymentController::class, 'downloadProof']);
         Route::get('/cadete/{cadeteId}', [App\Http\Controllers\Admin\CadetePaymentController::class, 'getPaymentsByCadete']);
     });
 });
+
+
+// Rutas para métodos de pago de comisiones
+Route::prefix('payment-methods')->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\PaymentMethodController::class, 'index']);
+    Route::post('/associate', [App\Http\Controllers\Admin\PaymentMethodController::class, 'associatePaymentMethod']);
+    Route::get('/summary', [App\Http\Controllers\Admin\PaymentMethodController::class, 'getPaymentMethodsSummary']);
+});
+

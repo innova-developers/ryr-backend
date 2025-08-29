@@ -3,6 +3,7 @@
 namespace App\Contexts\Commissions\Application\DTOs;
 
 use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\PaymentMethod;
 
 class ListCommissionsFiltersDTO
 {
@@ -14,6 +15,7 @@ class ListCommissionsFiltersDTO
         public readonly ?string $dateFrom = null,
         public readonly ?string $dateTo = null,
         public readonly ?CommissionStatus $status = null,
+        public readonly ?PaymentMethod $method = null,
         public readonly int $page = 1,
         public readonly int $perPage = 15,
         public readonly ?string $sort = 'date',
@@ -31,6 +33,7 @@ class ListCommissionsFiltersDTO
             dateFrom: $data['dateFrom'] ?? null,
             dateTo: $data['dateTo'] ?? null,
             status: isset($data['status']) ? CommissionStatus::from($data['status']) : null,
+            method: isset($data['method']) ? PaymentMethod::from($data['method']) : null,
             page: $data['page'] ?? 1,
             perPage: $data['perPage'] ?? 15,
             sort: $data['sort_by'] ?? null,
