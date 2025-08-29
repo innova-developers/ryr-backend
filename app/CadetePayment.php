@@ -32,6 +32,11 @@ class CadetePayment extends Model
         'reference_number',
         'transaction_id',
         'paid_at',
+        'payment_proof_filename',
+        'payment_proof_path',
+        'payment_proof_mime_type',
+        'payment_proof_size',
+        'payment_proof_uploaded_at',
     ];
 
     protected $casts = [
@@ -45,6 +50,8 @@ class CadetePayment extends Model
         'period_start' => 'date',
         'period_end' => 'date',
         'paid_at' => 'datetime',
+        'payment_proof_size' => 'integer',
+        'payment_proof_uploaded_at' => 'datetime',
     ];
 
     // Constantes para tipos de pago
@@ -160,12 +167,24 @@ class CadetePayment extends Model
     /**
      * Marcar como pagado
      */
-    public function markAsPaid(): bool
+    public function markAsPaid(?array $paymentProofData = null, ?array $additionalData = null): bool
     {
-        return $this->update([
+        $updateData = [
             'status' => self::STATUS_PAID,
             'paid_at' => now(),
-        ]);
+        ];
+
+        // Agregar datos del comprobante si se proporcionan
+        if ($paymentProofData) {
+            $updateData = array_merge($updateData, $paymentProofData);
+        }
+
+        // Agregar datos adicionales si se proporcionan
+        if ($additionalData) {
+            $updateData = array_merge($updateData, $additionalData);
+        }
+
+        return $this->update($updateData);
     }
 
     /**
@@ -224,6 +243,46 @@ class CadetePayment extends Model
     public function getStatusLabelAttribute(): string
     {
         return self::getStatuses()[$this->status] ?? $this->status;
+    }
+
+    /**
+     * Verificar si tiene comprobante de pago
+     */
+    public function hasPaymentProof(): bool
+    {
+        return !empty($this->payment_proof_path);
+    }
+
+    /**
+     * Obtener la URL del comprobante de pago
+     */
+    public function getPaymentProofUrlAttribute(): ?string
+    {
+        if ($this->hasPaymentProof()) {
+            return asset('storage/' . $this->payment_proof_path);
+        }
+        return null;
+    }
+
+    /**
+     * Obtener el tamaño del archivo formateado
+     */
+    public function getPaymentProofSizeFormattedAttribute(): ?string
+    {
+        if (!$this->payment_proof_size) {
+            return null;
+        }
+
+        $units = ['B', 'KB', 'MB', 'GB'];
+        $size = $this->payment_proof_size;
+        $unit = 0;
+
+        while ($size >= 1024 && $unit < count($units) - 1) {
+            $size /= 1024;
+            $unit++;
+        }
+
+        return round($size, 2) . ' ' . $units[$unit];
     }
 
     /**

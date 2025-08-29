@@ -25,6 +25,8 @@ class CommissionsMapper
                     'branch_id' => $commission->branch_id ?? null,
                     'date' => $commission->date,
                     'status' => $commission->status,
+                    'payment_method' => $commission->payment_method?->value ?? null,
+                    'payment_method_label' => $commission->payment_method?->label() ?? null,
                     'user_id' => $commission->user_id,
                     'total' => $commission->total,
                     'created_at' => $commission->created_at,
@@ -128,6 +130,8 @@ class CommissionsMapper
                 'current_branch' => optional(optional(optional($commission->logs)->last())->user)->branch->name ?? null,
                 'date' => optional($commission->date)->format('Y-m-d H:i:s') ?? null,
                 'status' => $commission->status ?? null,
+                'payment_method' => $commission->payment_method?->value ?? null,
+                'payment_method_label' => $commission->payment_method?->label() ?? null,
                 'user_id' => $commission->user_id ?? null,
                 'user' => [
                     'id' => optional($commission->user)->id,

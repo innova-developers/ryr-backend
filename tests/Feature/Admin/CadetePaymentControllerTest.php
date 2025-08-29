@@ -456,6 +456,97 @@ class CadetePaymentControllerTest extends TestCase
     }
 
     /** @test */
+    public function admin_can_mark_payment_as_paid_with_proof_file()
+    {
+        $payment = CadetePayment::create([
+            'cadete_id' => $this->cadete->id,
+            'admin_id' => $this->admin->id,
+            'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
+            'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+            'base_salary' => 50000.00,
+            'commission_amount' => 0,
+            'bonus_amount' => 0,
+            'deduction_amount' => 0,
+            'net_amount' => 50000.00,
+            'status' => CadetePayment::STATUS_PENDING,
+            'payment_date' => '2025-08-15',
+            'period_start' => '2025-08-01',
+            'period_end' => '2025-08-31',
+            'description' => 'Pago mensual agosto'
+        ]);
+
+        // Crear un archivo de prueba
+        $file = \Illuminate\Http\UploadedFile::fake()->create('comprobante.pdf', 100, 'application/pdf');
+
+        $response = $this->patchJson("/api/admin/cadete-payments/{$payment->id}/mark-as-paid", [
+            'receipt' => $file,
+            'transaction_id' => 'TXN123456',
+            'notes' => 'Pago realizado por transferencia bancaria'
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+            'message' => 'Pago marcado como pagado exitosamente con comprobante adjunto'
+        ]);
+
+        // Verificar que se actualizó en la base de datos
+        $this->assertDatabaseHas('cadete_payments', [
+            'id' => $payment->id,
+            'status' => CadetePayment::STATUS_PAID,
+            'payment_proof_filename' => 'comprobante.pdf',
+            'payment_proof_mime_type' => 'application/pdf'
+        ]);
+
+        // Verificar que el archivo se guardó
+        $this->assertNotNull($payment->fresh()->payment_proof_path);
+
+        // Verificar que se actualizaron los campos adicionales
+        $this->assertDatabaseHas('cadete_payments', [
+            'id' => $payment->id,
+            'transaction_id' => 'TXN123456',
+            'notes' => 'Pago realizado por transferencia bancaria'
+        ]);
+    }
+
+    /** @test */
+    public function admin_cannot_mark_payment_as_paid_with_invalid_file()
+    {
+        $payment = CadetePayment::create([
+            'cadete_id' => $this->cadete->id,
+            'admin_id' => $this->admin->id,
+            'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
+            'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+            'base_salary' => 50000.00,
+            'commission_amount' => 0,
+            'bonus_amount' => 0,
+            'deduction_amount' => 0,
+            'net_amount' => 50000.00,
+            'status' => CadetePayment::STATUS_PENDING,
+            'payment_date' => '2025-08-15',
+            'period_start' => '2025-08-01',
+            'period_end' => '2025-08-31',
+            'description' => 'Pago mensual agosto'
+        ]);
+
+        // Crear un archivo de prueba con tipo inválido
+        $file = \Illuminate\Http\UploadedFile::fake()->create('documento.txt', 100, 'text/plain');
+
+        $response = $this->patchJson("/api/admin/cadete-payments/{$payment->id}/mark-as-paid", [
+            'receipt' => $file
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['payment_proof']);
+
+        // Verificar que el pago no se marcó como pagado
+        $this->assertDatabaseHas('cadete_payments', [
+            'id' => $payment->id,
+            'status' => CadetePayment::STATUS_PENDING
+        ]);
+    }
+
+    /** @test */
     public function admin_can_mark_payment_as_cancelled()
     {
         $payment = CadetePayment::create([
@@ -619,17 +710,44 @@ class CadetePaymentControllerTest extends TestCase
     /** @test */
     public function admin_can_filter_payments_by_status()
     {
-        CadetePayment::factory()->count(2)->create([
-            'cadete_id' => $this->cadete->id,
-            'admin_id' => $this->admin->id,
-            'status' => CadetePayment::STATUS_PENDING
-        ]);
+        // Crear pagos con fechas únicas para evitar conflictos de constraint
+        for ($i = 0; $i < 2; $i++) {
+            CadetePayment::create([
+                'cadete_id' => $this->cadete->id,
+                'admin_id' => $this->admin->id,
+                'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
+                'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+                'base_salary' => 50000.00,
+                'commission_amount' => 0,
+                'bonus_amount' => 0,
+                'deduction_amount' => 0,
+                'net_amount' => 50000.00,
+                'status' => CadetePayment::STATUS_PENDING,
+                'payment_date' => now()->subYears($i + 1)->format('Y-m-d'),
+                'period_start' => now()->subYears($i + 1)->startOfMonth()->format('Y-m-d'),
+                'period_end' => now()->subYears($i + 1)->endOfMonth()->format('Y-m-d'),
+                'description' => "Pago mensual {$i}"
+            ]);
+        }
 
-        CadetePayment::factory()->count(3)->create([
-            'cadete_id' => $this->cadete->id,
-            'admin_id' => $this->admin->id,
-            'status' => CadetePayment::STATUS_PAID
-        ]);
+        for ($i = 0; $i < 3; $i++) {
+            CadetePayment::create([
+                'cadete_id' => $this->cadete->id,
+                'admin_id' => $this->admin->id,
+                'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
+                'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+                'base_salary' => 50000.00,
+                'commission_amount' => 0,
+                'bonus_amount' => 0,
+                'deduction_amount' => 0,
+                'net_amount' => 50000.00,
+                'status' => CadetePayment::STATUS_PAID,
+                'payment_date' => now()->subYears($i + 4)->format('Y-m-d'),
+                'period_start' => now()->subYears($i + 4)->startOfMonth()->format('Y-m-d'),
+                'period_end' => now()->subYears($i + 4)->endOfMonth()->format('Y-m-d'),
+                'description' => "Pago mensual pagado {$i}"
+            ]);
+        }
 
         $response = $this->getJson('/api/admin/cadete-payments?status=pending');
 
@@ -1060,11 +1178,12 @@ class CadetePaymentControllerTest extends TestCase
     /** @test */
     public function calculate_payment_handles_cadete_externo()
     {
-        // Crear un cadete externo
+        // Crear un cadete externo con contract_type commission_based
         $cadeteExterno = User::factory()->create([
             'role' => UserRole::CADETE_EXTERNO->value,
             'branch_id' => $this->branch->id,
-            'commission_percentage' => 20.0
+            'commission_percentage' => 20.0,
+            'contract_type' => 'commission_based'
         ]);
 
         // Crear comisiones para el cadete externo
@@ -1087,6 +1206,7 @@ class CadetePaymentControllerTest extends TestCase
         
         $data = $response->json('data');
         $this->assertEquals($cadeteExterno->id, $data['cadete_info']['id']);
+        $this->assertEquals('commission_based', $data['cadete_info']['contract_type']);
         $this->assertEquals(20.0, $data['cadete_info']['commission_percentage']);
         
         // Verificar cálculo de comisión
