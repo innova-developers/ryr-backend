@@ -537,12 +537,88 @@ class CadetePaymentControllerTest extends TestCase
         ]);
 
         $response->assertStatus(422);
-        $response->assertJsonValidationErrors(['payment_proof']);
+        $response->assertJsonValidationErrors(['receipt']);
 
         // Verificar que el pago no se marcó como pagado
         $this->assertDatabaseHas('cadete_payments', [
             'id' => $payment->id,
             'status' => CadetePayment::STATUS_PENDING
+        ]);
+    }
+
+    /** @test */
+    public function admin_can_download_payment_proof()
+    {
+        // Crear un archivo real para el test
+        $testFilePath = storage_path('app/public/payment_proofs/test_file.pdf');
+        $testFileDir = dirname($testFilePath);
+        
+        if (!is_dir($testFileDir)) {
+            mkdir($testFileDir, 0755, true);
+        }
+        
+        // Crear un archivo PDF simple
+        file_put_contents($testFilePath, '%PDF-1.4 test file');
+
+        $payment = CadetePayment::create([
+            'cadete_id' => $this->cadete->id,
+            'admin_id' => $this->admin->id,
+            'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
+            'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+            'base_salary' => 50000.00,
+            'commission_amount' => 0,
+            'bonus_amount' => 0,
+            'deduction_amount' => 0,
+            'net_amount' => 50000.00,
+            'status' => CadetePayment::STATUS_PAID,
+            'payment_date' => '2025-08-15',
+            'period_start' => '2025-08-01',
+            'period_end' => '2025-08-31',
+            'description' => 'Pago mensual agosto',
+            'payment_proof_filename' => 'comprobante.pdf',
+            'payment_proof_path' => 'payment_proofs/test_file.pdf',
+            'payment_proof_mime_type' => 'application/pdf',
+            'payment_proof_size' => 1024,
+            'payment_proof_uploaded_at' => now(),
+        ]);
+
+        $response = $this->getJson("/api/admin/cadete-payments/{$payment->id}/download-proof");
+
+        $response->assertStatus(200);
+        $response->assertHeader('Content-Disposition', 'attachment; filename=comprobante.pdf');
+
+        // Limpiar el archivo de prueba
+        if (file_exists($testFilePath)) {
+            unlink($testFilePath);
+        }
+    }
+
+    /** @test */
+    public function admin_cannot_download_payment_proof_for_payment_without_proof()
+    {
+        $payment = CadetePayment::create([
+            'cadete_id' => $this->cadete->id,
+            'admin_id' => $this->admin->id,
+            'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
+            'payment_method' => CadetePayment::PAYMENT_METHOD_CASH,
+            'base_salary' => 50000.00,
+            'commission_amount' => 0,
+            'bonus_amount' => 0,
+            'deduction_amount' => 0,
+            'net_amount' => 50000.00,
+            'status' => CadetePayment::STATUS_PAID,
+            'payment_date' => '2025-08-15',
+            'period_start' => '2025-08-01',
+            'period_end' => '2025-08-31',
+            'description' => 'Pago mensual agosto'
+        ]);
+
+        $response = $this->getJson("/api/admin/cadete-payments/{$payment->id}/download-proof");
+
+        $response->assertStatus(404);
+        $response->assertJson([
+            'success' => false,
+            'message' => 'Este pago no tiene comprobante de pago'
         ]);
     }
 

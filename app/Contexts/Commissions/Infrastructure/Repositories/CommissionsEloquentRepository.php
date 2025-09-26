@@ -5,6 +5,7 @@ namespace App\Contexts\Commissions\Infrastructure\Repositories;
 use App\Contexts\Commissions\Application\DTOs\CreateCommissionDTO;
 use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
 use App\Contexts\Commissions\Application\DTOs\ListCommissionsFiltersDTO;
+use App\Contexts\Commissions\Application\DTOs\UpdateCommissionDTO;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Commission;
@@ -22,15 +23,17 @@ class CommissionsEloquentRepository implements CommissionsRepository
     public function create(CreateCommissionDTO $dto, int $destinationId): Commission
     {
         try {
-            $user = User::find(Auth::id());
+            $userId = Auth::id() ?? 1; // Usar ID 1 como fallback si no hay usuario autenticado
+            $user = User::find($userId);
             $commission = new Commission();
             $commission->client_id = $dto->clientId;
             $commission->destination_id = $destinationId;
             $commission->date = $dto->date;
             $commission->status = $dto->status;
-            $commission->user_id = Auth::id();
-            $commission->branch_id = $user->branch_id;
+            $commission->user_id = $userId;
+            $commission->branch_id = $user?->branch_id ?? 1; // Usar branch_id 1 como fallback
             $commission->total = $dto->total;
+            $commission->notes = $dto->notes;
             $commission->origin_location_id = $dto->originLocationId;
             $commission->destination_location_id = $dto->destinationLocationId;
             $commission->save();
@@ -40,8 +43,34 @@ class CommissionsEloquentRepository implements CommissionsRepository
             throw new \Exception('Error al crear comisión: ' . $e->getMessage());
         }
     }
-    public function addItems(int $commissionId, array $items): void
+
+    /**
+     * @throws \Exception
+     */
+    public function update(UpdateCommissionDTO $dto, int $destinationId): void
     {
+        try {
+            $commission = Commission::findOrFail($dto->id);
+            $commission->client_id = $dto->clientId;
+            $commission->destination_id = $destinationId;
+            $commission->date = $dto->date;
+            $commission->status = $dto->status;
+            $commission->total = $dto->total;
+            $commission->notes = $dto->notes;
+            $commission->origin_location_id = $dto->originLocationId;
+            $commission->destination_location_id = $dto->destinationLocationId;
+            $commission->save();
+        } catch (\Exception $e) {
+            throw new \Exception('Error al actualizar comisión: ' . $e->getMessage());
+        }
+    }
+
+    public function addItems(int $commissionId, ?array $items): void
+    {
+        if ($items === null || empty($items)) {
+            return;
+        }
+
         try {
             foreach ($items as $item) {
                 $commissionItem = new CommissionItem();
@@ -57,7 +86,18 @@ class CommissionsEloquentRepository implements CommissionsRepository
         } catch (\Exception $e) {
             throw new \Exception('Error al agregar items a la comisión: ' . $e->getMessage());
         }
+    }
 
+    /**
+     * @throws \Exception
+     */
+    public function deleteItems(int $commissionId): void
+    {
+        try {
+            CommissionItem::where('commission_id', $commissionId)->forceDelete();
+        } catch (\Exception $e) {
+            throw new \Exception('Error al eliminar items de la comisión: ' . $e->getMessage());
+        }
     }
 
     /**

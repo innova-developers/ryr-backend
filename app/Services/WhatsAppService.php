@@ -62,13 +62,19 @@ class WhatsAppService
     private function cleanPhoneNumber(string $phone): string
     {
         $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
+        
+        // Si ya tiene el formato completo 549XXXXXXXXX, devolverlo tal como está
         if (str_starts_with($cleanPhone, '549')) {
             return $cleanPhone;
         }
+        
+        // Si tiene formato 54XXXXXXXXX, agregar el 9 después del 54
         if (str_starts_with($cleanPhone, '54')) {
-            return '9' . $cleanPhone;
+            return '54' . '9' . substr($cleanPhone, 2);
         }
-        return '549'.$cleanPhone;
+        
+        // Si no tiene código de país, agregar 549 al principio
+        return '549' . $cleanPhone;
     }
 
 

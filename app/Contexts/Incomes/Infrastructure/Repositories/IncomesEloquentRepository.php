@@ -29,7 +29,20 @@ class IncomesEloquentRepository implements IncomesRepository
             ->when($filterDTO->dateFrom, fn ($q) => $q->where('date', '>=', $filterDTO->dateFrom))
             ->when($filterDTO->dateTo, fn ($q) => $q->where('date', '<=', $filterDTO->dateTo))
             ->when($filterDTO->categoryId, fn ($q) => $q->where('income_category_id', $filterDTO->categoryId))
-            ->when($filterDTO->userId, fn ($q) => $q->where('user_id', $filterDTO->userId));
+            ->when($filterDTO->userId, fn ($q) => $q->where('user_id', $filterDTO->userId))
+            ->when($filterDTO->search, function ($q) use ($filterDTO) {
+                $searchTerm = '%' . $filterDTO->search . '%';
+                return $q->where(function ($query) use ($searchTerm) {
+                    $query->where('detail', 'LIKE', $searchTerm)
+                        ->orWhere('amount', 'LIKE', $searchTerm)
+                        ->orWhereHas('category', function ($categoryQuery) use ($searchTerm) {
+                            $categoryQuery->where('name', 'LIKE', $searchTerm);
+                        })
+                        ->orWhereHas('user', function ($userQuery) use ($searchTerm) {
+                            $userQuery->where('name', 'LIKE', $searchTerm);
+                        });
+                });
+            });
 
         return $query->get();
     }

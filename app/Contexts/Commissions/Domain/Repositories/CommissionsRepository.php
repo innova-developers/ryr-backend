@@ -19,7 +19,17 @@ interface CommissionsRepository
     /**
      * @throws \Exception
      */
-    public function addItems(int $commissionId, array $items): void;
+    public function update(\App\Contexts\Commissions\Application\DTOs\UpdateCommissionDTO $dto, int $destinationId): void;
+
+    /**
+     * @throws \Exception
+     */
+    public function addItems(int $commissionId, ?array $items): void;
+
+    /**
+     * @throws \Exception
+     */
+    public function deleteItems(int $commissionId): void;
 
     /**
      * @throws \Exception
