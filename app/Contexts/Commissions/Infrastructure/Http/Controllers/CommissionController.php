@@ -6,11 +6,14 @@ use App\Contexts\Commissions\Application\CreateCommissionUseCase;
 use App\Contexts\Commissions\Application\DeleteCommissionUseCase;
 use App\Contexts\Commissions\Application\DTOs\CreateCommissionDTO;
 use App\Contexts\Commissions\Application\DTOs\ListCommissionsFiltersDTO;
+use App\Contexts\Commissions\Application\DTOs\UpdateCommissionDTO;
 use App\Contexts\Commissions\Application\GetCommissionUseCase;
 use App\Contexts\Commissions\Application\ListCommissionsUseCase;
 use App\Contexts\Commissions\Application\UpdateCommissionStatusUseCase;
+use App\Contexts\Commissions\Application\UpdateCommissionUseCase;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Contexts\Commissions\Infrastructure\Http\Requests\CreateCommissionRequest;
+use App\Contexts\Commissions\Infrastructure\Http\Requests\UpdateCommissionRequest;
 use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
@@ -52,6 +55,56 @@ class CommissionController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error al crear la comisión',
+                'error' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    public function update(UpdateCommissionRequest $request, int $id): JsonResponse
+    {
+        try {
+            // Obtener la comisión existente
+            $existingCommission = $this->repository->findById($id);
+            
+            // Obtener datos validados del request
+            $validatedData = $request->validated();
+            
+            // Combinar datos existentes con los nuevos datos
+            $data = [
+                'id' => $id,
+                'client_id' => $validatedData['client_id'] ?? $existingCommission->client_id,
+                'date' => $validatedData['date'] ?? $existingCommission->date->format('Y-m-d'),
+                'origin' => $validatedData['origin'] ?? $existingCommission->destination->origin,
+                'destination' => $validatedData['destination'] ?? $existingCommission->destination->destination,
+                'status' => $validatedData['status'] ?? $existingCommission->status->value,
+                'origin_location_id' => $validatedData['origin_location_id'] ?? $existingCommission->origin_location_id,
+                'destination_location_id' => $validatedData['destination_location_id'] ?? $existingCommission->destination_location_id,
+                'items' => $validatedData['items'] ?? null,
+                'total' => $validatedData['total'] ?? $existingCommission->total,
+                'notes' => $validatedData['notes'] ?? $existingCommission->notes,
+                'a_cuenta' => $validatedData['a_cuenta'] ?? false,
+            ];
+            
+            $dto = UpdateCommissionDTO::fromArray($data);
+            $useCase = new UpdateCommissionUseCase(
+                $this->repository,
+                $this->customerRepository,
+                $this->destinationRepository,
+                $this->currentAccountRepository
+            );
+            $commission = $useCase($dto);
+
+            return response()->json($commission, 200);
+        } catch (\Exception $e) {
+            if (str_contains($e->getMessage(), 'Comisión no encontrada')) {
+                return response()->json([
+                    'message' => 'Comisión no encontrada',
+                    'error' => $e->getMessage(),
+                ], 404);
+            }
+
+            return response()->json([
+                'message' => 'Error al actualizar la comisión',
                 'error' => $e->getMessage(),
             ], 400);
         }

@@ -29,6 +29,7 @@ class CommissionsMapper
                     'payment_method_label' => $commission->payment_method?->label() ?? null,
                     'user_id' => $commission->user_id,
                     'total' => $commission->total,
+                    'notes' => $commission->notes,
                     'created_at' => $commission->created_at,
                     'updated_at' => $commission->updated_at,
                     'client' => [
@@ -122,6 +123,7 @@ class CommissionsMapper
                     'phone' => optional($commission->destinationLocation)->phone,
                     'schedule' => optional($commission->destinationLocation)->schedule,
                 ],
+                'notes' => $commission->notes ?? null,
                 'branch_id' => $commission->branch_id ?? null,
                 'branch' => [
                     'id' => optional($commission->branch)->id,

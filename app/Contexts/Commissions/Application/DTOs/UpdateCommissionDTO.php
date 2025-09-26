@@ -5,9 +5,10 @@ namespace App\Contexts\Commissions\Application\DTOs;
 use App\Shared\Enums\CommissionStatus;
 use DateTime;
 
-class CreateCommissionDTO
+class UpdateCommissionDTO
 {
     public function __construct(
+        public readonly int $id,
         public readonly int $clientId,
         public readonly DateTime $date,
         public readonly string $origin,
@@ -28,6 +29,7 @@ class CreateCommissionDTO
     public static function fromArray(array $data): self
     {
         return new self(
+            id: $data['id'],
             clientId: $data['client_id'],
             date: new DateTime($data['date']),
             origin: $data['origin'],
@@ -45,6 +47,7 @@ class CreateCommissionDTO
     public function toArray(): array
     {
         return [
+            'id' => $this->id,
             'client_id' => $this->clientId,
             'date' => $this->date->format('Y-m-d'),
             'origin' => $this->origin,

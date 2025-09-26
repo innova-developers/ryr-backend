@@ -257,19 +257,15 @@ class CadeteController extends Controller
                 'timestamp' => now()->toISOString()
             ]);
             
-            // Actualizar estado
-            $commission->status = $adminStatus;
-            $commission->save();
+            // Usar el UseCase para actualizar el estado (incluye notificaciones automáticas)
+            $useCase = app(\App\Contexts\Commissions\Application\UpdateCommissionStatusUseCase::class);
+            $details = 'Estado actualizado por cadete: ' . $request->status . 
+                      ($request->observation ? ' - Observación: ' . $request->observation : '');
+            
+            $useCase($commission->id, $adminStatus, $details, false);
 
-            // Registrar el cambio en commission_logs
-            CommissionLog::create([
-                'commission_id' => $commission->id,
-                'user_id' => $user->id,
-                'previous_status' => $oldStatusValue,
-                'new_status' => $newStatusValue,
-                'details' => 'Estado actualizado por cadete: ' . $request->status . 
-                             ($request->observation ? ' - Observación: ' . $request->observation : '')
-            ]);
+            // Recargar la comisión para obtener el estado actualizado
+            $commission->refresh();
 
             // Si se marca como entregado, guardar la firma
             if ($request->status === 'Entregado' || $newStatusValue === CommissionStatus::ENTREGADO->value) {
@@ -955,14 +951,10 @@ class CadeteController extends Controller
         
         $totalDeliveries = Commission::where('cadete_id', $user->id)->count();
         
-        // Estados operativos del cadete (nuevas comisiones asignadas)
+        // Estados pendientes (solo comisiones recién asignadas)
         $pending = Commission::where('cadete_id', $user->id)
                             ->whereIn('status', [
                                 CommissionStatus::CADETE_ASIGNADO,
-                                CommissionStatus::CADETE_EN_CAMINO_ORIGEN,
-                                CommissionStatus::EN_PUNTO_RETIRO,
-                                CommissionStatus::ENCOMIENDA_RETIRADA,
-                                CommissionStatus::EN_CAMINO_PLANTA,
                                 // Estados administrativos que se mapean a "En proceso" para el cadete
                                 CommissionStatus::SOLICITUD_RECIBIDA,
                                 CommissionStatus::BUSCANDO_CADETE,
@@ -975,9 +967,13 @@ class CadeteController extends Controller
                             ])
                             ->count();
         
-        // Estados en progreso (en tránsito o proceso de entrega)
+        // Estados en progreso (desde en camino al origen hasta en proceso de entrega)
         $inProgress = Commission::where('cadete_id', $user->id)
                                ->whereIn('status', [
+                                   CommissionStatus::CADETE_EN_CAMINO_ORIGEN,
+                                   CommissionStatus::EN_PUNTO_RETIRO,
+                                   CommissionStatus::ENCOMIENDA_RETIRADA,
+                                   CommissionStatus::EN_CAMINO_PLANTA,
                                    CommissionStatus::EN_TRANSITO_DESTINO,
                                    CommissionStatus::EN_PROCESO_ENTREGA
                                ])
@@ -1047,14 +1043,10 @@ class CadeteController extends Controller
         // Total de comisiones que coinciden con los filtros
         $totalDeliveries = $totalQuery->where('cadete_id', $cadeteId)->count();
 
-        // Estados operativos del cadete (nuevas comisiones asignadas)
+        // Estados pendientes (solo comisiones recién asignadas)
         $pending = $pendingQuery->where('cadete_id', $cadeteId)
                                ->whereIn('status', [
                                    CommissionStatus::CADETE_ASIGNADO,
-                                   CommissionStatus::CADETE_EN_CAMINO_ORIGEN,
-                                   CommissionStatus::EN_PUNTO_RETIRO,
-                                   CommissionStatus::ENCOMIENDA_RETIRADA,
-                                   CommissionStatus::EN_CAMINO_PLANTA,
                                    // Estados administrativos que se mapean a "En proceso" para el cadete
                                    CommissionStatus::SOLICITUD_RECIBIDA,
                                    CommissionStatus::BUSCANDO_CADETE,
@@ -1067,9 +1059,13 @@ class CadeteController extends Controller
                                ])
                                ->count();
 
-        // Estados en progreso (en tránsito o proceso de entrega)
+        // Estados en progreso (desde en camino al origen hasta en proceso de entrega)
         $inProgress = $inProgressQuery->where('cadete_id', $cadeteId)
                                      ->whereIn('status', [
+                                         CommissionStatus::CADETE_EN_CAMINO_ORIGEN,
+                                         CommissionStatus::EN_PUNTO_RETIRO,
+                                         CommissionStatus::ENCOMIENDA_RETIRADA,
+                                         CommissionStatus::EN_CAMINO_PLANTA,
                                          CommissionStatus::EN_TRANSITO_DESTINO,
                                          CommissionStatus::EN_PROCESO_ENTREGA
                                      ])

@@ -15,6 +15,7 @@ class CommissionMapper
             'user_id' => $commission->user_id,
             'branch_id' => $commission->branch_id,
             'total' => $commission->total,
+            'notes' => $commission->notes,
             'origin_location_id' => $commission->origin_location_id,
             'destination_location_id' => $commission->destination_location_id,
             'client' => $commission->client ? [

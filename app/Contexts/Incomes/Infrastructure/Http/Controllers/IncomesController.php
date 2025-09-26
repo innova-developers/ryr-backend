@@ -29,7 +29,8 @@ class IncomesController extends Controller
                 $request->get('dateFrom'),
                 $request->get('dateTo'),
                 $request->get('income_category_id'),
-                $request->get('user')
+                $request->get('user'),
+                $request->get('search')
             );
 
             $incomes = $this->repository->findAll($filterDTO)->toArray();
@@ -135,7 +136,8 @@ class IncomesController extends Controller
                 null,
                 null,
                 null,
-                $userId
+                $userId,
+                null
             );
 
             $incomes = $this->repository->findAll($filterDTO)->toArray();

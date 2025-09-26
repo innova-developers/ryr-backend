@@ -14,6 +14,7 @@ use App\Contexts\Expenses\Infrastructure\Http\Controllers\ExpensesController;
 use App\Contexts\Incomes\Infrastructure\Http\Controllers\IncomesController;
 use App\Contexts\IncomeCategories\Infrastructure\Http\Controllers\IncomeCategoryController;
 use App\Contexts\CurrentAccount\Infrastructure\Http\Controllers\CurrentAccountController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Middleware\CadeteMiddleware;
 use Illuminate\Support\Facades\Route;
 
@@ -79,6 +80,7 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
 
     // Comisiones (excepto show que ya está pública)
     Route::post('/commissions', [CommissionController::class, 'store']);
+    Route::put('/commissions/{id}', [CommissionController::class, 'update']);
     Route::get('/commissions/statuses', [CommissionController::class, 'getStatuses']);
     Route::get('/commissions/statuses/client', [CommissionController::class, 'getClientStatuses']);
     Route::get('/commissions',  [CommissionController::class, 'index']);
@@ -160,9 +162,18 @@ Route::prefix('cadete')->middleware(['auth:sanctum', CadeteMiddleware::class])->
     Route::prefix('payments')->group(function () {
         Route::get('/', [App\Http\Controllers\Cadete\CadetePaymentController::class, 'index']);
         Route::get('/summary', [App\Http\Controllers\Cadete\CadetePaymentController::class, 'getPaymentsSummary']);
+        Route::get('/next', [App\Http\Controllers\Cadete\CadetePaymentController::class, 'getNextPayment']);
         Route::get('/next-payment', [App\Http\Controllers\Cadete\CadetePaymentController::class, 'getNextPayment']);
         Route::get('/recent', [App\Http\Controllers\Cadete\CadetePaymentController::class, 'getRecentPayments']);
         Route::get('/{id}', [App\Http\Controllers\Cadete\CadetePaymentController::class, 'show']);
+    });
+
+    // Rutas para notificaciones del cadete
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [NotificationController::class, 'index']);
+        Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::patch('/{id}/mark-as-read', [NotificationController::class, 'markAsRead']);
+        Route::patch('/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
     });
 });
 

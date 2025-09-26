@@ -26,6 +26,7 @@ class Commission extends Model
         'status',
         'payment_method',
         'total',
+        'notes',
         'user_id',
         'origin_location_id',
         'destination_location_id',

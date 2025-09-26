@@ -20,6 +20,7 @@ enum CommissionStatus: string
     
     // Estados de incidencia
     case INTENTO_ENTREGA_FALLIDO = 'INTENTO_ENTREGA_FALLIDO';
+    case INTENTO_RETIRO_FALLIDO = 'INTENTO_RETIRO_FALLIDO';
     case REPROGRAMANDO_ENTREGA = 'REPROGRAMANDO_ENTREGA';
     case DISPONIBLE_RETIRO = 'DISPONIBLE_RETIRO';
     case EN_DEVOLUCION = 'EN_DEVOLUCION';
@@ -51,6 +52,7 @@ enum CommissionStatus: string
             
             // Estados de incidencia que puede reportar el cadete
             self::INTENTO_ENTREGA_FALLIDO => 'Intento de entrega fallido',
+            self::INTENTO_RETIRO_FALLIDO => 'Intento de retiro fallido',
             self::REPROGRAMANDO_ENTREGA => 'Reprogramando entrega',
             self::DISPONIBLE_RETIRO => 'Disponible para retiro en sucursal',
             self::EN_DEVOLUCION => 'En devolución al remitente',
@@ -88,6 +90,7 @@ enum CommissionStatus: string
             
             // Estados de incidencia
             self::INTENTO_ENTREGA_FALLIDO => 'Intento de entrega fallido',
+            self::INTENTO_RETIRO_FALLIDO => 'Intento de retiro fallido',
             self::REPROGRAMANDO_ENTREGA => 'Reprogramando entrega',
             self::DISPONIBLE_RETIRO => 'Disponible para retiro',
             self::EN_DEVOLUCION => 'En devolución',
@@ -122,6 +125,7 @@ enum CommissionStatus: string
             
             // Estados de incidencia
             self::INTENTO_ENTREGA_FALLIDO => 'Intento de entrega fallido',
+            self::INTENTO_RETIRO_FALLIDO => 'Intento de retiro fallido',
             self::REPROGRAMANDO_ENTREGA => 'Reprogramando entrega',
             self::DISPONIBLE_RETIRO => 'Disponible para retiro',
             self::EN_DEVOLUCION => 'En devolución',
@@ -159,6 +163,7 @@ enum CommissionStatus: string
             
             // Estados de incidencia que puede reportar el cadete
             'Intento de entrega fallido' => self::INTENTO_ENTREGA_FALLIDO,
+            'Intento de retiro fallido' => self::INTENTO_RETIRO_FALLIDO,
             'Reprogramando entrega' => self::REPROGRAMANDO_ENTREGA,
             'Disponible para retiro en sucursal' => self::DISPONIBLE_RETIRO,
             'En devolución al remitente' => self::EN_DEVOLUCION,
@@ -185,6 +190,7 @@ enum CommissionStatus: string
             self::ENTREGADO->value,
             self::RETIRADO_SUCURSAL->value,
             self::INTENTO_ENTREGA_FALLIDO->value,
+            self::INTENTO_RETIRO_FALLIDO->value,
             self::REPROGRAMANDO_ENTREGA->value,
             self::DISPONIBLE_RETIRO->value,
             self::EN_DEVOLUCION->value,
@@ -202,6 +208,7 @@ enum CommissionStatus: string
             'Entregado',
             'Retirado en sucursal',
             'Intento de entrega fallido',
+            'Intento de retiro fallido',
             'Reprogramando entrega',
             'Disponible para retiro en sucursal',
             'En devolución al remitente',

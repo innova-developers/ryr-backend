@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\NotificationService;
 use App\Shared\Models\Commission;
 use App\Shared\Models\User;
 use App\Shared\Enums\CommissionStatus;
@@ -14,6 +15,10 @@ use Illuminate\Routing\Controller;
 
 class CommissionCadeteController extends Controller
 {
+    public function __construct(
+        private readonly NotificationService $notificationService
+    ) {
+    }
     /**
      * Asociar un cadete a una comisión
      */
@@ -49,6 +54,9 @@ class CommissionCadeteController extends Controller
             'cadete_id' => $request->cadete_id,
             'status' => CommissionStatus::CADETE_ASIGNADO
         ]);
+
+        // Crear notificación para el cadete
+        $this->notificationService->createCommissionAssignedNotification($commission);
 
         return response()->json([
             'message' => 'Cadete asignado exitosamente',
@@ -123,6 +131,9 @@ class CommissionCadeteController extends Controller
             'cadete_id' => $request->cadete_id,
             'status' => CommissionStatus::CADETE_ASIGNADO
         ]);
+
+        // Crear notificación para el nuevo cadete
+        $this->notificationService->createCommissionAssignedNotification($commission);
 
         return response()->json([
             'message' => 'Cadete cambiado exitosamente',
