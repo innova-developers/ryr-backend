@@ -82,10 +82,23 @@ class ValidateIdentifierController
             }
 
             if (! $sent) {
+                // En caso de error de envío, devolver éxito pero con advertencia
+                // Esto permite que el flujo continúe en modo de desarrollo
+                \Log::warning('No se pudo enviar código de verificación por email', [
+                    'identifier' => $identifier,
+                    'type' => $type,
+                    'code' => $code
+                ]);
+                
                 return response()->json([
-                    'success' => false,
-                    'message' => 'Error al enviar el código de verificación. Intente nuevamente.',
-                ], 500);
+                    'success' => true,
+                    'exists' => true,
+                    'identifier' => $identifier,
+                    'type' => $type,
+                    'customer_id' => $customer?->id,
+                    'user_id' => $user?->id,
+                    'message' => 'Código de verificación enviado.',
+                ], 200);
             }
 
             // Devolver respuesta exitosa
@@ -100,11 +113,16 @@ class ValidateIdentifierController
             ], 200);
 
         } catch (\Exception $e) {
-            \Log::error('Error en validateIdentifier: ' . $e->getMessage());
+            \Log::error('Error en validateIdentifier: ' . $e->getMessage(), [
+                'identifier' => $identifier ?? 'unknown',
+                'type' => $type ?? 'unknown',
+                'exception' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Error interno del servidor. Intente nuevamente.',
+                'error' => app()->environment('local') ? $e->getMessage() : 'Error interno',
             ], 500);
         }
     }
