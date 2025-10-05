@@ -145,76 +145,80 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 'deliverySignature',
             ]);
 
-            if ($filters->client) {
-                $query->whereHas('client', function ($q) use ($filters) {
-                    $q->where('name', 'LIKE', "%{$filters->client}%")
-                      ->orWhere('last_name', 'LIKE', "%{$filters->client}%");
-                });
-            }
+            // Si se proporciona commissionId, ignorar todos los demás filtros
+            if ($filters->commissionId) {
+                $query->where('commissions.id', $filters->commissionId);
+            } else {
+                // Aplicar filtros solo si no se proporciona commissionId
+                if ($filters->clientId) {
+                    $query->where('client_id', $filters->clientId);
+                }
 
-            if ($filters->destinationId) {
-                $query->where('destination_id', $filters->destinationId);
-            }
+                if ($filters->client) {
+                    $query->whereHas('client', function ($q) use ($filters) {
+                        $q->where('name', 'LIKE', "%{$filters->client}%")
+                          ->orWhere('last_name', 'LIKE', "%{$filters->client}%");
+                    });
+                }
 
-            if ($filters->branchId) {
-                $query->where('branch_id', $filters->branchId);
-            }
+                if ($filters->destinationId) {
+                    $query->where('destination_id', $filters->destinationId);
+                }
 
-            if ($filters->userId) {
-                $query->where('user_id', $filters->userId);
-            }
+                if ($filters->branchId) {
+                    $query->where('branch_id', $filters->branchId);
+                }
 
-            if ($filters->dateFrom) {
-                $query->where('date', '>=', $filters->dateFrom);
-            }
+                if ($filters->userId) {
+                    $query->where('user_id', $filters->userId);
+                }
 
-            if ($filters->dateTo) {
-                $query->where('date', '<=', $filters->dateTo);
-            }
+                if ($filters->dateFrom) {
+                    $query->where('date', '>=', $filters->dateFrom);
+                }
 
-            if ($filters->status) {
-                $query->where('status', $filters->status->value);
-            }
+                if ($filters->dateTo) {
+                    $query->where('date', '<=', $filters->dateTo);
+                }
 
-            if ($filters->method) {
-                $query->where('payment_method', $filters->method->value);
-            }
+                if ($filters->status) {
+                    $query->where('status', $filters->status->value);
+                }
 
-            switch ($filters->sort) {
-                case 'id':
-                    $query->orderBy('commissions.id', $filters->sortDirection);
+                if ($filters->method) {
+                    $query->where('payment_method', $filters->method->value);
+                }
 
-                    break;
-                case 'client_name':
-                    $query->leftJoin('customers', 'customers.id', '=', 'commissions.client_id')
-                        ->orderBy('customers.name', $filters->sortDirection)
-                        ->select('commissions.*');
-
-                    break;
-                case 'origin':
-                    $query->leftJoin('destinations', 'destinations.id', '=', 'commissions.destination_id')
-                        ->orderBy('destinations.origin', $filters->sortDirection)
-                        ->select('commissions.*');
-
-                    break;
-                case 'destination':
-                    $query->leftJoin('destinations', 'destinations.id', '=', 'commissions.destination_id')
-                        ->orderBy('destinations.destination', $filters->sortDirection)
-                        ->select('commissions.*');
-
-                    break;
-                case 'date':
-                    $query->orderBy('date', $filters->sortDirection);
-
-                    break;
-                case 'total':
-                    $query->orderBy('total', $filters->sortDirection);
-
-                    break;
-                case 'status':
-                    $query->orderBy('status', $filters->sortDirection);
-
-                    break;
+                // Aplicar ordenamiento solo si no se proporciona commissionId
+                switch ($filters->sort) {
+                    case 'id':
+                        $query->orderBy('commissions.id', $filters->sortDirection);
+                        break;
+                    case 'client_name':
+                        $query->leftJoin('customers', 'customers.id', '=', 'commissions.client_id')
+                            ->orderBy('customers.name', $filters->sortDirection)
+                            ->select('commissions.*');
+                        break;
+                    case 'origin':
+                        $query->leftJoin('destinations', 'destinations.id', '=', 'commissions.destination_id')
+                            ->orderBy('destinations.origin', $filters->sortDirection)
+                            ->select('commissions.*');
+                        break;
+                    case 'destination':
+                        $query->leftJoin('destinations', 'destinations.id', '=', 'commissions.destination_id')
+                            ->orderBy('destinations.destination', $filters->sortDirection)
+                            ->select('commissions.*');
+                        break;
+                    case 'date':
+                        $query->orderBy('date', $filters->sortDirection);
+                        break;
+                    case 'total':
+                        $query->orderBy('total', $filters->sortDirection);
+                        break;
+                    case 'status':
+                        $query->orderBy('status', $filters->sortDirection);
+                        break;
+                }
             }
 
             return $query->paginate($filters->perPage, ['*'], 'page', $filters->page);
@@ -267,6 +271,114 @@ class CommissionsEloquentRepository implements CommissionsRepository
             ]);
         } catch (\Exception $e) {
             throw new \Exception('Error al crear el log de la comisión: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Obtener totalizadores para el dashboard
+     */
+    public function getTotals(ListCommissionsFiltersDTO $filters): array
+    {
+        try {
+            $query = Commission::query();
+
+            // Si se proporciona commissionId, ignorar todos los demás filtros
+            if ($filters->commissionId) {
+                $query->where('commissions.id', $filters->commissionId);
+            } else {
+                // Aplicar filtros solo si no se proporciona commissionId
+                if ($filters->clientId) {
+                    $query->where('client_id', $filters->clientId);
+                }
+
+                if ($filters->client) {
+                    $query->whereHas('client', function ($q) use ($filters) {
+                        $q->where('name', 'LIKE', "%{$filters->client}%")
+                          ->orWhere('last_name', 'LIKE', "%{$filters->client}%");
+                    });
+                }
+
+                if ($filters->destinationId) {
+                    $query->where('destination_id', $filters->destinationId);
+                }
+
+                if ($filters->branchId) {
+                    $query->where('branch_id', $filters->branchId);
+                }
+
+                if ($filters->userId) {
+                    $query->where('user_id', $filters->userId);
+                }
+
+                if ($filters->dateFrom) {
+                    $query->where('date', '>=', $filters->dateFrom);
+                }
+
+                if ($filters->dateTo) {
+                    $query->where('date', '<=', $filters->dateTo);
+                }
+
+                if ($filters->status) {
+                    $query->where('status', $filters->status->value);
+                }
+
+                if ($filters->method) {
+                    $query->where('payment_method', $filters->method->value);
+                }
+            }
+
+            // Total de monto
+            $totalAmount = $query->sum('total');
+
+            // Totalizadores por método de pago
+            $paymentMethods = $query->clone()
+                ->selectRaw('payment_method, COUNT(*) as count, SUM(total) as total')
+                ->groupBy('payment_method')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'method' => $item->payment_method,
+                        'count' => $item->count,
+                        'total' => (float) $item->total,
+                    ];
+                });
+
+            // Totalizadores por estado
+            $statuses = $query->clone()
+                ->selectRaw('status, COUNT(*) as count, SUM(total) as total')
+                ->groupBy('status')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'status' => $item->status,
+                        'count' => $item->count,
+                        'total' => (float) $item->total,
+                    ];
+                });
+
+            // Totalizadores por sucursal
+            $branches = $query->clone()
+                ->join('branches', 'branches.id', '=', 'commissions.branch_id')
+                ->selectRaw('branches.id, branches.name, COUNT(*) as count, SUM(commissions.total) as total')
+                ->groupBy('branches.id', 'branches.name')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'branch_id' => $item->id,
+                        'branch_name' => $item->name,
+                        'count' => $item->count,
+                        'total' => (float) $item->total,
+                    ];
+                });
+
+            return [
+                'total_amount' => (float) $totalAmount,
+                'payment_methods' => $paymentMethods,
+                'statuses' => $statuses,
+                'branches' => $branches,
+            ];
+        } catch (\Exception $e) {
+            throw new \Exception('Error al obtener totalizadores: ' . $e->getMessage());
         }
     }
 }
