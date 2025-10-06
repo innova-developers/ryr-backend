@@ -62,6 +62,26 @@ return [
             ]) : [],
         ],
 
+        'mysql_old' => [
+            'driver' => 'mysql',
+            'url' => env('DB_OLD_URL'),
+            'host' => env('DB_OLD_HOST', '127.0.0.1'),
+            'port' => env('DB_OLD_PORT', '3307'),
+            'database' => env('DB_OLD_DATABASE', 'ryr_old'),
+            'username' => env('DB_OLD_USERNAME', 'laravel'),
+            'password' => env('DB_OLD_PASSWORD', 'laravel'),
+            'unix_socket' => env('DB_OLD_SOCKET', ''),
+            'charset' => env('DB_OLD_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_OLD_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => false, // Desactivar strict mode para compatibilidad con DB vieja
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

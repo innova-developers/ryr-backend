@@ -48,4 +48,5 @@ interface CommissionsRepository
 
     public function updateStatus(int $id, CommissionStatus $status): void;
     public function createLog(CreateCommissionLogDTO $dto): void;
+    public function getTotals(ListCommissionsFiltersDTO $filters): array;
 }
