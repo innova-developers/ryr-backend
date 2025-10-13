@@ -73,7 +73,7 @@ class PublicCommissionControllerTest extends TestCase
                 'message' => 'Comisión creada correctamente',
                 'commission' => [
                     'id' => 1,
-                    'tracking_number' => 'RYR000000001',
+                    'tracking_number' => '1',
                     'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
                     'total' => 1500,
                     'notes' => 'Comisión con notas desde FormData',

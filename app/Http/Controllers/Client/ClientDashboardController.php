@@ -188,7 +188,7 @@ class ClientDashboardController
             $shipments = $commissions->map(function ($commission) {
                 return [
                     'id' => $commission->id,
-                    'tracking_number' => 'RYR' . str_pad($commission->id, 9, '0', STR_PAD_LEFT),
+                    'tracking_number' => $commission->id,
                     'status' => $commission->status,
                     'origin' => $commission->originLocation ? $commission->originLocation->name : null,
                     'destination' => $commission->destinationLocation ? $commission->destinationLocation->name : null,
