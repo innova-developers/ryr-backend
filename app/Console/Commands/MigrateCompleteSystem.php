@@ -508,7 +508,7 @@ class MigrateCompleteSystem extends Command
                             'address' => $address,
                             'phone' => $oldLocation->telefono ?? null,
                             'map' => substr((string)($oldLocation->mapa ?? ''), 0, 255),
-                            'schedule' => $oldLocation->mapa ?? '',
+                            'schedule' => $oldLocation->abre ?? '',
                             'created_at' => now(),
                             'updated_at' => now(),
                         ];
