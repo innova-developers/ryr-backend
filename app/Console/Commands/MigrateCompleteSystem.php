@@ -36,7 +36,13 @@ class MigrateCompleteSystem extends Command
     protected $signature = 'migrate:complete-system 
                             {--dry-run : Ejecutar en modo de prueba sin hacer cambios}
                             {--force : Forzar la migración sin confirmación}
-                            {--skip-clear : Omitir limpieza de base de datos}';
+                            {--skip-clear : Omitir limpieza de base de datos}
+                            {--commission-from=1 : ID de comisión inicial a migrar}
+                            {--commission-to=0 : ID de comisión final a migrar (0 = todas)}
+                            {--batch-size=100 : Tamaño del lote para procesamiento}
+                            {--locations-batch=10 : Tamaño del lote para ubicaciones (con coordenadas)}
+                            {--skip-coordinates : Omitir cálculo de coordenadas (migrar sin lat/lng)}
+                            {--coordinates-only : Solo calcular coordenadas para ubicaciones existentes}';
 
     /**
      * The console command description.
@@ -45,8 +51,13 @@ class MigrateCompleteSystem extends Command
      */
     protected $description = 'Migrar todo el sistema desde la base de datos vieja';
     
-    // Constante para limitar el número de comisiones a migrar (0 = todas, >0 = cantidad específica)
-    private const COMMISSIONS_LIMIT = 100;
+    // Variables de configuración para procesamiento por lotes
+    private int $commissionFrom = 1;
+    private int $commissionTo = 0;
+    private int $batchSize = 100;
+    private int $locationsBatchSize = 10;
+    private bool $skipCoordinates = false;
+    private bool $coordinatesOnly = false;
 
     /**
      * Execute the console command.
@@ -58,6 +69,20 @@ class MigrateCompleteSystem extends Command
         $dryRun   = (bool) $this->option('dry-run');
         $force    = (bool) $this->option('force');
         $skipClear= (bool) $this->option('skip-clear');
+        
+        // Configurar variables de procesamiento por lotes
+        $this->commissionFrom = (int) $this->option('commission-from');
+        $this->commissionTo = (int) $this->option('commission-to');
+        $this->batchSize = (int) $this->option('batch-size');
+        $this->locationsBatchSize = (int) $this->option('locations-batch');
+        $this->skipCoordinates = (bool) $this->option('skip-coordinates');
+        $this->coordinatesOnly = (bool) $this->option('coordinates-only');
+        
+        $this->info("📊 Configuración de lotes:");
+        $this->info("   - Comisiones: {$this->commissionFrom} a " . ($this->commissionTo > 0 ? $this->commissionTo : 'todas'));
+        $this->info("   - Tamaño de lote: {$this->batchSize}");
+        $this->info("   - Lote de ubicaciones: {$this->locationsBatchSize}");
+        $this->info("   - Coordenadas: " . ($this->skipCoordinates ? 'OMITIDAS' : ($this->coordinatesOnly ? 'SOLO COORDENADAS' : 'INCLUIDAS')));
         
         if ($dryRun) {
             $this->warn('⚠️  MODO DE PRUEBA ACTIVADO - No se realizarán cambios reales');
@@ -156,6 +181,18 @@ class MigrateCompleteSystem extends Command
      */
     private function executeMigrationSteps(bool $dryRun): void
     {
+        // Si es solo coordenadas, solo ejecutar ese paso
+        if ($this->coordinatesOnly) {
+            $this->info("📋 Solo calculando coordenadas para ubicaciones existentes...");
+            try {
+                $this->migrateLocationCoordinatesOnly($dryRun);
+                $this->info("   ✅ Cálculo de coordenadas completado");
+            } catch (\Throwable $e) {
+                $this->warn("   ⚠️  Error calculando coordenadas: {$e->getMessage()}");
+            }
+            return;
+        }
+
         $steps = [
             '1. Migrar sucursales' => [$this, 'migrateBranches'],
             '2. Crear usuario por defecto' => [$this, 'createDefaultUser'],
@@ -387,16 +424,23 @@ class MigrateCompleteSystem extends Command
              ->chunk(1000, function ($oldCustomers) {
                  DB::transaction(function () use ($oldCustomers) {
                      foreach ($oldCustomers as $oldCustomer) {
-                         // Obtener la ciudad desde locaciones usando el campo direccion como ID
+                         // Obtener la ciudad y dirección desde locaciones usando el campo direccion como ID
                          $city = 'CIUDAD'; // Valor por defecto
+                         $address = 'Dirección'; // Valor por defecto
+                         
                          if ($oldCustomer->direccion) {
                              $location = DB::connection('mysql_old')
                                  ->table('locaciones')
                                  ->where('idlocaciones', $oldCustomer->direccion)
                                  ->first();
                              
-                             if ($location && $location->localidad) {
-                                 $city = $this->normalizeCityName($location->localidad);
+                             if ($location) {
+                                 if ($location->localidad) {
+                                     $city = $this->normalizeCityName($location->localidad);
+                                 }
+                                 if ($location->direccion) {
+                                     $address = $location->direccion;
+                                 }
                              }
                          }
                          
@@ -408,7 +452,7 @@ class MigrateCompleteSystem extends Command
                                  'last_name' => $oldCustomer->apellido,
                                  'mobile' => $oldCustomer->telefono,
                                  'email' => $oldCustomer->correo ?: "cliente-{$oldCustomer->idclientes}@ryrcomisiones.com",
-                                 'address' => $oldCustomer->direccion ?? 'Dirección',
+                                 'address' => $address,
                                  'city' => $city,
                                  'phone' => $oldCustomer->telefono,
                                  'maps_url' => null,
@@ -433,41 +477,140 @@ class MigrateCompleteSystem extends Command
     {
         if ($dryRun) { return; }
 
+        $this->info("   📍 Procesando ubicaciones en lotes de {$this->locationsBatchSize}...");
+        
+        $totalProcessed = 0;
+        $googleMapsService = null;
+        
+        // Solo inicializar GoogleMapsService si no se omiten coordenadas
+        if (!$this->skipCoordinates) {
+            $googleMapsService = new GoogleMapsService();
+        }
+        
         DB::connection('mysql_old')
             ->table('locaciones')
             ->orderBy('idlocaciones')
-            ->chunk(1000, function ($oldLocations) {
-                DB::transaction(function () use ($oldLocations) {
-                    $googleMapsService = new GoogleMapsService();
-                    
+            ->chunk($this->locationsBatchSize, function ($oldLocations) use (&$totalProcessed, $googleMapsService) {
+                DB::transaction(function () use ($oldLocations, &$totalProcessed, $googleMapsService) {
                     foreach ($oldLocations as $oldLocation) {
+                        $totalProcessed++;
+                        
+                        if ($totalProcessed % 10 == 0) {
+                            $this->info("   📍 Procesadas: {$totalProcessed} ubicaciones...");
+                        }
+                        
                         $address = $oldLocation->direccion ?? 'Dirección';
                         $city = $this->normalizeCityName($oldLocation->localidad ?? 'CIUDAD');
                         
-                        // Calcular coordenadas usando Google Maps API
-                        $coordinates = $googleMapsService->getCoordinates($address, $city);
+                        $locationData = [
+                            'name' => $oldLocation->nombre ?? 'Ubicación',
+                            'origin' => $city,
+                            'address' => $address,
+                            'phone' => $oldLocation->telefono ?? null,
+                            'map' => substr((string)($oldLocation->mapa ?? ''), 0, 255),
+                            'schedule' => $oldLocation->mapa ?? '',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                        
+                        // Calcular coordenadas solo si no se omiten
+                        if (!$this->skipCoordinates && $googleMapsService) {
+                            try {
+                                $coordinates = $googleMapsService->getCoordinates($address, $city);
+                                $locationData['latitude'] = $coordinates['latitude'] ?? null;
+                                $locationData['longitude'] = $coordinates['longitude'] ?? null;
+                                
+                                // Pausa para evitar límites de API
+                                usleep(500000); // 0.5 segundos - más conservador
+                            } catch (\Throwable $e) {
+                                $this->warn("   ⚠️  Error obteniendo coordenadas para {$address}, {$city}: " . $e->getMessage());
+                                $locationData['latitude'] = null;
+                                $locationData['longitude'] = null;
+                            }
+                        } else {
+                            $locationData['latitude'] = null;
+                            $locationData['longitude'] = null;
+                        }
                         
                         DB::table('locations')->updateOrInsert(
                             ['id' => (int)($oldLocation->idlocaciones ?? 0)],
-                            [
-                                'name' => $oldLocation->nombre ?? 'Ubicación',
-                                'origin' => $city,
-                                'address' => $address,
-                                'phone' => $oldLocation->telefono ?? null,
-                                'map' => substr((string)($oldLocation->mapa ?? ''), 0, 255),
-                                'schedule' => 'Lunes a Viernes 9:00-18:00',
-                                'latitude' => $coordinates['latitude'] ?? null,
-                                'longitude' => $coordinates['longitude'] ?? null,
-                                'created_at' => now(),
-                                'updated_at' => now(),
-                            ]
+                            $locationData
                         );
-                        
-                        // Pequeña pausa para evitar límites de API
-                        usleep(100000); // 0.1 segundos
                     }
                 });
+                
+                // Pausa entre lotes para evitar sobrecarga
+                if (!$this->skipCoordinates) {
+                    sleep(2); // Pausa más larga para API
+                }
             });
+            
+        $this->info("   ✅ Total ubicaciones procesadas: {$totalProcessed}");
+    }
+
+    /**
+     * Migrar solo coordenadas para ubicaciones existentes
+     */
+    private function migrateLocationCoordinatesOnly(bool $dryRun): void
+    {
+        if ($dryRun) { 
+            $this->info("   [DRY-RUN] Calculando coordenadas para ubicaciones existentes...");
+            return; 
+        }
+
+        $this->info("   📍 Calculando coordenadas para ubicaciones existentes...");
+        
+        $totalProcessed = 0;
+        $googleMapsService = new GoogleMapsService();
+        
+        // Obtener ubicaciones que no tienen coordenadas
+        $locationsWithoutCoordinates = DB::table('locations')
+            ->whereNull('latitude')
+            ->orWhereNull('longitude')
+            ->orderBy('id')
+            ->get();
+            
+        $this->info("   📍 Ubicaciones sin coordenadas encontradas: " . $locationsWithoutCoordinates->count());
+        
+        if ($locationsWithoutCoordinates->isEmpty()) {
+            $this->info("   ✅ Todas las ubicaciones ya tienen coordenadas");
+            return;
+        }
+        
+        foreach ($locationsWithoutCoordinates->chunk($this->locationsBatchSize) as $locationChunk) {
+            DB::transaction(function () use ($locationChunk, &$totalProcessed, $googleMapsService) {
+                foreach ($locationChunk as $location) {
+                    $totalProcessed++;
+                    
+                    if ($totalProcessed % 5 == 0) {
+                        $this->info("   📍 Procesadas: {$totalProcessed} coordenadas...");
+                    }
+                    
+                    try {
+                        $coordinates = $googleMapsService->getCoordinates($location->address, $location->origin);
+                        
+                        DB::table('locations')
+                            ->where('id', $location->id)
+                            ->update([
+                                'latitude' => $coordinates['latitude'] ?? null,
+                                'longitude' => $coordinates['longitude'] ?? null,
+                                'updated_at' => now(),
+                            ]);
+                            
+                        // Pausa para evitar límites de API
+                        usleep(500000); // 0.5 segundos
+                        
+                    } catch (\Throwable $e) {
+                        $this->warn("   ⚠️  Error obteniendo coordenadas para {$location->address}, {$location->origin}: " . $e->getMessage());
+                    }
+                }
+            });
+            
+            // Pausa entre lotes
+            sleep(2);
+        }
+        
+        $this->info("   ✅ Total coordenadas calculadas: {$totalProcessed}");
     }
 
     /**
@@ -509,28 +652,32 @@ class MigrateCompleteSystem extends Command
     {
         if ($dryRun) { return; }
 
-        // Procesar comisiones según el límite configurado
+        // Procesar comisiones según el rango configurado
         $query = DB::connection('mysql_old')
             ->table('historial')
             ->orderBy('idhistorial', 'desc');
         
-        if (self::COMMISSIONS_LIMIT > 0) {
-            $query->limit(self::COMMISSIONS_LIMIT);
+        // Aplicar filtros de rango
+        if ($this->commissionFrom > 1) {
+            $query->where('idhistorial', '>=', $this->commissionFrom);
+        }
+        
+        if ($this->commissionTo > 0) {
+            $query->where('idhistorial', '<=', $this->commissionTo);
         }
         
         $oldHistory = $query->get();
         
-        $this->info("Procesando " . count($oldHistory) . " comisiones...");
+        $this->info("   💼 Procesando " . count($oldHistory) . " comisiones (rango: {$this->commissionFrom} a " . ($this->commissionTo > 0 ? $this->commissionTo : 'todas') . ")...");
         
         $processed = 0;
-        $batchSize = 100; // Procesar en lotes de 100
         
-        foreach (array_chunk($oldHistory->toArray(), $batchSize) as $batch) {
+        foreach (array_chunk($oldHistory->toArray(), $this->batchSize) as $batch) {
             DB::transaction(function () use ($batch, &$processed) {
                 foreach ($batch as $oldRecord) {
                     $processed++;
-                    if ($processed % 100 == 0) {
-                        $this->info("Procesadas: {$processed} comisiones...");
+                    if ($processed % 50 == 0) {
+                        $this->info("   💼 Procesadas: {$processed} comisiones...");
                     }
                     
                     $oldCommission = DB::connection('mysql_old')
@@ -809,13 +956,18 @@ class MigrateCompleteSystem extends Command
     {
         if ($dryRun) { return; }
 
-        // Solo procesar las comisiones según el límite configurado (las mismas que se migraron)
+        // Solo procesar las comisiones según el rango configurado (las mismas que se migraron)
         $query = DB::connection('mysql_old')
             ->table('historial')
             ->orderBy('idhistorial', 'desc');
         
-        if (self::COMMISSIONS_LIMIT > 0) {
-            $query->limit(self::COMMISSIONS_LIMIT);
+        // Aplicar filtros de rango
+        if ($this->commissionFrom > 1) {
+            $query->where('idhistorial', '>=', $this->commissionFrom);
+        }
+        
+        if ($this->commissionTo > 0) {
+            $query->where('idhistorial', '<=', $this->commissionTo);
         }
         
         $lastHistoryIds = $query->pluck('idhistorial')->toArray();
