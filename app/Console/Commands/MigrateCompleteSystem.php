@@ -46,7 +46,7 @@ class MigrateCompleteSystem extends Command
     protected $description = 'Migrar todo el sistema desde la base de datos vieja';
     
     // Constante para limitar el número de comisiones a migrar (0 = todas, >0 = cantidad específica)
-    private const COMMISSIONS_LIMIT = 0;
+    private const COMMISSIONS_LIMIT = 100;
 
     /**
      * Execute the console command.
@@ -357,7 +357,7 @@ class MigrateCompleteSystem extends Command
                             ['id' => (int)$oldEmployee->idusuario + 1],
                             [
                                 'name' => $oldEmployee->usuario,
-                                'email' => $oldEmployee->correo ?: $oldEmployee->usuario."@ryrcomisiones.com",
+                                'email' => $oldEmployee->usuario."@ryrcomisiones.com",
                                 'password' => Hash::make($oldEmployee->clave),
                                 'role' => $this->mapUserRole($oldEmployee->rol ?? 'empleado'),
                                 'branch_id' => 1,
