@@ -108,41 +108,116 @@ class CadetePaymentController extends Controller
             'date_to' => 'nullable|date',
         ]);
 
-        $query = CadetePayment::where('cadete_id', Auth::id());
+        $cadeteId = Auth::id();
+        $cadete = Auth::user();
+        
+        // Obtener porcentaje de comisión del cadete
+        $commissionPercentage = $cadete->commission_percentage ?? 0;
 
+        // Obtener comisiones del cadete
+        $commissionsQuery = \App\Shared\Models\Commission::where('cadete_id', $cadeteId);
+        
+        // Aplicar filtro de fecha si se proporciona
         if ($request->filled('date_from') && $request->filled('date_to')) {
-            $query->byPeriod($request->date_from, $request->date_to);
+            $commissionsQuery->whereBetween('date', [
+                \Carbon\Carbon::parse($request->date_from)->startOfDay(),
+                \Carbon\Carbon::parse($request->date_to)->endOfDay()
+            ]);
         }
 
+        $commissions = $commissionsQuery->get();
+
+        // Calcular métricas de comisiones
+        $deliveredCommissions = $commissions->where('status', \App\Shared\Enums\CommissionStatus::ENTREGADO->value);
+        $pendingCommissions = $commissions->whereNotIn('status', [
+            \App\Shared\Enums\CommissionStatus::ENTREGADO->value,
+            \App\Shared\Enums\CommissionStatus::CANCELADO->value
+        ]);
+
+        // Ganancias totales (comisiones finalizadas)
+        $totalEarnings = $deliveredCommissions->sum('total') * ($commissionPercentage / 100);
+        
+        // Cantidad de entregas
+        $deliveriesCount = $deliveredCommissions->count();
+        
+        // Promedio por entrega
+        $averagePerDelivery = $deliveriesCount > 0 ? $totalEarnings / $deliveriesCount : 0;
+        
+        // Pendiente (comisiones no entregadas)
+        $pendingEarnings = $pendingCommissions->sum('total') * ($commissionPercentage / 100);
+        
+        // Ganancias últimos 7 días
+        $last7Days = now()->subDays(7);
+        $last7DaysEarnings = $commissions
+            ->where('status', \App\Shared\Enums\CommissionStatus::ENTREGADO->value)
+            ->where('updated_at', '>=', $last7Days)
+            ->sum('total') * ($commissionPercentage / 100);
+        
+        // Comisión promedio
+        $averageCommission = $commissions->count() > 0 ? $commissions->avg('total') : 0;
+        
+        // Entregas hoy
+        $todayDeliveries = $commissions
+            ->where('status', \App\Shared\Enums\CommissionStatus::ENTREGADO->value)
+            ->where('updated_at', '>=', now()->startOfDay())
+            ->count();
+        
+        // Próximo pago (primer pago pendiente)
+        $nextPayment = CadetePayment::where('cadete_id', $cadeteId)
+            ->where('status', CadetePayment::STATUS_PENDING)
+            ->orderBy('payment_date', 'asc')
+            ->first();
+        
+        $nextPaymentAmount = $nextPayment ? $nextPayment->net_amount : 0;
+
+        // Resumen de pagos (mantener compatibilidad)
+        $paymentsQuery = CadetePayment::where('cadete_id', $cadeteId);
+        if ($request->filled('date_from') && $request->filled('date_to')) {
+            $paymentsQuery->byPeriod($request->date_from, $request->date_to);
+        }
+        $payments = $paymentsQuery->get();
+
         $summary = [
-            'total_payments' => $query->count(),
-            'total_amount' => $query->sum('net_amount'),
-            'pending_payments' => $query->clone()->byStatus(CadetePayment::STATUS_PENDING)->count(),
-            'pending_amount' => $query->clone()->byStatus(CadetePayment::STATUS_PENDING)->sum('net_amount'),
-            'paid_payments' => $query->clone()->byStatus(CadetePayment::STATUS_PAID)->count(),
-            'paid_amount' => $query->clone()->byStatus(CadetePayment::STATUS_PAID)->sum('net_amount'),
-            'cancelled_payments' => $query->clone()->byStatus(CadetePayment::STATUS_CANCELLED)->count(),
-            'cancelled_amount' => $query->clone()->byStatus(CadetePayment::STATUS_CANCELLED)->sum('net_amount'),
+            // Métricas principales de ganancias
+            'total_earnings' => round($totalEarnings, 2),
+            'deliveries_count' => $deliveriesCount,
+            'average_per_delivery' => round($averagePerDelivery, 2),
+            'pending_earnings' => round($pendingEarnings, 2),
+            'last_7_days_earnings' => round($last7DaysEarnings, 2),
+            'average_commission' => round($averageCommission, 2),
+            'today_deliveries' => $todayDeliveries,
+            'next_payment_amount' => round($nextPaymentAmount, 2),
+            
+            // Resumen de comisiones por estado
+            'commissions_summary' => [
+                'total_commissions' => $commissions->count(),
+                'delivered_commissions' => $deliveredCommissions->count(),
+                'pending_commissions' => $pendingCommissions->count(),
+                'cancelled_commissions' => $commissions->where('status', \App\Shared\Enums\CommissionStatus::CANCELADO->value)->count(),
+            ],
+            
+            // Resumen de pagos (compatibilidad)
+            'payments_summary' => [
+                'total_payments' => $payments->count(),
+                'total_amount' => $payments->sum('net_amount'),
+                'pending_payments' => $payments->where('status', CadetePayment::STATUS_PENDING)->count(),
+                'pending_amount' => $payments->where('status', CadetePayment::STATUS_PENDING)->sum('net_amount'),
+                'paid_payments' => $payments->where('status', CadetePayment::STATUS_PAID)->count(),
+                'paid_amount' => $payments->where('status', CadetePayment::STATUS_PAID)->sum('net_amount'),
+                'cancelled_payments' => $payments->where('status', CadetePayment::STATUS_CANCELLED)->count(),
+                'cancelled_amount' => $payments->where('status', CadetePayment::STATUS_CANCELLED)->sum('net_amount'),
+            ],
+            
+            // Configuración del cadete
+            'cadete_info' => [
+                'commission_percentage' => $commissionPercentage,
+                'name' => $cadete->name,
+            ]
         ];
-
-        // Resumen por tipo de pago
-        $summaryByType = $query->clone()
-            ->select('payment_type', \DB::raw('COUNT(*) as count'), \DB::raw('SUM(net_amount) as total_amount'))
-            ->groupBy('payment_type')
-            ->get()
-            ->mapWithKeys(function ($item) {
-                return [$item->payment_type => [
-                    'count' => $item->count,
-                    'total_amount' => $item->total_amount,
-                    'label' => CadetePayment::getPaymentTypes()[$item->payment_type] ?? $item->payment_type
-                ]];
-            });
-
-        $summary['by_payment_type'] = $summaryByType;
 
         return response()->json([
             'success' => true,
-            'message' => 'Resumen de pagos obtenido correctamente',
+            'message' => 'Resumen de ganancias obtenido correctamente',
             'data' => $summary
         ]);
     }

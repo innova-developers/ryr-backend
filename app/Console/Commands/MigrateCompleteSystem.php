@@ -24,6 +24,7 @@ use App\Shared\Models\CurrentAccount;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\CommissionItemType;
 use App\Shared\Enums\CommissionItemSize;
+use App\Services\GoogleMapsService;
 
 class MigrateCompleteSystem extends Command
 {
@@ -347,17 +348,17 @@ class MigrateCompleteSystem extends Command
         if ($dryRun) { return; }
 
         DB::connection('mysql_old')
-            ->table('empleados')
-            ->orderBy('idempleados')
+            ->table('usuario')
+            ->orderBy('idusuario')
             ->chunk(1000, function ($oldEmployees) {
                 DB::transaction(function () use ($oldEmployees) {
                     foreach ($oldEmployees as $oldEmployee) {
                         DB::table('users')->updateOrInsert(
-                            ['id' => (int)$oldEmployee->idempleados + 1],
+                            ['id' => (int)$oldEmployee->idusuario + 1],
                             [
-                                'name' => $oldEmployee->nombre,
-                                'email' => $oldEmployee->correo ?: "empleado-{$oldEmployee->idempleados}@ryrcomisiones.com",
-                                'password' => Hash::make('password123'),
+                                'name' => $oldEmployee->usuario,
+                                'email' => $oldEmployee->correo ?: $oldEmployee->usuario."@ryrcomisiones.com",
+                                'password' => Hash::make($oldEmployee->clave),
                                 'role' => $this->mapUserRole($oldEmployee->rol ?? 'empleado'),
                                 'branch_id' => 1,
                                 'base_salary' => (float)($oldEmployee->sueldo ?? 0),
@@ -437,20 +438,33 @@ class MigrateCompleteSystem extends Command
             ->orderBy('idlocaciones')
             ->chunk(1000, function ($oldLocations) {
                 DB::transaction(function () use ($oldLocations) {
+                    $googleMapsService = new GoogleMapsService();
+                    
                     foreach ($oldLocations as $oldLocation) {
+                        $address = $oldLocation->direccion ?? 'Dirección';
+                        $city = $this->normalizeCityName($oldLocation->localidad ?? 'CIUDAD');
+                        
+                        // Calcular coordenadas usando Google Maps API
+                        $coordinates = $googleMapsService->getCoordinates($address, $city);
+                        
                         DB::table('locations')->updateOrInsert(
                             ['id' => (int)($oldLocation->idlocaciones ?? 0)],
                             [
                                 'name' => $oldLocation->nombre ?? 'Ubicación',
-                                'origin' => $this->normalizeCityName($oldLocation->localidad ?? 'CIUDAD'),
-                                'address' => $oldLocation->direccion ?? 'Dirección',
+                                'origin' => $city,
+                                'address' => $address,
                                 'phone' => $oldLocation->telefono ?? null,
                                 'map' => substr((string)($oldLocation->mapa ?? ''), 0, 255),
                                 'schedule' => 'Lunes a Viernes 9:00-18:00',
+                                'latitude' => $coordinates['latitude'] ?? null,
+                                'longitude' => $coordinates['longitude'] ?? null,
                                 'created_at' => now(),
                                 'updated_at' => now(),
                             ]
                         );
+                        
+                        // Pequeña pausa para evitar límites de API
+                        usleep(100000); // 0.1 segundos
                     }
                 });
             });

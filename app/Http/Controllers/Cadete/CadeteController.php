@@ -11,6 +11,7 @@ use App\Shared\Models\Transport;
 use App\Shared\Models\User;
 use App\Shared\Enums\UserRole;
 use App\DeliverySignature;
+use App\Services\GoogleMapsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -612,19 +613,27 @@ class CadeteController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->whereHas('client', function ($clientQuery) use ($search) {
-                    $clientQuery->where('name', 'like', "%{$search}%")
-                               ->orWhere('last_name', 'like', "%{$search}%")
-                               ->orWhere('address', 'like', "%{$search}%");
-                })
-                ->orWhereHas('originLocation', function ($originQuery) use ($search) {
-                    $originQuery->where('name', 'like', "%{$search}%")
-                               ->orWhere('address', 'like', "%{$search}%");
-                })
-                ->orWhereHas('destinationLocation', function ($destQuery) use ($search) {
-                    $destQuery->where('name', 'like', "%{$search}%")
-                             ->orWhere('address', 'like', "%{$search}%");
-                });
+                // Búsqueda por ID de comisión directamente
+                $q->where('id', 'like', "%{$search}%")
+                  // Búsqueda en cliente
+                  ->orWhereHas('client', function ($clientQuery) use ($search) {
+                      $clientQuery->where('name', 'like', "%{$search}%")
+                                 ->orWhere('last_name', 'like', "%{$search}%")
+                                 ->orWhere('address', 'like', "%{$search}%")
+                                 ->orWhere('id', 'like', "%{$search}%");
+                  })
+                  // Búsqueda en ubicación de origen
+                  ->orWhereHas('originLocation', function ($originQuery) use ($search) {
+                      $originQuery->where('name', 'like', "%{$search}%")
+                                 ->orWhere('address', 'like', "%{$search}%")
+                                 ->orWhere('id', 'like', "%{$search}%");
+                  })
+                  // Búsqueda en ubicación de destino
+                  ->orWhereHas('destinationLocation', function ($destQuery) use ($search) {
+                      $destQuery->where('name', 'like', "%{$search}%")
+                               ->orWhere('address', 'like', "%{$search}%")
+                               ->orWhere('id', 'like', "%{$search}%");
+                  });
             });
         }
 
@@ -651,21 +660,31 @@ class CadeteController extends Controller
 
         // Transformar datos
         $transformedDeliveries = $deliveries->getCollection()->map(function ($commission) {
+            // Obtener coordenadas de ubicaciones
+            $pickupCoordinates = $this->getLocationCoordinates($commission->originLocation);
+            $deliveryCoordinates = $this->getLocationCoordinates($commission->destinationLocation);
+            
             return [
                 'id' => $commission->id,
-                'tracking_number' => 'RYR' . str_pad($commission->id, 9, '0', STR_PAD_LEFT),
+                'tracking_number' => $commission->id,
                 'customer_name' => $commission->client ? 
                     $commission->client->name . ' ' . $commission->client->last_name : 'N/A',
-                'customer_address' => $commission->client ? $commission->client->address : 'N/A',
+                'customer_address' => $commission->client ? $commission->client->address . ' ,' . $commission->client->origin : 'N/A',
                 'customer_phone' => $commission->client ? $commission->client->phone : 'N/A',
                 'pickup_address' => $commission->originLocation ? 
-                    $commission->originLocation->name . ', ' . $commission->originLocation->address : 'N/A',
-                'pickup_phone' => $commission->originLocation ? $commission->originLocation->phone : 'N/A',
+                    $commission->originLocation->name . ', ' . $commission->originLocation->address  . ' ,' . $commission->originLocation->origin : 'N/A',
+                'pickup_phone' => $commission->originLocation ? $commission->originLocation->phone  : 'N/A',
+                'pickup_latitude' => $pickupCoordinates['latitude'] ?? null,
+                'pickup_longitude' => $pickupCoordinates['longitude'] ?? null,
+                'delivery_address' => $commission->destinationLocation ? 
+                    $commission->destinationLocation->name . ', ' . $commission->destinationLocation->address  . ' ,' . $commission->destinationLocation->origin : 'N/A',
+                'delivery_phone' => $commission->destinationLocation ? $commission->destinationLocation->phone  : 'N/A',
+                'delivery_latitude' => $deliveryCoordinates['latitude'] ?? null,
+                'delivery_longitude' => $deliveryCoordinates['longitude'] ?? null,
                 'status' => $commission->status->getCadeteStatus(),
                 'status_label' => $commission->status->getCadeteStatus(),
-                'estimated_pickup_time' => $commission->date ? $commission->date->format('H:i') : 'N/A',
-                'estimated_delivery_time' => $commission->date ? 
-                    $commission->date->addHours(5)->format('H:i') : 'N/A', // +5 horas por defecto
+                'estimated_pickup_time' => $commission->originLocation ? $commission->originLocation->schedule : 'N/A',
+                'estimated_delivery_time' => $commission->destinationLocation ? $commission->destinationLocation->schedule : 'N/A', 
                 'commission_amount' => $commission->total,
                 'created_at' => $commission->created_at->toISOString(),
                 'updated_at' => $commission->updated_at->toISOString(),
@@ -754,19 +773,27 @@ class CadeteController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->whereHas('client', function ($clientQuery) use ($search) {
-                    $clientQuery->where('name', 'like', "%{$search}%")
-                               ->orWhere('last_name', 'like', "%{$search}%")
-                               ->orWhere('address', 'like', "%{$search}%");
-                })
-                ->orWhereHas('originLocation', function ($originQuery) use ($search) {
-                    $originQuery->where('name', 'like', "%{$search}%")
-                               ->orWhere('address', 'like', "%{$search}%");
-                })
-                ->orWhereHas('destinationLocation', function ($destQuery) use ($search) {
-                    $destQuery->where('name', 'like', "%{$search}%")
-                             ->orWhere('address', 'like', "%{$search}%");
-                });
+                // Búsqueda por ID de comisión directamente
+                $q->where('id', 'like', "%{$search}%")
+                  // Búsqueda en cliente
+                  ->orWhereHas('client', function ($clientQuery) use ($search) {
+                      $clientQuery->where('name', 'like', "%{$search}%")
+                                 ->orWhere('last_name', 'like', "%{$search}%")
+                                 ->orWhere('address', 'like', "%{$search}%")
+                                 ->orWhere('id', 'like', "%{$search}%");
+                  })
+                  // Búsqueda en ubicación de origen
+                  ->orWhereHas('originLocation', function ($originQuery) use ($search) {
+                      $originQuery->where('name', 'like', "%{$search}%")
+                                 ->orWhere('address', 'like', "%{$search}%")
+                                 ->orWhere('id', 'like', "%{$search}%");
+                  })
+                  // Búsqueda en ubicación de destino
+                  ->orWhereHas('destinationLocation', function ($destQuery) use ($search) {
+                      $destQuery->where('name', 'like', "%{$search}%")
+                               ->orWhere('address', 'like', "%{$search}%")
+                               ->orWhere('id', 'like', "%{$search}%");
+                  });
             });
         }
 
@@ -793,9 +820,13 @@ class CadeteController extends Controller
 
         // Transformar datos a la estructura esperada por los tests
         $transformedShipments = $shipments->getCollection()->map(function ($commission) {
+            // Obtener coordenadas de ubicaciones
+            $pickupCoordinates = $this->getLocationCoordinates($commission->originLocation);
+            $deliveryCoordinates = $this->getLocationCoordinates($commission->destinationLocation);
+            
             return [
                 'id' => $commission->id,
-                'tracking_number' => 'RYR' . str_pad($commission->id, 9, '0', STR_PAD_LEFT),
+                'tracking_number' => $commission->id,
                 'status' => $commission->status->value,
                 'status_label' => $commission->status->getCadeteStatus(),
                 'date' => $commission->date ? $commission->date->format('Y-m-d') : null,
@@ -811,12 +842,16 @@ class CadeteController extends Controller
                     'name' => $commission->originLocation->name,
                     'address' => $commission->originLocation->address,
                     'phone' => $commission->originLocation->phone,
+                    'latitude' => $pickupCoordinates['latitude'] ?? null,
+                    'longitude' => $pickupCoordinates['longitude'] ?? null,
                 ] : null,
                 'destination' => $commission->destinationLocation ? [
                     'id' => $commission->destinationLocation->id,
                     'name' => $commission->destinationLocation->name,
                     'address' => $commission->destinationLocation->address,
                     'phone' => $commission->destinationLocation->phone,
+                    'latitude' => $deliveryCoordinates['latitude'] ?? null,
+                    'longitude' => $deliveryCoordinates['longitude'] ?? null,
                 ] : null,
                 'items' => $commission->items->map(function ($item) {
                     return [
@@ -1587,5 +1622,38 @@ class CadeteController extends Controller
                 'previous_period_earnings' => round($previousPeriodEarnings, 2)
             ]
         ];
+    }
+
+    /**
+     * Obtiene las coordenadas de una ubicación
+     * Primero intenta desde la base de datos, si no están disponibles usa Google Maps API
+     */
+    private function getLocationCoordinates($location): ?array
+    {
+        if (!$location) {
+            return null;
+        }
+
+        // Si ya tiene coordenadas en la base de datos, las usamos
+        if ($location->hasCoordinates()) {
+            return $location->getCoordinates();
+        }
+
+        // Si no tiene coordenadas, las calculamos con Google Maps API
+        $googleMapsService = new GoogleMapsService();
+        $coordinates = $googleMapsService->getCoordinates(
+            $location->address,
+            $location->origin
+        );
+
+        // Si obtuvimos coordenadas, las guardamos en la base de datos para futuras consultas
+        if ($coordinates) {
+            $location->update([
+                'latitude' => $coordinates['latitude'],
+                'longitude' => $coordinates['longitude']
+            ]);
+        }
+
+        return $coordinates;
     }
 }

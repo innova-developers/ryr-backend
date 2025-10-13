@@ -146,7 +146,7 @@ class CadeteDeliveriesTest extends TestCase
                         'deliveries' => [
                             [
                                 'id' => $commission->id,
-                                'tracking_number' => 'RYR' . str_pad($commission->id, 9, '0', STR_PAD_LEFT),
+                                'tracking_number' => $commission->id,
                                 'customer_name' => 'Juan Pérez García',
                                 'customer_address' => 'Av. Principal 123, Ciudad',
                                 'customer_phone' => '+1234567890',

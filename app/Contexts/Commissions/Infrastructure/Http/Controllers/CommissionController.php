@@ -171,7 +171,7 @@ class CommissionController extends Controller
             // Información pública limitada para tracking
             $publicData = [
                 'tracking_id' => $commission['id'],
-                'tracking_number' => 'RYR' . str_pad($commission['id'], 9, '0', STR_PAD_LEFT),
+                'tracking_number' => $commission['id'],
                 'status' => $commission['status'],
                 'status_label' => $commission['status_label'] ?? null,
                 'origin' => [
