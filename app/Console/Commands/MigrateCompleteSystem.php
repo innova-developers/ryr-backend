@@ -42,7 +42,8 @@ class MigrateCompleteSystem extends Command
                             {--batch-size=100 : Tamaño del lote para procesamiento}
                             {--locations-batch=10 : Tamaño del lote para ubicaciones (con coordenadas)}
                             {--skip-coordinates : Omitir cálculo de coordenadas (migrar sin lat/lng)}
-                            {--coordinates-only : Solo calcular coordenadas para ubicaciones existentes}';
+                            {--coordinates-only : Solo calcular coordenadas para ubicaciones existentes}
+                            {--resume : Continuar migración desde el último ID procesado}';
 
     /**
      * The console command description.
@@ -54,10 +55,11 @@ class MigrateCompleteSystem extends Command
     // Variables de configuración para procesamiento por lotes
     private int $commissionFrom = 1;
     private int $commissionTo = 0;
-    private int $batchSize = 100;
-    private int $locationsBatchSize = 10;
+    private int $batchSize = 10;
+    private int $locationsBatchSize = 20;
     private bool $skipCoordinates = false;
     private bool $coordinatesOnly = false;
+    private bool $resume = false;
 
     /**
      * Execute the console command.
@@ -77,6 +79,7 @@ class MigrateCompleteSystem extends Command
         $this->locationsBatchSize = (int) $this->option('locations-batch');
         $this->skipCoordinates = (bool) $this->option('skip-coordinates');
         $this->coordinatesOnly = (bool) $this->option('coordinates-only');
+        $this->resume = (bool) $this->option('resume');
         
         $this->info("📊 Configuración de lotes:");
         $this->info("   - Comisiones: {$this->commissionFrom} a " . ($this->commissionTo > 0 ? $this->commissionTo : 'todas'));
@@ -217,9 +220,44 @@ class MigrateCompleteSystem extends Command
             try {
                 $stepMethod($dryRun);
                 $this->info("   ✅ {$stepName} completado");
+                
+                // Log de progreso después de cada paso
+                $this->logProgress($stepName);
+                
             } catch (\Throwable $e) {
-                $this->warn("   ⚠️  Error en {$stepName}: {$e->getMessage()}");
+                $this->error("   ❌ Error en {$stepName}: {$e->getMessage()}");
+                $this->error("   📍 Archivo: {$e->getFile()}:{$e->getLine()}");
+                $this->error("   🔍 Trace: " . $e->getTraceAsString());
+                
+                // Intentar continuar con el siguiente paso
+                $this->warn("   ⚠️  Continuando con el siguiente paso...");
             }
+        }
+    }
+
+    /**
+     * Log de progreso después de cada paso
+     */
+    private function logProgress(string $stepName): void
+    {
+        try {
+            $commissionsCount = DB::table('commissions')->count();
+            $locationsCount = DB::table('locations')->count();
+            $customersCount = DB::table('customers')->count();
+            $usersCount = DB::table('users')->count();
+            
+            $this->info("   📊 Progreso actual:");
+            $this->info("      💼 Comisiones: {$commissionsCount}");
+            $this->info("      📍 Ubicaciones: {$locationsCount}");
+            $this->info("      👥 Clientes: {$customersCount}");
+            $this->info("      👤 Usuarios: {$usersCount}");
+            
+            // Log a archivo para debugging
+            $logMessage = "[" . now() . "] {$stepName} - Comisiones: {$commissionsCount}, Ubicaciones: {$locationsCount}, Clientes: {$customersCount}\n";
+            file_put_contents(storage_path('logs/migration_progress.log'), $logMessage, FILE_APPEND);
+            
+        } catch (\Throwable $e) {
+            $this->warn("   ⚠️  No se pudo obtener el progreso: " . $e->getMessage());
         }
     }
 
@@ -666,15 +704,31 @@ class MigrateCompleteSystem extends Command
             $query->where('idhistorial', '<=', $this->commissionTo);
         }
         
-        $oldHistory = $query->get();
+        // Si es modo resume, obtener el último ID procesado
+        if ($this->resume) {
+            $lastProcessedId = DB::table('commissions')->max('id') ?? 0;
+            if ($lastProcessedId > 0) {
+                $this->commissionFrom = $lastProcessedId + 1;
+                $this->info("   🔄 Modo resume: Continuando desde ID {$this->commissionFrom}");
+            }
+        }
         
-        $this->info("   💼 Procesando " . count($oldHistory) . " comisiones (rango: {$this->commissionFrom} a " . ($this->commissionTo > 0 ? $this->commissionTo : 'todas') . ")...");
+        // No cargar todo en memoria, usar chunk directamente
+        $totalCount = $query->count();
+        $this->info("   💼 Procesando {$totalCount} comisiones (rango: {$this->commissionFrom} a " . ($this->commissionTo > 0 ? $this->commissionTo : 'todas') . ")...");
         
         $processed = 0;
+        $totalBatches = ceil($totalCount / $this->batchSize);
+        $currentBatch = 0;
         
-        foreach (array_chunk($oldHistory->toArray(), $this->batchSize) as $batch) {
-            DB::transaction(function () use ($batch, &$processed) {
-                foreach ($batch as $oldRecord) {
+        // Usar chunk para no cargar todo en memoria
+        $query->chunk($this->batchSize, function ($oldHistory) use (&$processed, &$currentBatch, $totalBatches) {
+            $currentBatch++;
+            $this->info("   📦 Procesando lote {$currentBatch}/{$totalBatches}...");
+            
+            try {
+                DB::transaction(function () use ($oldHistory, &$processed) {
+                foreach ($oldHistory as $oldRecord) {
                     $processed++;
                     if ($processed % 50 == 0) {
                         $this->info("   💼 Procesadas: {$processed} comisiones...");
@@ -779,8 +833,32 @@ class MigrateCompleteSystem extends Command
                         ]
                     );
                 }
-            });
-        }
+                });
+                
+                $this->info("   ✅ Lote {$currentBatch} completado");
+                
+            } catch (\Throwable $e) {
+                $this->error("   ❌ Error en lote {$currentBatch}: " . $e->getMessage());
+                $this->error("   📍 Archivo: {$e->getFile()}:{$e->getLine()}");
+                
+                // Continuar con el siguiente lote
+                $this->warn("   ⚠️  Continuando con el siguiente lote...");
+            }
+            
+            // Liberar memoria después de cada lote
+            unset($oldHistory);
+            
+            // Pausa entre lotes para evitar sobrecarga
+            if ($currentBatch < $totalBatches) {
+                $this->info("   ⏸️  Pausa entre lotes...");
+                sleep(2);
+            }
+            
+            // Forzar garbage collection
+            if (function_exists('gc_collect_cycles')) {
+                gc_collect_cycles();
+            }
+        });
     }
 
     /**
