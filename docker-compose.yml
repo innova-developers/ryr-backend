@@ -39,6 +39,24 @@ services:
         networks:
             - laravel-network
 
+    mysql_old:
+        image: mysql:8.0
+        container_name: mysql_old
+        restart: unless-stopped
+        tty: true
+        ports:
+            - "3307:3306"
+        environment:
+            MYSQL_DATABASE: ryr_old
+            MYSQL_USER: laravel
+            MYSQL_PASSWORD: laravel
+            MYSQL_ROOT_PASSWORD: root
+        volumes:
+            - ./docker/mysql_old:/var/lib/mysql
+            - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+        networks:
+            - laravel-network
+
     phpmyadmin:
         image: phpmyadmin/phpmyadmin
         container_name: ryrphpmyadmin
@@ -47,11 +65,21 @@ services:
         ports:
             - "8081:80"
         environment:
-            PMA_HOST: mysql
-            PMA_USER: root
-            PMA_PASSWORD: root
+            PMA_ARBITRARY: 1
+            PMA_ABSOLUTE_URI: http://localhost:8081/
+            UPLOAD_LIMIT: 1024M
+            MEMORY_LIMIT: 1024M
+            MAX_EXECUTION_TIME: 300
+            POST_MAX_SIZE: 1024M
+            PHP_UPLOAD_MAX_FILESIZE: 1024M
+            PHP_POST_MAX_SIZE: 1024M
+            PHP_MEMORY_LIMIT: 1024M
+            PHP_MAX_EXECUTION_TIME: 300
+        volumes:
+            - ./docker/phpmyadmin/php.ini:/usr/local/etc/php/conf.d/php.ini
         depends_on:
             - mysql
+            - mysql_old
         networks:
             - laravel-network
     nginx:

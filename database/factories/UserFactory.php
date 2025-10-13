@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Shared\Models\Branch;
 use App\Shared\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -22,6 +23,18 @@ class UserFactory extends Factory
             'password' => Hash::make('password'),
             'remember_token' => Str::random(10),
             'role' => $this->faker->randomElement(array_column(UserRole::cases(), 'value')),
+            'branch_id' => Branch::factory(),
+            'base_salary' => $this->faker->optional(0.7)->randomFloat(2, 1000, 10000),
+            'income_percentage' => $this->faker->optional(0.7)->randomFloat(2, 0, 50),
+            'commission_percentage' => $this->faker->optional(0.7)->randomFloat(2, 0, 50),
+            'contract_type' => $this->faker->randomElement(['fixed_salary', 'commission_based']),
         ];
+    }
+
+    public function withBranch(?Branch $branch = null): self
+    {
+        return $this->state(fn (array $attributes) => [
+            'branch_id' => $branch?->id ?? Branch::factory(),
+        ]);
     }
 }

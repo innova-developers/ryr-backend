@@ -3,6 +3,7 @@
 namespace App\Contexts\Branchs\Infrastructure\Repositories;
 
 use App\Contexts\Branchs\Application\DTO\CreateBranchDTO;
+use App\Contexts\Branchs\Application\DTO\GetBranchesFiltersDTO;
 use App\Contexts\Branchs\Application\DTO\UpdateBranchDTO;
 use App\Contexts\Branchs\Domain\Repositories\BranchRepository;
 use App\Shared\Models\Branch;
@@ -11,9 +12,50 @@ use Illuminate\Database\QueryException;
 
 class BranchEloquentRepository implements BranchRepository
 {
-    public function get(): array
+    public function get(?GetBranchesFiltersDTO $filters = null): array
     {
-        return Branch::select('id', 'name', 'address', 'schedule', 'phone')->get()->toArray();
+        $query = Branch::select('id', 'name', 'address', 'schedule', 'phone', 'secondary_phone');
+
+        // Aplicar filtro de búsqueda
+        if ($filters && $filters->search) {
+            $query->where(function ($q) use ($filters) {
+                $q->where('name', 'like', '%' . $filters->search . '%')
+                  ->orWhere('address', 'like', '%' . $filters->search . '%')
+                  ->orWhere('phone', 'like', '%' . $filters->search . '%')
+                  ->orWhere('secondary_phone', 'like', '%' . $filters->search . '%');
+            });
+        }
+
+        // Aplicar ordenamiento
+        if ($filters && $filters->sortBy) {
+            $allowedSortFields = ['name', 'address', 'phone', 'schedule', 'created_at'];
+            if (in_array($filters->sortBy, $allowedSortFields)) {
+                $query->orderBy($filters->sortBy, $filters->sortDirection);
+            }
+        } else {
+            $query->orderBy('name', 'asc');
+        }
+
+        // Aplicar paginación
+        if ($filters) {
+            $perPage = min($filters->perPage, 100); // Limitar a máximo 100 por página
+            $branches = $query->paginate($perPage, ['*'], 'page', $filters->page);
+
+            return [
+                'data' => $branches->items(),
+                'pagination' => [
+                    'current_page' => $branches->currentPage(),
+                    'per_page' => $branches->perPage(),
+                    'total' => $branches->total(),
+                    'last_page' => $branches->lastPage(),
+                    'from' => $branches->firstItem(),
+                    'to' => $branches->lastItem(),
+                ],
+            ];
+        }
+
+        // Sin filtros, devolver todas las branches
+        return $query->get()->toArray();
     }
 
     public function findById(int $id): ?Branch
@@ -35,6 +77,7 @@ class BranchEloquentRepository implements BranchRepository
             $branch->address = $dto->address;
             $branch->phone = $dto->phone;
             $branch->schedule = $dto->schedule;
+            $branch->secondary_phone = $dto->secondary_phone;
             $branch->save();
 
             return $branch;
@@ -57,6 +100,7 @@ class BranchEloquentRepository implements BranchRepository
             $branch->address = $dto->address;
             $branch->phone = $dto->phone;
             $branch->schedule = $dto->schedule;
+            $branch->secondary_phone = $dto->secondary_phone;
             $branch->save();
 
             return $branch;

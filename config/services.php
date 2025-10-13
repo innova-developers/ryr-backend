@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'whatsapp' => [
+        'base_url' => env('WHATSAPP_API_URL', 'https://api.green-api.com'),
+        'instance_id' => env('WHATSAPP_API_INSTANCE'),
+        'token' => env('WHATSAPP_API_TOKEN'),
+    ],
+
+    'google_maps' => [
+        'api_key' => env('GOOGLE_MAPS_API_KEY'),
+    ],
+
 ];

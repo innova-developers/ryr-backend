@@ -2,8 +2,8 @@
 
 namespace App\Contexts\Users\Application;
 
+use App\Contexts\Users\Application\DTO\GetUsersFiltersDTO;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
-use App\Shared\Models\User;
 
 class GetUsersUseCase
 {
@@ -15,10 +15,10 @@ class GetUsersUseCase
     }
 
     /**
-     * @return User[]
+     * @return array
      */
-    public function __invoke(): array
+    public function __invoke(?GetUsersFiltersDTO $filters = null): array
     {
-        return $this->repository->get();
+        return $this->repository->get($filters);
     }
 }

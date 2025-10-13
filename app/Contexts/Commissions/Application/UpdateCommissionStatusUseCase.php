@@ -1,0 +1,142 @@
+<?php
+
+namespace App\Contexts\Commissions\Application;
+
+use App\Contexts\Commissions\Application\DTOs\CreateCommissionDTO;
+use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
+use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
+use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
+use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
+use App\Services\CommissionNotificationService;
+use App\Services\NotificationService;
+use App\Shared\Enums\CommissionStatus;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+class UpdateCommissionStatusUseCase
+{
+    public function __construct(
+        private readonly CommissionsRepository $commissionsRepository,
+        private readonly CurrentAccountRepository $currentAccountRepository,
+        private readonly CommissionNotificationService $notificationService,
+        private readonly NotificationService $pushNotificationService
+    ) {
+    }
+
+    /**
+     * @throws \Exception
+     */
+    public function __invoke(int $id, CommissionStatus $status, ?string $details = null, bool $aCuenta = false): void
+    {
+        DB::transaction(function () use ($id, $status, $details, $aCuenta) {
+            try {
+                $commission = $this->commissionsRepository->findById($id);
+                $previousStatus = $commission->status;
+
+                $this->commissionsRepository->updateStatus($id, $status);
+
+                // Si a_cuenta es true, crear transacción en cuenta corriente
+                if ($aCuenta) {
+                    $this->createCurrentAccountTransaction($commission);
+                }
+
+                $dto = new CreateCommissionLogDTO(
+                    commissionId: $id,
+                    userId: Auth::id() ?? 1, // Usar ID 1 como fallback si no hay usuario autenticado
+                    previousStatus: $previousStatus->value,
+                    newStatus: $status->value,
+                    details: $details
+                );
+                $this->commissionsRepository->createLog($dto);
+
+                // Si el estado es INTENTO_ENTREGA_FALLIDO, crear nueva comisión con precio base
+                if ($status === CommissionStatus::INTENTO_ENTREGA_FALLIDO) {
+                    $this->createFailedDeliveryCommission($commission);
+                }
+
+                // Enviar notificaciones al cliente (email y WhatsApp)
+                $this->notificationService->notifyStatusChange(
+                    $commission,
+                    $previousStatus->value,
+                    $status,
+                    $details
+                );
+
+                // Crear notificación push para el cadete
+                $this->pushNotificationService->createCommissionStatusNotification(
+                    $commission,
+                    $previousStatus->value,
+                    $status,
+                    $details
+                );
+            } catch (\Exception $e) {
+                throw new \Exception($e->getMessage());
+            }
+        });
+    }
+
+    /**
+     * Crea una transacción en cuenta corriente por el monto de la comisión
+     */
+    private function createCurrentAccountTransaction($commission): void
+    {
+        $currentAccountDTO = new CreateCurrentAccountDTO(
+            customerId: $commission->client_id,
+            type: 'debit', // Saldo negativo (deuda)
+            amount: $commission->total,
+            description: "Comisión #{$commission->id} - Actualización de estado",
+            reference: "COM-{$commission->id}",
+            transactionDate: now()->format('Y-m-d'),
+            paymentMethod: null,
+            observations: "Comisión registrada a cuenta corriente por actualización de estado",
+            userId: Auth::id() ?? 1, // Usar ID 1 como fallback si no hay usuario autenticado
+        );
+
+        $this->currentAccountRepository->create($currentAccountDTO);
+    }
+
+    /**
+     * Crea una nueva comisión con precio base cuando la entrega falla
+     */
+    private function createFailedDeliveryCommission($originalCommission): void
+    {
+        try {
+            // Obtener el precio base del destino
+            $destination = $originalCommission->destination;
+            $basePrice = $destination->fixed_price;
+
+            // Crear DTO para la nueva comisión
+            $newCommissionDTO = new CreateCommissionDTO(
+                clientId: $originalCommission->client_id,
+                date: now(),
+                origin: $originalCommission->destination->origin,
+                destination: $originalCommission->destination->destination,
+                status: CommissionStatus::SOLICITUD_RECIBIDA,
+                items: null, // No items para comisión de entrega fallida
+                total: $basePrice,
+                originLocationId: $originalCommission->origin_location_id,
+                destinationLocationId: $originalCommission->destination_location_id,
+                notes: "Comisión creada automáticamente por entrega fallida de comisión #{$originalCommission->id}",
+                aCuenta: false
+            );
+
+            // Crear la nueva comisión
+            $newCommission = $this->commissionsRepository->create($newCommissionDTO, $originalCommission->destination_id);
+
+            // Crear log para la nueva comisión
+            $logDTO = new CreateCommissionLogDTO(
+                commissionId: $newCommission->id,
+                userId: Auth::id() ?? 1, // Usar ID 1 como fallback si no hay usuario autenticado
+                previousStatus: "",
+                newStatus: CommissionStatus::SOLICITUD_RECIBIDA->value,
+                details: "Comisión creada automáticamente por entrega fallida de comisión #{$originalCommission->id}"
+            );
+
+            $this->commissionsRepository->createLog($logDTO);
+
+        } catch (\Exception $e) {
+            // Log el error pero no fallar la transacción principal
+            \Log::error("Error al crear comisión por entrega fallida: " . $e->getMessage());
+        }
+    }
+}

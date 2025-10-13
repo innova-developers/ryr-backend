@@ -1,0 +1,108 @@
+<?php
+
+namespace App\Shared\Models;
+
+use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\PaymentMethod;
+use App\DeliverySignature;
+use Database\Factories\CommissionFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Commission extends Model
+{
+    use SoftDeletes;
+    use HasFactory;
+
+    protected $fillable = [
+        'client_id',
+        'destination_id',
+        'branch_id',
+        'date',
+        'status',
+        'payment_method',
+        'total',
+        'notes',
+        'user_id',
+        'origin_location_id',
+        'destination_location_id',
+        'transport_id',
+        'cadete_id',
+    ];
+
+    protected $casts = [
+        'date' => 'date',
+        'status' => CommissionStatus::class,
+        'payment_method' => PaymentMethod::class,
+        'total' => 'decimal:2',
+    ];
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class, 'client_id');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function destination(): BelongsTo
+    {
+        return $this->belongsTo(Destination::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
+
+    public function originLocation(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'origin_location_id');
+    }
+
+    public function destinationLocation(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'destination_location_id');
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(CommissionItem::class);
+    }
+
+    public function logs(): HasMany
+    {
+        return $this->hasMany(CommissionLog::class);
+    }
+
+    public function transport(): BelongsTo
+    {
+        return $this->belongsTo(Transport::class);
+    }
+
+    public function cadete(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cadete_id');
+    }
+
+    public function deliverySignature(): HasOne
+    {
+        return $this->hasOne(DeliverySignature::class);
+    }
+
+    public function getPaymentMethodLabelAttribute(): ?string
+    {
+        return $this->payment_method?->label();
+    }
+
+    public static function newFactory(): CommissionFactory
+    {
+        return CommissionFactory::new();
+    }
+}
