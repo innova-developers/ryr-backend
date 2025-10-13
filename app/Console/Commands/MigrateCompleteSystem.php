@@ -365,7 +365,7 @@ class MigrateCompleteSystem extends Command
                                 'income_percentage' => 0,
                                 'commission_percentage' => 0,
                                 'contract_type' => 'fixed_salary',
-                                'created_at' => $oldEmployee->fechacreacion ?? now(),
+                                'created_at' =>  now(),
                                 'updated_at' => now(),
                             ]
                         );
