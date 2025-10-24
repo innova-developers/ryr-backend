@@ -41,7 +41,7 @@ class LoginUseCase
     {
         switch ($scope) {
             case 'web':
-                if ($userRole !== UserRole::ADMINISTRADOR) {
+                if ($userRole !== UserRole::ADMINISTRADOR && $userRole !== UserRole::MOSTRADOR) {
                     throw new InvalidScopeException($userRole->value, $scope);
                 }
                 break;
