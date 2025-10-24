@@ -16,11 +16,18 @@ use App\Contexts\IncomeCategories\Infrastructure\Http\Controllers\IncomeCategory
 use App\Contexts\CurrentAccount\Infrastructure\Http\Controllers\CurrentAccountController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Middleware\CadeteMiddleware;
+use App\Http\Controllers\SuperAdmin\FranchiseController;
+use App\Http\Controllers\SuperAdmin\DashboardController;
+use App\Http\Controllers\SuperAdmin\UserController as SuperAdminUserController;
+use App\Http\Controllers\SuperAdmin\AuthController as SuperAdminAuthController;
 use Illuminate\Support\Facades\Route;
 
 // Rutas públicas
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout']);
+
+// Rutas públicas para Super Admin
+Route::post('/super-admin/login', [SuperAdminAuthController::class, 'login']);
 
 // Rutas públicas para validación de clientes
 Route::post('/validate-identifier', [App\Http\Controllers\Auth\ValidateIdentifierController::class, 'validateIdentifier']);
@@ -201,5 +208,43 @@ Route::prefix('payment-methods')->group(function () {
     Route::get('/', [App\Http\Controllers\Admin\PaymentMethodController::class, 'index']);
     Route::post('/associate', [App\Http\Controllers\Admin\PaymentMethodController::class, 'associatePaymentMethod']);
     Route::get('/summary', [App\Http\Controllers\Admin\PaymentMethodController::class, 'getPaymentMethodsSummary']);
+});
+
+// Rutas para Super Admin - Sistema de Franquicias
+Route::prefix('super-admin')->group(function () {
+    // Autenticación de Super Admin (sin middleware)
+    Route::post('/login', [SuperAdminAuthController::class, 'login']);
+    
+    Route::middleware(['auth:superadmin'])->group(function () {
+    // Autenticación de Super Admin
+    Route::post('/logout', [SuperAdminAuthController::class, 'logout']);
+    Route::get('/profile', [SuperAdminAuthController::class, 'profile']);
+    Route::get('/franchises/available', [SuperAdminAuthController::class, 'getAvailableFranchises']);
+    Route::post('/franchises/{franchise}/select', [SuperAdminAuthController::class, 'selectFranchise']);
+    Route::get('/franchises/current', [SuperAdminAuthController::class, 'getCurrentFranchise']);
+    
+    // Dashboard del super admin
+    Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/dashboard/consolidated-report', [DashboardController::class, 'consolidatedReport']);
+    
+    // Gestión de franquicias - Rutas específicas ANTES del apiResource
+    Route::get('/franchises/selector', [FranchiseController::class, 'getFranchisesForSelector']);
+    Route::apiResource('franchises', FranchiseController::class);
+    Route::post('/franchises/{franchise}/activate', [FranchiseController::class, 'activate']);
+    Route::post('/franchises/{franchise}/deactivate', [FranchiseController::class, 'deactivate']);
+    Route::get('/franchises/{franchise}/stats', [FranchiseController::class, 'stats']);
+    Route::post('/franchises/{franchise}/access', [FranchiseController::class, 'access']);
+    Route::get('/franchises/{franchise}/dashboard', [DashboardController::class, 'franchiseStats']);
+    
+    // Gestión de logos y configuración
+    Route::post('/franchises/{franchise}/logo', [FranchiseController::class, 'uploadLogo']);
+    Route::get('/franchises/{franchise}/settings', [FranchiseController::class, 'getSettings']);
+    Route::put('/franchises/{franchise}/settings', [FranchiseController::class, 'updateSettings']);
+    
+    // Gestión de usuarios - Rutas específicas ANTES del apiResource
+    Route::get('/users/stats', [SuperAdminUserController::class, 'stats']);
+    Route::apiResource('users', SuperAdminUserController::class);
+    Route::post('/users/{user}/toggle-status', [SuperAdminUserController::class, 'toggleStatus']);
+    });
 });
 

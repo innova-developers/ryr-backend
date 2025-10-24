@@ -14,8 +14,8 @@ class WhatsAppService
     public function __construct()
     {
         $this->baseUrl = config('services.whatsapp.base_url', 'https://api.green-api.com');
-        $this->instanceId = config('services.whatsapp.instance_id');
-        $this->token = config('services.whatsapp.token');
+        $this->instanceId = config('services.whatsapp.instance_id', '');
+        $this->token = config('services.whatsapp.token', '');
     }
 
     public function sendMessage(string $phone, string $message): bool
