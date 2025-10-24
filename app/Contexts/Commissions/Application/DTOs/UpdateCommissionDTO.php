@@ -3,6 +3,7 @@
 namespace App\Contexts\Commissions\Application\DTOs;
 
 use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\PaymentMethod;
 use DateTime;
 
 class UpdateCommissionDTO
@@ -19,7 +20,8 @@ class UpdateCommissionDTO
         public readonly int $originLocationId,
         public readonly int $destinationLocationId,
         public readonly ?string $notes = null,
-        public readonly bool $aCuenta = false
+        public readonly bool $aCuenta = false,
+        public readonly ?PaymentMethod $paymentMethod = null
     ) {
     }
 
@@ -40,7 +42,8 @@ class UpdateCommissionDTO
             originLocationId: $data['origin_location_id'],
             destinationLocationId: $data['destination_location_id'],
             notes: $data['notes'] ?? null,
-            aCuenta: $data['a_cuenta'] ?? false
+            aCuenta: $data['a_cuenta'] ?? false,
+            paymentMethod: isset($data['payment_method']) ? PaymentMethod::from($data['payment_method']) : null
         );
     }
 

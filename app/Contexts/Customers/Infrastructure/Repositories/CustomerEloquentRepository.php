@@ -13,7 +13,7 @@ class CustomerEloquentRepository implements CustomerRepository
 {
     public function get(?GetCustomersFiltersDTO $filters = null): array
     {
-        $query = Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id', 'created_at')
+        $query = Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'user_id', 'created_at')
             ->with(['user:id,name']);
 
         // Aplicar filtro de búsqueda
@@ -54,6 +54,7 @@ class CustomerEloquentRepository implements CustomerRepository
                         'city' => $customer->city,
                         'phone' => $customer->phone,
                         'is_premium' => $customer->is_premium,
+                        'auto_calculate_iva' => $customer->auto_calculate_iva,
                         'user' => optional($customer->user),
                         'branch' => optional($customer->branch),
                         'balance' => $customer->current_balance,
@@ -84,6 +85,7 @@ class CustomerEloquentRepository implements CustomerRepository
                     'city' => $customer->city,
                     'phone' => $customer->phone,
                     'is_premium' => $customer->is_premium,
+                    'auto_calculate_iva' => $customer->auto_calculate_iva,
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),
                     'balance' => $customer->current_balance,
@@ -109,6 +111,7 @@ class CustomerEloquentRepository implements CustomerRepository
             $customer->business_hours = $dto->businessHours;
             $customer->observations = $dto->observations;
             $customer->is_premium = $dto->isPremium;
+            $customer->auto_calculate_iva = $dto->autoCalculateIva;
             $customer->user_id = $dto->userId;
             $customer->branch_id = $dto->branchId;
             $customer->save();
@@ -148,6 +151,7 @@ class CustomerEloquentRepository implements CustomerRepository
             $customer->business_hours = $dto->businessHours;
             $customer->observations = $dto->observations;
             $customer->is_premium = $dto->isPremium;
+            $customer->auto_calculate_iva = $dto->autoCalculateIva;
             $customer->user_id = $dto->userId;
             $customer->branch_id = $dto->branchId;
             $customer->save();
@@ -181,7 +185,7 @@ class CustomerEloquentRepository implements CustomerRepository
 
     public function search(string $query): array
     {
-        return Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id', 'created_at')
+        return Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'user_id', 'created_at')
             ->with(['user:id,name'])
             ->where(function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
@@ -201,6 +205,7 @@ class CustomerEloquentRepository implements CustomerRepository
                     'city' => $customer->city,
                     'phone' => $customer->phone,
                     'is_premium' => $customer->is_premium,
+                    'auto_calculate_iva' => $customer->auto_calculate_iva,
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),
                     'balance' => $customer->current_balance,

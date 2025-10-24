@@ -76,6 +76,7 @@ class CustomerController extends Controller
                 $request->input('business_hours'),
                 $request->input('observations'),
                 $request->boolean('is_premium', false),
+                $request->boolean('auto_calculate_iva', true),
                 $userCreated->id,
                 $user->branch_id
             );
@@ -129,6 +130,7 @@ class CustomerController extends Controller
                 $request->input('business_hours'),
                 $request->input('observations'),
                 $request->boolean('is_premium', false),
+                $request->boolean('auto_calculate_iva', true),
                 $request->input('user_id', $currentCustomer->user_id), // Preservar user_id existente si no se proporciona
                 $user->branch_id
             );
@@ -161,5 +163,51 @@ class CustomerController extends Controller
         $customers = $useCase($query);
 
         return response()->json($customers);
+    }
+
+    public function updateAutoCalculateIva(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+
+            if (! $user) {
+                return response()->json(['message' => 'Usuario no autenticado'], 401);
+            }
+
+            $validated = $request->validate([
+                'auto_calculate_iva' => 'required|boolean',
+            ]);
+
+            $customer = $this->repository->findById($id);
+            if (!$customer) {
+                return response()->json(['message' => 'Customer not found'], 404);
+            }
+
+            $customer->auto_calculate_iva = $validated['auto_calculate_iva'];
+            $customer->save();
+
+            return response()->json([
+                'message' => 'Campo auto_calculate_iva actualizado exitosamente',
+                'customer' => [
+                    'id' => $customer->id,
+                    'name' => $customer->name,
+                    'last_name' => $customer->last_name,
+                    'auto_calculate_iva' => $customer->auto_calculate_iva,
+                ]
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $errors = $e->errors();
+            $errorMessages = [];
+            foreach ($errors as $field => $messages) {
+                $errorMessages[] = $field . ': ' . implode(', ', $messages);
+            }
+            
+            return response()->json([
+                'message' => 'Datos inválidos: ' . implode(', ', $errorMessages),
+                'errors' => $errors
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al actualizar el campo: ' . $e->getMessage()], 500);
+        }
     }
 }

@@ -26,6 +26,8 @@ class Commission extends Model
         'status',
         'payment_method',
         'total',
+        'iva_amount',
+        'iva_applied',
         'notes',
         'user_id',
         'origin_location_id',
@@ -39,6 +41,8 @@ class Commission extends Model
         'status' => CommissionStatus::class,
         'payment_method' => PaymentMethod::class,
         'total' => 'decimal:2',
+        'iva_amount' => 'decimal:2',
+        'iva_applied' => 'boolean',
     ];
 
     public function client(): BelongsTo

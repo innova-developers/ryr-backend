@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use Illuminate\Routing\Controller;
 use App\Shared\Enums\PaymentMethod;
 use App\Shared\Models\Commission;
+use App\Services\IvaCalculationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +13,10 @@ use Illuminate\Support\Facades\Validator;
 
 class PaymentMethodController extends Controller
 {
+    public function __construct(
+        private IvaCalculationService $ivaCalculationService
+    ) {
+    }
     /**
      * Get all available payment methods
      */
@@ -57,9 +62,18 @@ class PaymentMethodController extends Controller
             ], 404);
         }
 
-        $commission->update([
-            'payment_method' => $request->payment_method,
-        ]);
+        $newPaymentMethod = PaymentMethod::from($request->payment_method);
+        $customer = $commission->client;
+        
+        // Actualizar método de pago y recalcular IVA
+        $commission = $this->ivaCalculationService->updateIvaForPaymentMethodChange($commission, $newPaymentMethod);
+        
+        // Agregar nota sobre IVA si se aplicó
+        if ($commission->iva_applied && $commission->iva_amount > 0) {
+            $ivaNote = $this->ivaCalculationService->generateIvaNote($commission->iva_amount, true);
+            $commission->notes = $commission->notes ? $commission->notes . "\n" . $ivaNote : $ivaNote;
+            $commission->save();
+        }
 
         return response()->json([
             'success' => true,
@@ -67,7 +81,10 @@ class PaymentMethodController extends Controller
             'data' => [
                 'commission_id' => $commission->id,
                 'payment_method' => $request->payment_method,
-                'payment_method_label' => PaymentMethod::from($request->payment_method)->label(),
+                'payment_method_label' => $newPaymentMethod->label(),
+                'iva_applied' => $commission->iva_applied,
+                'iva_amount' => $commission->iva_amount,
+                'total_with_iva' => $commission->total,
             ],
         ]);
     }
