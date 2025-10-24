@@ -478,4 +478,118 @@ class CommissionTest extends TestCase
             'notes' => 'Notas actualizadas',
         ]);
     }
+
+    public function test_commission_response_includes_iva_fields(): void
+    {
+        $this->actingAs($this->user);
+
+        // Crear comisión con IVA
+        $commission = Commission::factory()->create([
+            'client_id' => $this->customer->id,
+            'destination_id' => $this->destination->id,
+            'user_id' => $this->user->id,
+            'branch_id' => $this->branch->id,
+            'origin_location_id' => $this->originLocation->id,
+            'destination_location_id' => $this->destinationLocation->id,
+            'payment_method' => \App\Shared\Enums\PaymentMethod::TRANSFERENCIA,
+            'total' => 1210.00,
+            'iva_amount' => 210.00,
+            'iva_applied' => true,
+        ]);
+
+        $response = $this->getJson("/api/commissions/{$commission->id}");
+
+        $response->assertStatus(200);
+        
+        // Debug: ver qué está devolviendo la respuesta
+        $responseData = $response->json();
+        $this->assertArrayHasKey('data', $responseData);
+        
+        $commissionData = $responseData['data'];
+        $this->assertArrayHasKey('id', $commissionData);
+        $this->assertArrayHasKey('total', $commissionData);
+        $this->assertArrayHasKey('iva_amount', $commissionData);
+        $this->assertArrayHasKey('iva_applied', $commissionData);
+        $this->assertArrayHasKey('payment_method', $commissionData);
+        $this->assertArrayHasKey('payment_method_label', $commissionData);
+        
+        $this->assertEquals($commission->id, $commissionData['id']);
+        $this->assertEquals(1210.00, $commissionData['total']);
+        $this->assertEquals(210.00, $commissionData['iva_amount']);
+        $this->assertTrue($commissionData['iva_applied']);
+        $this->assertEquals('TRANSFERENCIA', $commissionData['payment_method']);
+        $this->assertEquals('Transferencia', $commissionData['payment_method_label']);
+    }
+
+    public function test_commission_list_includes_iva_fields(): void
+    {
+        $this->actingAs($this->user);
+
+        // Crear comisiones con y sin IVA
+        Commission::factory()->create([
+            'client_id' => $this->customer->id,
+            'destination_id' => $this->destination->id,
+            'user_id' => $this->user->id,
+            'branch_id' => $this->branch->id,
+            'origin_location_id' => $this->originLocation->id,
+            'destination_location_id' => $this->destinationLocation->id,
+            'payment_method' => \App\Shared\Enums\PaymentMethod::TRANSFERENCIA,
+            'total' => 1210.00,
+            'iva_amount' => 210.00,
+            'iva_applied' => true,
+        ]);
+
+        Commission::factory()->create([
+            'client_id' => $this->customer->id,
+            'destination_id' => $this->destination->id,
+            'user_id' => $this->user->id,
+            'branch_id' => $this->branch->id,
+            'origin_location_id' => $this->originLocation->id,
+            'destination_location_id' => $this->destinationLocation->id,
+            'payment_method' => \App\Shared\Enums\PaymentMethod::EFECTIVO,
+            'total' => 1000.00,
+            'iva_amount' => 0.00,
+            'iva_applied' => false,
+        ]);
+
+        $response = $this->getJson('/api/commissions');
+
+        $response->assertStatus(200)
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => [
+                        'id',
+                        'client_id',
+                        'branch_id',
+                        'date',
+                        'status',
+                        'payment_method',
+                        'payment_method_label',
+                        'user_id',
+                        'total',
+                        'iva_amount',
+                        'iva_applied',
+                        'notes',
+                        'created_at',
+                        'updated_at',
+                        'client',
+                        'origin',
+                        'destination',
+                        'origin_location',
+                        'destination_location',
+                    ]
+                ]
+            ]);
+
+        $data = $response->json('data');
+        $this->assertCount(2, $data);
+        
+        // Verificar que ambas comisiones incluyen los campos de IVA
+        foreach ($data as $commission) {
+            $this->assertArrayHasKey('iva_amount', $commission);
+            $this->assertArrayHasKey('iva_applied', $commission);
+            $this->assertArrayHasKey('payment_method', $commission);
+            $this->assertArrayHasKey('payment_method_label', $commission);
+        }
+    }
 }

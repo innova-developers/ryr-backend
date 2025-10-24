@@ -30,6 +30,7 @@ class CreateCustomerRequest extends FormRequest
             'business_hours' => 'nullable|string|max:255',
             'observations' => 'nullable|string',
             'is_premium' => 'boolean',
+            'auto_calculate_iva' => 'boolean',
             'user_id' => 'nullable|exists:users,id',
         ];
     }

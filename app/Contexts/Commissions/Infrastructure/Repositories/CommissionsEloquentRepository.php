@@ -7,6 +7,7 @@ use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
 use App\Contexts\Commissions\Application\DTOs\ListCommissionsFiltersDTO;
 use App\Contexts\Commissions\Application\DTOs\UpdateCommissionDTO;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
+use App\Services\IvaCalculationService;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Commission;
 use App\Shared\Models\CommissionItem;
@@ -17,6 +18,10 @@ use Illuminate\Support\Facades\Auth;
 
 class CommissionsEloquentRepository implements CommissionsRepository
 {
+    public function __construct(
+        private IvaCalculationService $ivaCalculationService
+    ) {
+    }
     /**
      * @throws \Exception
      */
@@ -36,6 +41,24 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission->notes = $dto->notes;
             $commission->origin_location_id = $dto->originLocationId;
             $commission->destination_location_id = $dto->destinationLocationId;
+            
+            // Aplicar lógica de IVA si hay método de pago
+            if (isset($dto->paymentMethod)) {
+                $customer = \App\Shared\Models\Customer::find($dto->clientId);
+                $ivaCalculation = $this->ivaCalculationService->calculateIva($customer, $dto->paymentMethod, $dto->total);
+                
+                $commission->payment_method = $dto->paymentMethod;
+                $commission->iva_amount = $ivaCalculation['iva_amount'];
+                $commission->iva_applied = $ivaCalculation['iva_applied'];
+                $commission->total = $ivaCalculation['total_with_iva'];
+                
+                // Agregar nota sobre IVA si se aplicó
+                if ($ivaCalculation['iva_applied']) {
+                    $ivaNote = $this->ivaCalculationService->generateIvaNote($ivaCalculation['iva_amount'], true);
+                    $commission->notes = $commission->notes ? $commission->notes . "\n" . $ivaNote : $ivaNote;
+                }
+            }
+            
             $commission->save();
 
             return $commission;
@@ -51,6 +74,8 @@ class CommissionsEloquentRepository implements CommissionsRepository
     {
         try {
             $commission = Commission::findOrFail($dto->id);
+            $previousPaymentMethod = $commission->payment_method;
+            
             $commission->client_id = $dto->clientId;
             $commission->destination_id = $destinationId;
             $commission->date = $dto->date;
@@ -59,6 +84,30 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission->notes = $dto->notes;
             $commission->origin_location_id = $dto->originLocationId;
             $commission->destination_location_id = $dto->destinationLocationId;
+            
+            // Aplicar lógica de IVA si hay método de pago
+            if (isset($dto->paymentMethod)) {
+                $customer = \App\Shared\Models\Customer::find($dto->clientId);
+                
+                // Si cambió el método de pago, recalcular IVA
+                if ($previousPaymentMethod !== $dto->paymentMethod) {
+                    $commission = $this->ivaCalculationService->updateIvaForPaymentMethodChange($commission, $dto->paymentMethod);
+                } else {
+                    // Si no cambió, solo aplicar IVA si corresponde
+                    $ivaCalculation = $this->ivaCalculationService->calculateIva($customer, $dto->paymentMethod, $dto->total);
+                    $commission->payment_method = $dto->paymentMethod;
+                    $commission->iva_amount = $ivaCalculation['iva_amount'];
+                    $commission->iva_applied = $ivaCalculation['iva_applied'];
+                    $commission->total = $ivaCalculation['total_with_iva'];
+                }
+                
+                // Agregar nota sobre IVA si se aplicó
+                if ($commission->iva_applied && $commission->iva_amount > 0) {
+                    $ivaNote = $this->ivaCalculationService->generateIvaNote($commission->iva_amount, true);
+                    $commission->notes = $commission->notes ? $commission->notes . "\n" . $ivaNote : $ivaNote;
+                }
+            }
+            
             $commission->save();
         } catch (\Exception $e) {
             throw new \Exception('Error al actualizar comisión: ' . $e->getMessage());

@@ -97,6 +97,7 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
 
     // Clientes
     Route::get('customers/search', [CustomerController::class, 'search']);
+    Route::patch('customers/{customer}/auto-calculate-iva', [CustomerController::class, 'updateAutoCalculateIva']);
     Route::apiResource('customers', CustomerController::class);
 
     // Cuenta corriente de clientes

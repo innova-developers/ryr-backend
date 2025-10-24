@@ -27,12 +27,14 @@ class Customer extends Model
         'business_hours',
         'observations',
         'is_premium',
+        'auto_calculate_iva',
         'user_id',
         'branch_id',
     ];
 
     protected $casts = [
         'is_premium' => 'boolean',
+        'auto_calculate_iva' => 'boolean',
         'dni' => 'integer',
     ];
 

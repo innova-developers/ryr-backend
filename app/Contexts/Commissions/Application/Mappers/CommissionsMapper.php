@@ -29,6 +29,8 @@ class CommissionsMapper
                     'payment_method_label' => $commission->payment_method?->label() ?? null,
                     'user_id' => $commission->user_id,
                     'total' => $commission->total,
+                    'iva_amount' => $commission->iva_amount ?? 0.00,
+                    'iva_applied' => $commission->iva_applied ?? false,
                     'notes' => $commission->notes,
                     'created_at' => $commission->created_at,
                     'updated_at' => $commission->updated_at,
@@ -146,6 +148,8 @@ class CommissionsMapper
                     'role' => $commission->cadete->role->value,
                 ] : null,
                 'total' => $commission->total ?? null,
+                'iva_amount' => $commission->iva_amount ?? 0.00,
+                'iva_applied' => $commission->iva_applied ?? false,
                 'items' => optional($commission->items)->map(function ($item) {
                     return [
                         'id' => $item->id ?? null,

@@ -17,6 +17,7 @@ class UpdateCustomerDTO
     public ?string $businessHours;
     public ?string $observations;
     public bool $isPremium;
+    public bool $autoCalculateIva;
     public ?int $userId;
     public int $branchId;
     public function __construct(
@@ -33,6 +34,7 @@ class UpdateCustomerDTO
         ?string $businessHours = null,
         ?string $observations = null,
         bool $isPremium = false,
+        bool $autoCalculateIva = true,
         ?int $userId = null,
         int $branchId
     ) {
@@ -49,6 +51,7 @@ class UpdateCustomerDTO
         $this->businessHours = $businessHours;
         $this->observations = $observations;
         $this->isPremium = $isPremium;
+        $this->autoCalculateIva = $autoCalculateIva;
         $this->userId = $userId;
         $this->branchId = $branchId;
     }
