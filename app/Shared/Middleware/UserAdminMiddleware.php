@@ -2,11 +2,22 @@
 
 namespace App\Shared\Middleware;
 
+use App\Shared\Enums\UserRole;
+
 class UserAdminMiddleware
 {
     public function handle($request, \Closure $next)
     {
-        if (! $request->user() || ! $request->user()->isAdmin()) {
+        $user = $request->user();
+        
+        if (! $user) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
+
+        // Permitir acceso a administradores y mostradores
+        $allowedRoles = [UserRole::ADMINISTRADOR, UserRole::MOSTRADOR];
+        
+        if (! in_array($user->role, $allowedRoles)) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
 
