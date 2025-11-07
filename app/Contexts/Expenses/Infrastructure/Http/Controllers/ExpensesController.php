@@ -32,8 +32,8 @@ class ExpensesController extends Controller
             } else {
                 // Construir el DTO de filtros
                 $filterDTO = new \App\Contexts\Expenses\Application\DTOs\ExpenseFilterDTO(
-                    $request->get('dateFrom'),
-                    $request->get('dateTo'),
+                    $request->get('date_from') ?? $request->get('dateFrom'),
+                    $request->get('date_to') ?? $request->get('dateTo'),
                     $request->get('category'),
                     $request->get('transport'),
                     $request->get('user_id')
