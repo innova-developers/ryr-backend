@@ -11,9 +11,13 @@ class HandleCors extends Middleware
         'https://localhost:5173',
         'http://localhost:3000',
         'https://localhost:3000',
-        // Agrega aquí tu dominio de producción
-        'https://tu-dominio-produccion.com',
-        'https://www.tu-dominio-produccion.com',
+        // Dominios de producción
+        'https://ryr.desarrollo.innovadevelopers.com',
+        'https://www.ryr.desarrollo.innovadevelopers.com',
+        'https://ryrcomisiones.com',
+        'https://www.ryrcomisiones.com',
+        'http://ryrcomisiones.com',
+        'http://www.ryrcomisiones.com',
     ];
 
     public function handle($request, \Closure $next)

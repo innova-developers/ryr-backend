@@ -22,11 +22,13 @@ return [
         'http://127.0.0.1:4200',
         'http://127.0.0.1:4000',
         'http://127.0.0.1:5000',
-        // Agrega aquí tu dominio de producción
+        // Dominios de producción
         'https://ryr.desarrollo.innovadevelopers.com',
         'https://www.ryr.desarrollo.innovadevelopers.com',
-        // Para desarrollo, puedes permitir todos los orígenes
-        // Comenta la línea de abajo en producción
+        'https://ryrcomisiones.com',
+        'https://www.ryrcomisiones.com',
+        'http://ryrcomisiones.com',
+        'http://www.ryrcomisiones.com',
         '*',
     ],
     'allowed_origins_patterns' => [],
