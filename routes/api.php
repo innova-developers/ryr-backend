@@ -22,6 +22,10 @@ use Illuminate\Support\Facades\Route;
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout']);
 
+// Rutas de prueba para envío de notificaciones
+Route::get('/test-email', [App\Http\Controllers\TestEmailController::class, 'testCommissionStatusEmail']);
+Route::get('/test-whatsapp', [App\Http\Controllers\TestEmailController::class, 'testCommissionStatusWhatsApp']);
+
 // Rutas públicas para validación de clientes
 Route::post('/validate-identifier', [App\Http\Controllers\Auth\ValidateIdentifierController::class, 'validateIdentifier']);
 Route::post('/verify-code', [App\Http\Controllers\Auth\ValidateIdentifierController::class, 'verifyCode']);
@@ -47,10 +51,6 @@ Route::apiResource('expense-categories', ExpenseCategoryController::class);
 Route::apiResource('expenses', ExpensesController::class);
 Route::get('users/{userId}/expenses', [ExpensesController::class, 'index']);
 
-// Rutas de ingresos
-Route::apiResource('incomes', IncomesController::class);
-Route::get('users/{userId}/incomes', [IncomesController::class, 'indexByUser']);
-
 // Rutas de categorías de ingresos
 Route::apiResource('income-categories', IncomeCategoryController::class);
 
@@ -69,40 +69,86 @@ Route::post('/commissions/public', [App\Http\Controllers\Public\PublicCommission
 // Rutas públicas para clientes
 Route::post('/customers/public', [App\Http\Controllers\Public\PublicCustomerController::class, 'store']);
 
-// Rutas protegidas para usuarios, comisiones y clientes
-Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
-    // Usuarios
+// Rutas compartidas para administradores, mostradores y cadetes
+Route::middleware(['auth:sanctum', 'adminOrCadete'])->group(function () {
+    // Nueva comisión
+    Route::post('/commissions', [CommissionController::class, 'store']);
+    
+    // Listado de comisiones
+    Route::get('/commissions', [CommissionController::class, 'index']);
+    Route::get('/commissions/statuses', [CommissionController::class, 'getStatuses']);
+    Route::get('/commissions/{id}', [CommissionController::class, 'show']);
+    
+    // Actualizar estado de comisión (cadetes y mostradores pueden actualizar)
+    Route::patch('/commissions/{id}/status', [CommissionController::class, 'updateStatus']);
+    
+    // Actualizar sucursal de comisión (todos los roles pueden actualizar)
+    Route::patch('/commissions/{id}/branch', [CommissionController::class, 'updateBranch']);
+    
+    // Actualizar comisión (cadetes y administradores)
+    Route::put('/commissions/{id}', [CommissionController::class, 'update']);
+    
+    // Ver comisiones de un cadete (cadetes solo pueden ver las suyas)
+    Route::get('/cadetes/{cadete}/commissions', [App\Http\Controllers\CommissionCadeteController::class, 'getCommissionsByCadete']);
+    
+    // Desasignar cadete de una comisión (cadetes solo pueden desasignarse a sí mismos)
+    Route::delete('/commissions/{commission}/unassign-cadete', [App\Http\Controllers\CommissionCadeteController::class, 'unassignCadete']);
+    
+    // Búsqueda de clientes (necesaria para crear comisiones)
+    Route::get('customers/search', [CustomerController::class, 'search']);
+    
+    // Listado de usuarios (solo lectura para cadetes)
     Route::get('/users', [UserController::class, 'index']);
+    Route::get('/users/{id}', [UserController::class, 'show']);
+    
+    // Ingresos
+    Route::apiResource('incomes', IncomesController::class);
+    Route::get('users/{userId}/incomes', [IncomesController::class, 'indexByUser']);
+    
+    // Panel de cobradores (pagos de cadetes) - Solo lectura para cadetes
+    Route::prefix('admin/cadete-payments')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\CadetePaymentController::class, 'index']);
+        Route::get('/summary', [App\Http\Controllers\Admin\CadetePaymentController::class, 'getPaymentsSummary']);
+        Route::get('/{id}', [App\Http\Controllers\Admin\CadetePaymentController::class, 'show']);
+        Route::get('/cadete/{cadeteId}', [App\Http\Controllers\Admin\CadetePaymentController::class, 'getPaymentsByCadete']);
+    });
+});
+
+// Rutas protegidas solo para administradores y mostradores
+Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
+    // Usuarios - Operaciones administrativas (crear, editar, eliminar)
     Route::post('/users', [UserController::class, 'store']);
     Route::put('/users/{id}', [UserController::class, 'update']);
     Route::delete('/users/{id}', [UserController::class, 'destroy']);
-    Route::get('/users/{id}', [UserController::class, 'show']);
 
-    // Comisiones (excepto show que ya está pública)
-    Route::post('/commissions', [CommissionController::class, 'store']);
-    Route::put('/commissions/{id}', [CommissionController::class, 'update']);
-    Route::get('/commissions/statuses', [CommissionController::class, 'getStatuses']);
+    // Comisiones - Operaciones administrativas
     Route::get('/commissions/statuses/client', [CommissionController::class, 'getClientStatuses']);
-    Route::get('/commissions',  [CommissionController::class, 'index']);
-    Route::get('/commissions/{id}', [CommissionController::class, 'show']);
-    Route::patch('/commissions/{id}/status', [CommissionController::class, 'updateStatus']);
     Route::delete('/commissions/{id}', [CommissionController::class, 'destroy']);
 
-    // Gestión de cadetes en comisiones
+    // Gestión de cadetes en comisiones (solo administradores)
     Route::post('/commissions/{commission}/assign-cadete', [App\Http\Controllers\CommissionCadeteController::class, 'assignCadete']);
-    Route::delete('/commissions/{commission}/unassign-cadete', [App\Http\Controllers\CommissionCadeteController::class, 'unassignCadete']);
     Route::patch('/commissions/{commission}/change-cadete', [App\Http\Controllers\CommissionCadeteController::class, 'changeCadete']);
     Route::get('/commissions/{commission}/assigned-cadete', [App\Http\Controllers\CommissionCadeteController::class, 'getAssignedCadete']);
-    Route::get('/cadetes/{cadete}/commissions', [App\Http\Controllers\CommissionCadeteController::class, 'getCommissionsByCadete']);
+    Route::get('/commissions/available', [App\Http\Controllers\CommissionCadeteController::class, 'getAvailableCommissions']);
 
     // Clientes
-    Route::get('customers/search', [CustomerController::class, 'search']);
     Route::apiResource('customers', CustomerController::class);
 
     // Cuenta corriente de clientes
     Route::prefix('customers/{customerId}/current-account')->group(function () {
         Route::get('/transactions', [CurrentAccountController::class, 'getCustomerTransactions']);
         Route::get('/balance', [CurrentAccountController::class, 'getCustomerBalance']);
+    });
+    
+    // Panel de cobradores - Operaciones administrativas (crear, editar, eliminar)
+    Route::prefix('admin/cadete-payments')->group(function () {
+        Route::post('/', [App\Http\Controllers\Admin\CadetePaymentController::class, 'store']);
+        Route::post('/calculate', [App\Http\Controllers\Admin\CadetePaymentController::class, 'calculate']);
+        Route::put('/{id}', [App\Http\Controllers\Admin\CadetePaymentController::class, 'update']);
+        Route::delete('/{id}', [App\Http\Controllers\Admin\CadetePaymentController::class, 'destroy']);
+        Route::patch('/{id}/mark-as-paid', [App\Http\Controllers\Admin\CadetePaymentController::class, 'markAsPaid']);
+        Route::patch('/{id}/mark-as-cancelled', [App\Http\Controllers\Admin\CadetePaymentController::class, 'markAsCancelled']);
+        Route::get('/{id}/download-proof', [App\Http\Controllers\Admin\CadetePaymentController::class, 'downloadProof']);
     });
 });
 
@@ -175,24 +221,22 @@ Route::prefix('cadete')->middleware(['auth:sanctum', CadeteMiddleware::class])->
         Route::patch('/{id}/mark-as-read', [NotificationController::class, 'markAsRead']);
         Route::patch('/mark-all-as-read', [NotificationController::class, 'markAllAsRead']);
     });
+
+    // Ruta para registrar token FCM
+    Route::post('/fcm-token', [App\Http\Controllers\Cadete\FcmTokenController::class, 'store']);
+
+    // Ruta de test para enviar notificaciones push FCM
+    Route::get('/test-fcm-notification', [App\Http\Controllers\Cadete\TestFcmNotificationController::class, 'sendTestNotificationGet']);
+    Route::post('/test-fcm-notification', [App\Http\Controllers\Cadete\TestFcmNotificationController::class, 'sendTestNotification']);
+
+    // Pool de comisiones disponibles (sin cadete asignado)
+    Route::get('/commissions/available', [App\Http\Controllers\CommissionCadeteController::class, 'getAvailableCommissions']);
+    // Autoasignar comisión a sí mismo
+    Route::post('/commissions/{commission}/self-assign', [App\Http\Controllers\CommissionCadeteController::class, 'selfAssignCommission']);
+    // Desasignarse de una comisión
+    Route::delete('/commissions/{commission}/unassign-cadete', [App\Http\Controllers\CommissionCadeteController::class, 'unassignCadete']);
 });
 
-// Rutas para administradores - Gestión de pagos de cadetes
-Route::middleware(['auth:sanctum', 'isAdmin'])->prefix('admin')->group(function () {
-    Route::prefix('cadete-payments')->group(function () {
-        Route::get('/', [App\Http\Controllers\Admin\CadetePaymentController::class, 'index']);
-        Route::post('/', [App\Http\Controllers\Admin\CadetePaymentController::class, 'store']);
-        Route::get('/summary', [App\Http\Controllers\Admin\CadetePaymentController::class, 'getPaymentsSummary']);
-        Route::post('/calculate', [App\Http\Controllers\Admin\CadetePaymentController::class, 'calculate']);
-        Route::get('/{id}', [App\Http\Controllers\Admin\CadetePaymentController::class, 'show']);
-        Route::put('/{id}', [App\Http\Controllers\Admin\CadetePaymentController::class, 'update']);
-        Route::delete('/{id}', [App\Http\Controllers\Admin\CadetePaymentController::class, 'destroy']);
-        Route::patch('/{id}/mark-as-paid', [App\Http\Controllers\Admin\CadetePaymentController::class, 'markAsPaid']);
-        Route::patch('/{id}/mark-as-cancelled', [App\Http\Controllers\Admin\CadetePaymentController::class, 'markAsCancelled']);
-        Route::get('/{id}/download-proof', [App\Http\Controllers\Admin\CadetePaymentController::class, 'downloadProof']);
-        Route::get('/cadete/{cadeteId}', [App\Http\Controllers\Admin\CadetePaymentController::class, 'getPaymentsByCadete']);
-    });
-});
 
 
 // Rutas para métodos de pago de comisiones
