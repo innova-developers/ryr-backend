@@ -78,6 +78,11 @@ class User extends Authenticatable
         return $this->hasMany(Expense::class);
     }
 
+    public function fcmTokens(): HasMany
+    {
+        return $this->hasMany(FcmToken::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === UserRole::ADMINISTRADOR;

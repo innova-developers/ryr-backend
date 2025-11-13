@@ -6,7 +6,9 @@ use App\Contexts\Users\Application\DTO\CreateUserDTO;
 use App\Contexts\Users\Application\DTO\GetUsersFiltersDTO;
 use App\Contexts\Users\Application\DTO\UpdateUserDTO;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
+use App\Shared\Enums\UserRole;
 use App\Shared\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 class UserEloquentRepository implements UserRepository
 {
@@ -29,6 +31,15 @@ class UserEloquentRepository implements UserRepository
         $query = User::select('id', 'name', 'email', 'role', 'created_at', 'branch_id', 'base_salary', 'income_percentage', 'commission_percentage', 'contract_type')
             ->with(['branch:id,name'])
             ->where('role', '!=', 'cliente');
+
+        // Filtrar por sucursal según el rol del usuario
+        $user = Auth::user();
+        if ($user && $user->branch_id) {
+            // Cadetes, mostradores y administradores con sucursal solo ven usuarios de su sucursal
+            if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
+                $query->where('branch_id', $user->branch_id);
+            }
+        }
 
         // Aplicar filtro de búsqueda
         if ($filters && $filters->search) {

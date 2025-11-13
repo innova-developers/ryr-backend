@@ -32,6 +32,23 @@ class NotificationService
     ];
 
     /**
+     * Estados que requieren notificación push FCM
+     */
+    private const FCM_PUSH_STATUSES = [
+        CommissionStatus::CADETE_ASIGNADO,
+        CommissionStatus::ENTREGADO,
+        CommissionStatus::CANCELADO,
+    ];
+
+    private ?FcmNotificationService $fcmService = null;
+
+    public function __construct(?FcmNotificationService $fcmService = null)
+    {
+        // Inyectar FcmNotificationService si está disponible
+        $this->fcmService = $fcmService ?? app(FcmNotificationService::class);
+    }
+
+    /**
      * Crear notificación para cambio de estado de comisión
      */
     public function createCommissionStatusNotification(
@@ -55,7 +72,7 @@ class NotificationService
             $message = $this->getNotificationMessage($commission, $newStatus, $details);
             $data = $this->getNotificationData($commission, $previousStatus, $newStatus, $details);
 
-            return Notification::create([
+            $notification = Notification::create([
                 'user_id' => $commission->cadete_id,
                 'commission_id' => $commission->id,
                 'type' => 'commission_status_change',
@@ -63,6 +80,13 @@ class NotificationService
                 'message' => $message,
                 'data' => $data,
             ]);
+
+            // Enviar notificación push FCM si el estado lo requiere
+            if (in_array($newStatus, self::FCM_PUSH_STATUSES)) {
+                $this->sendFcmPushNotification($commission->cadete_id, $title, $message, $data);
+            }
+
+            return $notification;
 
         } catch (\Exception $e) {
             Log::error('Error creando notificación de cambio de estado', [
@@ -232,5 +256,39 @@ class NotificationService
             'details' => $details,
             'timestamp' => now()->toISOString(),
         ];
+    }
+
+    /**
+     * Enviar notificación push FCM al cadete
+     */
+    private function sendFcmPushNotification(int $userId, string $title, string $body, array $data): void
+    {
+        try {
+            if (!$this->fcmService) {
+                Log::warning('FcmNotificationService no disponible para enviar push notification', [
+                    'user_id' => $userId,
+                ]);
+                return;
+            }
+
+            $result = $this->fcmService->sendPushToUser($userId, [
+                'title' => $title,
+                'body' => $body,
+                'data' => $data,
+            ]);
+
+            Log::info('Notificación push FCM enviada', [
+                'user_id' => $userId,
+                'sent' => $result['sent'] ?? 0,
+                'failed' => $result['failed'] ?? 0,
+            ]);
+
+        } catch (\Exception $e) {
+            // No fallar la creación de la notificación si falla el push
+            Log::error('Error enviando notificación push FCM', [
+                'user_id' => $userId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

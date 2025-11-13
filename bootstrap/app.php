@@ -15,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'isAdmin' => \App\Shared\Middleware\UserAdminMiddleware::class,
+            'adminOrCadete' => \App\Http\Middleware\AdminOrCadeteMiddleware::class,
+            'cadete' => \App\Http\Middleware\CadeteMiddleware::class,
+            'client.auth' => \App\Http\Middleware\ClientAuthMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
