@@ -139,8 +139,7 @@ class CommissionCadeteController extends Controller
 
         // Actualizar la comisión
         $commission->update([
-            'cadete_id' => $request->cadete_id,
-            'status' => CommissionStatus::CADETE_ASIGNADO
+            'cadete_id' => $request->cadete_id
         ]);
 
         // Crear notificación para el nuevo cadete
@@ -214,16 +213,26 @@ class CommissionCadeteController extends Controller
     public function getAvailableCommissions(Request $request): JsonResponse
     {
         try {
+            // Obtener el usuario autenticado
+            $currentUser = $request->user();
+            
+            if (!$currentUser || !$currentUser->branch_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no autenticado o sin sucursal asignada'
+                ], 401);
+            }
+
             // Validar filtros opcionales
             $validated = $request->validate([
                 'status' => 'nullable|string',
-                'branch_id' => 'nullable|integer|exists:branches,id',
                 'date_from' => 'nullable|date',
                 'date_to' => 'nullable|date|after_or_equal:date_from',
             ]);
 
-            // Query base: comisiones sin cadete asignado
+            // Query base: comisiones sin cadete asignado y del branch_id del usuario
             $query = Commission::whereNull('cadete_id')
+                ->where('branch_id', $currentUser->branch_id)
                 ->where('status', '!=', CommissionStatus::CANCELADO)
                 ->where('status', '!=', CommissionStatus::ENTREGADO)
                 ->where('status', '!=', CommissionStatus::DEVUELTO_REMITENTE);
@@ -236,10 +245,6 @@ class CommissionCadeteController extends Controller
                 } catch (\ValueError $e) {
                     // Si el status no es válido, ignorar el filtro
                 }
-            }
-
-            if (isset($validated['branch_id'])) {
-                $query->where('branch_id', $validated['branch_id']);
             }
 
             if (isset($validated['date_from'])) {

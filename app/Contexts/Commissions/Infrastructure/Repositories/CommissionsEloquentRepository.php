@@ -199,7 +199,16 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 }
 
                 if ($filters->status) {
+                    // Si hay filtro de status, aplicar el filtro normalmente
                     $query->where('status', $filters->status->value);
+                } else {
+                    // Si NO hay filtro de status, excluir estados específicos
+                    $query->whereNotIn('status', [
+                        CommissionStatus::PENDIENTE_PAGO->value,
+                        CommissionStatus::PAGO_VALIDACION->value,
+                        CommissionStatus::PAGO_CONFIRMADO->value,
+                        CommissionStatus::ENTREGADO->value,
+                    ]);
                 }
 
                 if ($filters->method) {
@@ -346,7 +355,16 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 }
 
                 if ($filters->status) {
+                    // Si hay filtro de status, aplicar el filtro normalmente
                     $query->where('status', $filters->status->value);
+                } else {
+                    // Si NO hay filtro de status, excluir estados específicos
+                    $query->whereNotIn('status', [
+                        CommissionStatus::PENDIENTE_PAGO->value,
+                        CommissionStatus::PAGO_VALIDACION->value,
+                        CommissionStatus::PAGO_CONFIRMADO->value,
+                        CommissionStatus::ENTREGADO->value,
+                    ]);
                 }
 
                 if ($filters->method) {

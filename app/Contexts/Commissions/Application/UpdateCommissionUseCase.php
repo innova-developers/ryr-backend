@@ -39,8 +39,33 @@ readonly class UpdateCommissionUseCase
             }
             $this->validateLocations($dto->originLocationId, $dto->destinationLocationId);
 
-            // Actualizar la comisión
-            $this->commissionRepository->update($dto, $destination->id);
+            // Recalcular el total: fixed_price de destination + suma de subtotales de items
+            $itemsTotal = 0.0;
+            if ($dto->items !== null && !empty($dto->items)) {
+                foreach ($dto->items as $item) {
+                    $itemsTotal += $item->subtotal;
+                }
+            }
+            $recalculatedTotal = $destination->fixed_price + $itemsTotal;
+
+            // Crear un nuevo DTO con el total recalculado
+            $updatedDto = new UpdateCommissionDTO(
+                id: $dto->id,
+                clientId: $dto->clientId,
+                date: $dto->date,
+                origin: $dto->origin,
+                destination: $dto->destination,
+                status: $dto->status,
+                items: $dto->items,
+                total: $recalculatedTotal,
+                originLocationId: $dto->originLocationId,
+                destinationLocationId: $dto->destinationLocationId,
+                notes: $dto->notes,
+                aCuenta: $dto->aCuenta
+            );
+
+            // Actualizar la comisión con el total recalculado
+            $this->commissionRepository->update($updatedDto, $destination->id);
             
             // Eliminar items existentes y agregar los nuevos
             $this->commissionRepository->deleteItems($dto->id);
@@ -49,7 +74,7 @@ readonly class UpdateCommissionUseCase
             }
 
             // Crear log de la actualización
-            $dto = new CreateCommissionLogDTO(
+            $logDto = new CreateCommissionLogDTO(
                 commissionId: $dto->id,
                 userId: Auth::id(),
                 previousStatus: $existingCommission->status->value,
@@ -57,9 +82,9 @@ readonly class UpdateCommissionUseCase
                 details: 'Comisión actualizada'
             );
 
-            $this->commissionRepository->createLog($dto);
+            $this->commissionRepository->createLog($logDto);
 
-            return CommissionMapper::fromEntityToArray($this->commissionRepository->findById($dto->commissionId));
+            return CommissionMapper::fromEntityToArray($this->commissionRepository->findById($dto->id));
         });
     }
 
