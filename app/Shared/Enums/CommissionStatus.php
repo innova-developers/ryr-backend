@@ -64,6 +64,7 @@ enum CommissionStatus: string
             self::SOLICITUD_RECIBIDA, self::BUSCANDO_CADETE, 
             self::PENDIENTE_PAGO, self::PAGO_VALIDACION, self::PAGO_CONFIRMADO,
             self::EN_SUCURSAL_DESTINO, self::CANCELADO, self::EN_ANALISIS => 'En proceso',
+            self::EN_SUCURSAL => 'En sucursal',
         };
     }
 
@@ -99,6 +100,7 @@ enum CommissionStatus: string
             self::DEVUELTO_REMITENTE => 'Devuelto al remitente',
             self::CANCELADO => 'Cancelado',
             self::EN_ANALISIS => 'En análisis',
+            self::EN_SUCURSAL => 'En sucursal',
         };
     }
 
@@ -134,6 +136,7 @@ enum CommissionStatus: string
             self::DEVUELTO_REMITENTE => 'Devuelto al remitente',
             self::CANCELADO => 'Cancelado',
             self::EN_ANALISIS => 'En análisis',
+            self::EN_SUCURSAL => 'En sucursal',
         };
     }
 
@@ -170,7 +173,7 @@ enum CommissionStatus: string
             'Disponible para retiro en sucursal' => self::DISPONIBLE_RETIRO,
             'En devolución al remitente' => self::EN_DEVOLUCION,
             'Devuelto al remitente' => self::DEVUELTO_REMITENTE,
-            
+            'En sucursal' => self::EN_SUCURSAL,
             default => throw new \InvalidArgumentException("Estado del cadete no válido: {$cadeteStatus}")
         };
     }
@@ -214,7 +217,8 @@ enum CommissionStatus: string
             'Reprogramando entrega',
             'Disponible para retiro en sucursal',
             'En devolución al remitente',
-            'Devuelto al remitente'
+            'Devuelto al remitente',
+            'En sucursal'
         ];
 
         return array_merge($enumValues, $labels);
