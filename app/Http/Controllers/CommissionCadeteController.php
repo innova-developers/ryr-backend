@@ -338,6 +338,7 @@ class CommissionCadeteController extends Controller
                         'address' => $commission->originLocation->address,
                         'phone' => $commission->originLocation->phone,
                         'city' => $commission->originLocation->origin ?? null,
+                        'hours' => $commission->originLocation->schedule ?? null,
                     ] : null,
                     'destination' => $commission->destinationLocation ? [
                         'id' => $commission->destinationLocation->id,
@@ -345,6 +346,7 @@ class CommissionCadeteController extends Controller
                         'address' => $commission->destinationLocation->address,
                         'phone' => $commission->destinationLocation->phone,
                         'city' => $commission->destinationLocation->origin ?? null,
+                        'hours' => $commission->destinationLocation->schedule ?? null,
                     ] : null,
                     'branch' => $commission->branch ? [
                         'id' => $commission->branch->id,
