@@ -14,6 +14,7 @@ use App\Contexts\Customers\Application\UpdateCustomerUseCase;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Customers\Infrastructure\Http\Requests\CreateCustomerRequest;
 use App\Contexts\Customers\Infrastructure\Http\Requests\UpdateCustomerRequest;
+use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
 use App\Contexts\Locations\Domain\Repositories\LocationsRepository;
 use App\Contexts\Users\Application\CreateUserUseCase;
 use App\Contexts\Users\Application\DTO\CreateUserDTO;
@@ -29,12 +30,14 @@ class CustomerController extends Controller
     private UserRepository $userRepository;
     private CustomerRepository $repository;
     private LocationsRepository $locationsRepository;
+    private DestinationRepository $destinationRepository;
 
     public function __construct()
     {
         $this->userRepository = app(UserRepository::class);
         $this->repository = app(CustomerRepository::class);
         $this->locationsRepository = app(LocationsRepository::class);
+        $this->destinationRepository = app(DestinationRepository::class);
     }
 
     public function index(Request $request): JsonResponse
@@ -65,7 +68,7 @@ class CustomerController extends Controller
             );
             $userCreated = $useCaseCreateUser($dtoCreateUser);
 
-            $useCase = new CreateCustomerUseCase($this->repository, $this->locationsRepository);
+            $useCase = new CreateCustomerUseCase($this->repository, $this->locationsRepository, $this->destinationRepository);
             $dto = new CreateCustomerDTO(
                 $request->input('dni'),
                 $request->input('name'),
@@ -117,7 +120,7 @@ class CustomerController extends Controller
                 return response()->json(['message' => 'Customer not found'], 404);
             }
 
-            $useCase = new UpdateCustomerUseCase($this->repository, $this->locationsRepository);
+            $useCase = new UpdateCustomerUseCase($this->repository, $this->locationsRepository, $this->destinationRepository);
             $dto = new UpdateCustomerDTO(
                 $id,
                 $request->input('dni'),
