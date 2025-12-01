@@ -33,6 +33,8 @@ enum CommissionStatus: string
     case PAGO_VALIDACION = 'PAGO_VALIDACION';
     case PAGO_CONFIRMADO = 'PAGO_CONFIRMADO';
 
+    case EN_SUCURSAL = 'EN_SUCURSAL';
+
     /**
      * Obtiene el estado para mostrar al cadete
      */
