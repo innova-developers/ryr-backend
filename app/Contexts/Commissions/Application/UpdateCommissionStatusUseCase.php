@@ -8,6 +8,7 @@ use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Services\CommissionNotificationService;
+use App\Services\FcmNotificationService;
 use App\Services\NotificationService;
 use App\Shared\Enums\CommissionStatus;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +20,8 @@ class UpdateCommissionStatusUseCase
         private readonly CommissionsRepository $commissionsRepository,
         private readonly CurrentAccountRepository $currentAccountRepository,
         private readonly CommissionNotificationService $notificationService,
-        private readonly NotificationService $pushNotificationService
+        private readonly NotificationService $pushNotificationService,
+        private readonly FcmNotificationService $fcmNotificationService
     ) {
     }
 
@@ -69,6 +71,11 @@ class UpdateCommissionStatusUseCase
                     $status,
                     $details
                 );
+
+                // Si el estado cambió a BUSCANDO_CADETE, notificar a todos los cadetes
+                if ($status === CommissionStatus::BUSCANDO_CADETE) {
+                    $this->notifyAllCadetesNewCommission($commission);
+                }
             } catch (\Exception $e) {
                 throw new \Exception($e->getMessage());
             }
@@ -137,6 +144,48 @@ class UpdateCommissionStatusUseCase
         } catch (\Exception $e) {
             // Log el error pero no fallar la transacción principal
             \Log::error("Error al crear comisión por entrega fallida: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Notifica a todos los cadetes que hay una nueva comisión disponible en el pool
+     */
+    private function notifyAllCadetesNewCommission($commission): void
+    {
+        try {
+            // Preparar datos de la notificación
+            $origin = $commission->originLocation ? $commission->originLocation->name : 'Origen';
+            $destination = $commission->destinationLocation ? $commission->destinationLocation->name : 'Destino';
+
+            $payload = [
+                'title' => 'Nueva comisión disponible',
+                'body' => "Nueva comisión #{$commission->id} disponible: {$origin} → {$destination}",
+                'data' => [
+                    'type' => 'new_commission_available',
+                    'commission_id' => $commission->id,
+                    'status' => $commission->status->value,
+                    'origin' => $origin,
+                    'destination' => $destination,
+                    'total' => $commission->total,
+                ],
+            ];
+
+            // Enviar notificación a todos los cadetes con tokens FCM activos
+            $result = $this->fcmNotificationService->sendPushToAllCadetes($payload);
+
+            \Log::info('Notificaciones push enviadas a cadetes por nueva comisión disponible', [
+                'commission_id' => $commission->id,
+                'branch_id' => $commission->branch_id,
+                'total_cadetes' => $result['total_users'] ?? 0,
+                'successful' => $result['successful'] ?? 0,
+                'failed' => $result['failed'] ?? 0,
+            ]);
+        } catch (\Exception $e) {
+            // Log el error pero no fallar la transacción principal
+            \Log::error('Error al notificar cadetes sobre nueva comisión disponible', [
+                'commission_id' => $commission->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }

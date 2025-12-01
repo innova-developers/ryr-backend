@@ -290,5 +290,55 @@ class FcmNotificationService
 
         return $results;
     }
+
+    /**
+     * Enviar notificación a todos los cadetes con tokens FCM activos
+     *
+     * @param array $payload Datos de la notificación
+     * @param int|null $branchId Filtrar por branch_id (opcional)
+     * @return array Resultado del envío
+     */
+    public function sendPushToAllCadetes(array $payload, ?int $branchId = null): array
+    {
+        try {
+            // Obtener todos los cadetes con tokens FCM activos
+            $query = User::whereIn('role', [\App\Shared\Enums\UserRole::CADETE, \App\Shared\Enums\UserRole::CADETE_EXTERNO])
+                ->whereHas('fcmTokens', function ($q) {
+                    $q->where('is_active', true);
+                });
+
+            // Filtrar por branch si se especifica
+            if ($branchId !== null) {
+                $query->where('branch_id', $branchId);
+            }
+
+            $cadeteIds = $query->pluck('id')->toArray();
+
+            if (empty($cadeteIds)) {
+                Log::info('No hay cadetes con tokens FCM activos para notificar', [
+                    'branch_id' => $branchId,
+                ]);
+                return [
+                    'total_users' => 0,
+                    'successful' => 0,
+                    'failed' => 0,
+                    'details' => [],
+                ];
+            }
+
+            return $this->sendPushToUsers($cadeteIds, $payload);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener cadetes para notificación', [
+                'error' => $e->getMessage(),
+                'branch_id' => $branchId,
+            ]);
+            return [
+                'total_users' => 0,
+                'successful' => 0,
+                'failed' => 0,
+                'details' => [],
+            ];
+        }
+    }
 }
 

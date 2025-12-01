@@ -180,12 +180,12 @@ class CadeteController extends Controller
             $request->validate([
                 'status' => 'required|string|in:' . implode(',', CommissionStatus::getValidCadeteStatuses()),
                 'observation' => 'nullable|string|max:1000',
-                // Campos de firma requeridos solo cuando se marca como entregado
-                'receiver_name' => 'required_if:status,Entregado|string|max:255',
-                'receiver_phone' => 'required_if:status,Entregado|string|max:20',
+                // Campos de firma opcionales cuando se marca como entregado
+                'receiver_name' => 'nullable|string|max:255',
+                'receiver_phone' => 'nullable|string|max:20',
                 'notes' => 'nullable|string|max:1000',
-                'signature_image' => 'required_if:status,Entregado|string', // Base64 PNG
-                'delivery_timestamp' => 'required_if:status,Entregado|date',
+                'signature_image' => 'nullable|string', // Base64 PNG
+                'delivery_timestamp' => 'nullable|date',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::warning('Cadete intentó actualizar estado con valor inválido', [
@@ -268,8 +268,9 @@ class CadeteController extends Controller
             // Recargar la comisión para obtener el estado actualizado
             $commission->refresh();
 
-            // Si se marca como entregado, guardar la firma
-            if ($request->status === 'Entregado' || $newStatusValue === CommissionStatus::ENTREGADO->value) {
+            // Si se marca como entregado y se proporcionan datos de firma, guardar la firma
+            if (($request->status === 'Entregado' || $newStatusValue === CommissionStatus::ENTREGADO->value) 
+                && ($request->has('receiver_name') || $request->has('signature_image'))) {
                 // Verificar que no exista ya una firma para esta comisión
                 $existingSignature = DeliverySignature::where('commission_id', $commission->id)->first();
                 
@@ -286,7 +287,7 @@ class CadeteController extends Controller
                     ], 400);
                 }
 
-                // Crear la firma de entrega
+                // Crear la firma de entrega solo si se proporcionan datos
                 DeliverySignature::create([
                     'commission_id' => $commission->id,
                     'cadete_id' => $user->id,
@@ -294,7 +295,7 @@ class CadeteController extends Controller
                     'receiver_phone' => $request->receiver_phone,
                     'notes' => $request->notes,
                     'signature_image' => $request->signature_image,
-                    'delivery_timestamp' => $request->delivery_timestamp,
+                    'delivery_timestamp' => $request->delivery_timestamp ?? now(),
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
                 ]);
@@ -304,7 +305,7 @@ class CadeteController extends Controller
                     'commission_id' => $commission->id,
                     'receiver_name' => $request->receiver_name,
                     'receiver_phone' => $request->receiver_phone,
-                    'signature_size' => strlen($request->signature_image)
+                    'has_signature' => !empty($request->signature_image)
                 ]);
             }
 
