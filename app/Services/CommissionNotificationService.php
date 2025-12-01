@@ -22,6 +22,7 @@ class CommissionNotificationService
     private const IMPORTANT_STATUSES = [
         CommissionStatus::CADETE_ASIGNADO,
         CommissionStatus::ENCOMIENDA_RETIRADA,
+        CommissionStatus::RETIRADO_SUCURSAL,
         CommissionStatus::ENTREGADO,
         CommissionStatus::CANCELADO,
         CommissionStatus::PAGO_CONFIRMADO,

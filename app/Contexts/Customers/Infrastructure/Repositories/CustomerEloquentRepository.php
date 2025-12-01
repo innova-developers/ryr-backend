@@ -6,8 +6,10 @@ use App\Contexts\Customers\Application\DTO\CreateCustomerDTO;
 use App\Contexts\Customers\Application\DTO\GetCustomersFiltersDTO;
 use App\Contexts\Customers\Application\DTO\UpdateCustomerDTO;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
+use App\Shared\Enums\UserRole;
 use App\Shared\Models\Customer;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Auth;
 
 class CustomerEloquentRepository implements CustomerRepository
 {
@@ -15,6 +17,15 @@ class CustomerEloquentRepository implements CustomerRepository
     {
         $query = Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id', 'created_at')
             ->with(['user:id,name']);
+
+        // Filtrar por sucursal según el rol del usuario
+        $user = Auth::user();
+        if ($user && $user->branch_id) {
+            // Cadetes, mostradores y administradores con sucursal solo ven clientes de su sucursal
+            if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
+                $query->where('branch_id', $user->branch_id);
+            }
+        }
 
         // Aplicar filtro de búsqueda
         if ($filters && $filters->search) {
@@ -181,9 +192,19 @@ class CustomerEloquentRepository implements CustomerRepository
 
     public function search(string $query): array
     {
-        return Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id', 'created_at')
-            ->with(['user:id,name'])
-            ->where(function ($q) use ($query) {
+        $searchQuery = Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id', 'created_at')
+            ->with(['user:id,name']);
+
+        // Filtrar por sucursal según el rol del usuario
+        $user = Auth::user();
+        if ($user && $user->branch_id) {
+            // Cadetes, mostradores y administradores con sucursal solo ven clientes de su sucursal
+            if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
+                $searchQuery->where('branch_id', $user->branch_id);
+            }
+        }
+
+        return $searchQuery->where(function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
                     ->orWhere('last_name', 'like', "%{$query}%")
                     ->orWhere('email', 'like', "%{$query}%")

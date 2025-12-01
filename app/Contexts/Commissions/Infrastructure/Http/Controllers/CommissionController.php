@@ -5,6 +5,7 @@ namespace App\Contexts\Commissions\Infrastructure\Http\Controllers;
 use App\Contexts\Commissions\Application\CreateCommissionUseCase;
 use App\Contexts\Commissions\Application\DeleteCommissionUseCase;
 use App\Contexts\Commissions\Application\DTOs\CreateCommissionDTO;
+use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
 use App\Contexts\Commissions\Application\DTOs\ListCommissionsFiltersDTO;
 use App\Contexts\Commissions\Application\DTOs\UpdateCommissionDTO;
 use App\Contexts\Commissions\Application\GetCommissionUseCase;
@@ -249,10 +250,58 @@ class CommissionController extends Controller
                 'commission' => [
                     'id' => $commission->id,
                     'status' => $commission->status,
-                    'branch' => [
+                    'branch' => $branch ? [
                         'id' => $branch->id,
                         'name' => $branch->name,
-                    ],
+                    ] : null,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            if (str_contains($e->getMessage(), 'Comisión no encontrada')) {
+                return response()->json(['error' => $e->getMessage()], 404);
+            }
+
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updateBranch(int $id, Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'branch_id' => ['required', 'integer', 'exists:branches,id'],
+            ]);
+
+            $commission = $this->repository->findById($id);
+            if (!$commission) {
+                return response()->json([
+                    'message' => 'Comisión no encontrada',
+                ], 404);
+            }
+
+            $oldBranchId = $commission->branch_id;
+            $commission->branch_id = $validated['branch_id'];
+            $commission->save();
+            
+            // Obtener nombre de la sucursal para el log
+            $branch = \App\Shared\Models\Branch::find($validated['branch_id']);
+            $branchName = $branch ? $branch->name : "ID {$validated['branch_id']}";
+
+            // Crear log de la actualización
+            $logDTO = new CreateCommissionLogDTO(
+                commissionId: $id,
+                userId: Auth::id() ?? 1,
+                previousStatus: $commission->status->value,
+                newStatus: $commission->status->value,
+                details: "Sucursal actualizada de ID {$oldBranchId} a: {$branchName} (ID: {$validated['branch_id']})"
+            );
+            $this->repository->createLog($logDTO);
+
+            return response()->json([
+                'message' => 'Sucursal de la comisión actualizada correctamente',
+                'commission' => [
+                    'id' => $commission->id,
+                    'branch_id' => $commission->branch_id,
                 ],
             ]);
         } catch (\Exception $e) {

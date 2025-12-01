@@ -8,6 +8,7 @@ use App\Contexts\Commissions\Application\DTOs\ListCommissionsFiltersDTO;
 use App\Contexts\Commissions\Application\DTOs\UpdateCommissionDTO;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\UserRole;
 use App\Shared\Models\Commission;
 use App\Shared\Models\CommissionItem;
 use App\Shared\Models\CommissionLog;
@@ -36,6 +37,12 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission->notes = $dto->notes;
             $commission->origin_location_id = $dto->originLocationId;
             $commission->destination_location_id = $dto->destinationLocationId;
+            
+            // Si el usuario que crea la comisión es un cadete, asignar automáticamente su ID
+            if ($user && in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO])) {
+                $commission->cadete_id = $userId;
+            }
+            
             $commission->save();
 
             return $commission;
@@ -145,6 +152,15 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 'deliverySignature',
             ]);
 
+            // Filtrar por sucursal según el rol del usuario
+            $user = Auth::user();
+            if ($user && $user->branch_id) {
+                // Cadetes, mostradores y administradores con sucursal solo ven comisiones de su sucursal
+                if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
+                    $query->where('branch_id', $user->branch_id);
+                }
+            }
+
             // Si se proporciona commissionId, ignorar todos los demás filtros
             if ($filters->commissionId) {
                 $query->where('commissions.id', $filters->commissionId);
@@ -165,7 +181,8 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     $query->where('destination_id', $filters->destinationId);
                 }
 
-                if ($filters->branchId) {
+                // Solo aplicar branchId si el usuario es administrador sin sucursal (para otros roles ya está filtrado arriba)
+                if ($filters->branchId && $user && $user->role === UserRole::ADMINISTRADOR && !$user->branch_id) {
                     $query->where('branch_id', $filters->branchId);
                 }
 
@@ -282,6 +299,15 @@ class CommissionsEloquentRepository implements CommissionsRepository
         try {
             $query = Commission::query();
 
+            // Filtrar por sucursal según el rol del usuario
+            $user = Auth::user();
+            if ($user && $user->branch_id) {
+                // Cadetes, mostradores y administradores con sucursal solo ven comisiones de su sucursal
+                if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
+                    $query->where('branch_id', $user->branch_id);
+                }
+            }
+
             // Si se proporciona commissionId, ignorar todos los demás filtros
             if ($filters->commissionId) {
                 $query->where('commissions.id', $filters->commissionId);
@@ -302,7 +328,8 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     $query->where('destination_id', $filters->destinationId);
                 }
 
-                if ($filters->branchId) {
+                // Solo aplicar branchId si el usuario es administrador sin sucursal (para otros roles ya está filtrado arriba)
+                if ($filters->branchId && $user && $user->role === UserRole::ADMINISTRADOR && !$user->branch_id) {
                     $query->where('branch_id', $filters->branchId);
                 }
 
