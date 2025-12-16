@@ -2,6 +2,7 @@
 
 namespace App\Shared\Models;
 
+use App\Shared\Enums\CurrentAccountStatus;
 use Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -29,6 +30,7 @@ class Customer extends Model
         'is_premium',
         'user_id',
         'branch_id',
+        'internal_user_id',
     ];
 
     protected $casts = [
@@ -39,6 +41,11 @@ class Customer extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function internalUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'internal_user_id');
     }
 
     public function getFullNameAttribute(): string
@@ -58,7 +65,9 @@ class Customer extends Model
 
     public function getCurrentBalanceAttribute(): float
     {
+        // Solo considerar transacciones con estado OK para el cálculo del saldo
         $lastTransaction = $this->currentAccounts()
+            ->where('status', CurrentAccountStatus::OK->value)
             ->orderBy('transaction_date', 'desc')
             ->orderBy('id', 'desc')
             ->first();

@@ -12,6 +12,8 @@ class CommissionMapper
             'destination_id' => $commission->destination_id,
             'date' => $commission->date,
             'status' => $commission->status,
+            'type' => $commission->type?->value ?? null,
+            'type_label' => $commission->type?->label() ?? null,
             'user_id' => $commission->user_id,
             'branch_id' => $commission->branch_id,
             'total' => $commission->total,

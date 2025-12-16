@@ -6,12 +6,17 @@ use App\Contexts\Commissions\Application\DTOs\UpdateCommissionDTO;
 use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
 use App\Contexts\Commissions\Infrastructure\Mappers\CommissionMapper;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
+use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
+use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\CommissionType;
+use App\Shared\Models\CurrentAccount;
 use App\Shared\Models\Location;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 readonly class UpdateCommissionUseCase
 {
@@ -73,16 +78,53 @@ readonly class UpdateCommissionUseCase
                 $this->commissionRepository->addItems($dto->id, $dto->items);
             }
 
-            // Crear log de la actualización
-            $logDto = new CreateCommissionLogDTO(
-                commissionId: $dto->id,
-                userId: Auth::id(),
-                previousStatus: $existingCommission->status->value,
-                newStatus: $dto->status->value,
-                details: 'Comisión actualizada'
-            );
+            // Obtener el tipo de comisión antes de procesar el estado
+            $commissionType = $existingCommission->type;
 
-            $this->commissionRepository->createLog($logDto);
+            // Manejar el flujo según el nuevo estado
+            if ($dto->status === CommissionStatus::PENDIENTE_PAGO) {
+                // Crear log de cambio a PENDIENTE_PAGO
+                $logDto = new CreateCommissionLogDTO(
+                    commissionId: $dto->id,
+                    userId: Auth::id(),
+                    previousStatus: $existingCommission->status->value,
+                    newStatus: CommissionStatus::PENDIENTE_PAGO->value,
+                    details: 'Comisión actualizada'
+                );
+                $this->commissionRepository->createLog($logDto);
+
+                // Si es ORDINARIA: automáticamente cambiar a PAGO_VALIDACION y crear movimiento
+                if ($commissionType === CommissionType::ORDINARIA) {
+                    // Actualizar estado a PAGO_VALIDACION
+                    $this->commissionRepository->updateStatus($dto->id, CommissionStatus::PAGO_VALIDACION);
+                    
+                    // Crear log del cambio automático a PAGO_VALIDACION
+                    $logDtoAuto = new CreateCommissionLogDTO(
+                        commissionId: $dto->id,
+                        userId: Auth::id(),
+                        previousStatus: CommissionStatus::PENDIENTE_PAGO->value,
+                        newStatus: CommissionStatus::PAGO_VALIDACION->value,
+                        details: 'Cambio automático a PAGO_VALIDACION (comisión ordinaria)'
+                    );
+                    $this->commissionRepository->createLog($logDtoAuto);
+
+                    // Obtener la comisión actualizada para crear el movimiento
+                    $updatedCommission = $this->commissionRepository->findById($dto->id);
+                    // Crear movimiento en cuenta corriente
+                    $this->createCurrentAccountTransaction($updatedDto, $updatedCommission);
+                }
+                // Si es EXTRAORDINARIA: solo queda en PENDIENTE_PAGO (sin crear movimiento)
+            } else {
+                // Para otros estados, crear log normal
+                $logDto = new CreateCommissionLogDTO(
+                    commissionId: $dto->id,
+                    userId: Auth::id(),
+                    previousStatus: $existingCommission->status->value,
+                    newStatus: $dto->status->value,
+                    details: 'Comisión actualizada'
+                );
+                $this->commissionRepository->createLog($logDto);
+            }
 
             return CommissionMapper::fromEntityToArray($this->commissionRepository->findById($dto->id));
         });
@@ -130,5 +172,43 @@ readonly class UpdateCommissionUseCase
         if (! $destinationLocation) {
             throw new \Exception('La ubicación de destino no existe');
         }
+    }
+
+    /**
+     * Crea una transacción en cuenta corriente por el monto de la comisión como saldo deudor
+     */
+    private function createCurrentAccountTransaction(UpdateCommissionDTO $dto, $commission): void
+    {
+        // Verificar si ya existe una transacción con esta referencia para evitar duplicados
+        $reference = "COM-{$dto->id}";
+        if (CurrentAccount::where('reference', $reference)->exists()) {
+            Log::info('Transacción en cuenta corriente ya existe para esta comisión', [
+                'commission_id' => $dto->id,
+                'reference' => $reference,
+            ]);
+            return;
+        }
+
+        // Asegurar que la relación destination esté cargada
+        if (!$commission->relationLoaded('destination')) {
+            $commission->load('destination');
+        }
+
+        $origin = $commission->destination ? $commission->destination->origin : $dto->origin;
+        $destination = $commission->destination ? $commission->destination->destination : $dto->destination;
+
+        $currentAccountDTO = new CreateCurrentAccountDTO(
+            customerId: $dto->clientId,
+            type: 'debit', // Saldo negativo (deuda)
+            amount: $dto->total,
+            description: "Comisión #{$dto->id} - {$origin} a {$destination}",
+            reference: $reference,
+            transactionDate: $dto->date->format('Y-m-d'),
+            paymentMethod: null,
+            observations: "Comisión registrada a cuenta corriente como saldo deudor",
+            userId: Auth::id(),
+        );
+
+        $this->currentAccountRepository->create($currentAccountDTO);
     }
 }

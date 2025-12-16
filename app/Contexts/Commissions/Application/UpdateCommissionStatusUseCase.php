@@ -11,8 +11,11 @@ use App\Services\CommissionNotificationService;
 use App\Services\FcmNotificationService;
 use App\Services\NotificationService;
 use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\CommissionType;
+use App\Shared\Models\CurrentAccount;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class UpdateCommissionStatusUseCase
 {
@@ -34,25 +37,77 @@ class UpdateCommissionStatusUseCase
             try {
                 $commission = $this->commissionsRepository->findById($id);
                 $previousStatus = $commission->status;
+                
+                // Guardar el tipo antes de actualizar
+                $commissionType = $commission->type;
 
-                $this->commissionsRepository->updateStatus($id, $status);
+                // Manejar el flujo según el nuevo estado
+                if ($status === CommissionStatus::PENDIENTE_PAGO) {
+                    // Actualizar estado a PENDIENTE_PAGO
+                    $this->commissionsRepository->updateStatus($id, CommissionStatus::PENDIENTE_PAGO);
+                    
+                    // Crear log de cambio a PENDIENTE_PAGO
+                    $logDto = new CreateCommissionLogDTO(
+                        commissionId: $id,
+                        userId: Auth::id() ?? 1,
+                        previousStatus: $previousStatus->value,
+                        newStatus: CommissionStatus::PENDIENTE_PAGO->value,
+                        details: $details ?? 'Estado actualizado a PENDIENTE_PAGO'
+                    );
+                    $this->commissionsRepository->createLog($logDto);
 
-                // Si a_cuenta es true, crear transacción en cuenta corriente
-                if ($aCuenta) {
-                    $this->createCurrentAccountTransaction($commission);
+                    // Si es ORDINARIA: automáticamente cambiar a PAGO_VALIDACION y crear movimiento
+                    if ($commissionType === CommissionType::ORDINARIA) {
+                        // Actualizar estado a PAGO_VALIDACION
+                        $this->commissionsRepository->updateStatus($id, CommissionStatus::PAGO_VALIDACION);
+                        
+                        // Refrescar la comisión para obtener datos actualizados
+                        $commission->refresh();
+                        
+                        // Crear log del cambio automático a PAGO_VALIDACION
+                        $logDtoAuto = new CreateCommissionLogDTO(
+                            commissionId: $id,
+                            userId: Auth::id() ?? 1,
+                            previousStatus: CommissionStatus::PENDIENTE_PAGO->value,
+                            newStatus: CommissionStatus::PAGO_VALIDACION->value,
+                            details: 'Cambio automático a PAGO_VALIDACION (comisión ordinaria)'
+                        );
+                        $this->commissionsRepository->createLog($logDtoAuto);
+
+                        // Crear movimiento en cuenta corriente
+                        $this->createCurrentAccountTransaction($commission);
+                    }
+                    // Si es EXTRAORDINARIA: solo queda en PENDIENTE_PAGO (sin crear movimiento)
+                } else {
+                    // Para otros estados (incluyendo PAGO_VALIDACION)
+                    $this->commissionsRepository->updateStatus($id, $status);
+
+                    // Crear transacción en cuenta corriente cuando el estado es PAGO_VALIDACION
+                    // (por default solo llegamos a este caso si la comisión es extraordinaria,
+                    // ya que las ordinarias se procesan automáticamente arriba)
+                    if ($status === CommissionStatus::PAGO_VALIDACION) {
+                        // Refrescar la comisión para obtener datos actualizados
+                        $commission->refresh();
+                        $this->createCurrentAccountTransaction($commission);
+                    }
+
+                    // Crear log del cambio de estado
+                    $dto = new CreateCommissionLogDTO(
+                        commissionId: $id,
+                        userId: Auth::id() ?? 1,
+                        previousStatus: $previousStatus->value,
+                        newStatus: $status->value,
+                        details: $details
+                    );
+                    $this->commissionsRepository->createLog($dto);
                 }
 
-                $dto = new CreateCommissionLogDTO(
-                    commissionId: $id,
-                    userId: Auth::id() ?? 1, // Usar ID 1 como fallback si no hay usuario autenticado
-                    previousStatus: $previousStatus->value,
-                    newStatus: $status->value,
-                    details: $details
-                );
-                $this->commissionsRepository->createLog($dto);
+                // Refrescar la comisión para asegurar que tenemos el estado final correcto
+                $commission->refresh();
+                $finalStatus = $commission->status;
 
                 // Si el estado es INTENTO_ENTREGA_FALLIDO, crear nueva comisión con precio base
-                if ($status === CommissionStatus::INTENTO_ENTREGA_FALLIDO) {
+                if ($finalStatus === CommissionStatus::INTENTO_ENTREGA_FALLIDO) {
                     $this->createFailedDeliveryCommission($commission);
                 }
 
@@ -60,7 +115,7 @@ class UpdateCommissionStatusUseCase
                 $this->notificationService->notifyStatusChange(
                     $commission,
                     $previousStatus->value,
-                    $status,
+                    $finalStatus,
                     $details
                 );
 
@@ -68,12 +123,12 @@ class UpdateCommissionStatusUseCase
                 $this->pushNotificationService->createCommissionStatusNotification(
                     $commission,
                     $previousStatus->value,
-                    $status,
+                    $finalStatus,
                     $details
                 );
 
                 // Si el estado cambió a BUSCANDO_CADETE, notificar a todos los cadetes
-                if ($status === CommissionStatus::BUSCANDO_CADETE) {
+                if ($finalStatus === CommissionStatus::BUSCANDO_CADETE) {
                     $this->notifyAllCadetesNewCommission($commission);
                 }
             } catch (\Exception $e) {
@@ -83,19 +138,37 @@ class UpdateCommissionStatusUseCase
     }
 
     /**
-     * Crea una transacción en cuenta corriente por el monto de la comisión
+     * Crea una transacción en cuenta corriente por el monto de la comisión como saldo deudor
      */
     private function createCurrentAccountTransaction($commission): void
     {
+        // Verificar si ya existe una transacción con esta referencia para evitar duplicados
+        $reference = "COM-{$commission->id}";
+        if (CurrentAccount::where('reference', $reference)->exists()) {
+            Log::info('Transacción en cuenta corriente ya existe para esta comisión', [
+                'commission_id' => $commission->id,
+                'reference' => $reference,
+            ]);
+            return;
+        }
+
+        // Asegurar que la relación destination esté cargada
+        if (!$commission->relationLoaded('destination')) {
+            $commission->load('destination');
+        }
+
+        $origin = $commission->destination ? $commission->destination->origin : 'Origen';
+        $destination = $commission->destination ? $commission->destination->destination : 'Destino';
+
         $currentAccountDTO = new CreateCurrentAccountDTO(
             customerId: $commission->client_id,
             type: 'debit', // Saldo negativo (deuda)
             amount: $commission->total,
-            description: "Comisión #{$commission->id} - Actualización de estado",
-            reference: "COM-{$commission->id}",
-            transactionDate: now()->format('Y-m-d'),
+            description: "Comisión #{$commission->id} - {$origin} a {$destination}",
+            reference: $reference,
+            transactionDate: $commission->date->format('Y-m-d'),
             paymentMethod: null,
-            observations: "Comisión registrada a cuenta corriente por actualización de estado",
+            observations: "Comisión registrada a cuenta corriente como saldo deudor",
             userId: Auth::id() ?? 1, // Usar ID 1 como fallback si no hay usuario autenticado
         );
 
@@ -170,8 +243,8 @@ class UpdateCommissionStatusUseCase
                 ],
             ];
 
-            // Enviar notificación a todos los cadetes con tokens FCM activos
-            $result = $this->fcmNotificationService->sendPushToAllCadetes($payload);
+            // Enviar notificación a todos los cadetes de la sucursal con tokens FCM activos
+            $result = $this->fcmNotificationService->sendPushToAllCadetes($payload, $commission->branch_id);
 
             \Log::info('Notificaciones push enviadas a cadetes por nueva comisión disponible', [
                 'commission_id' => $commission->id,

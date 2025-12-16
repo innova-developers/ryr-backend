@@ -3,6 +3,7 @@
 namespace App\Contexts\Commissions\Application\DTOs;
 
 use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\CommissionType;
 use DateTime;
 
 class CreateCommissionDTO
@@ -18,7 +19,8 @@ class CreateCommissionDTO
         public readonly int $originLocationId,
         public readonly int $destinationLocationId,
         public readonly ?string $notes = null,
-        public readonly bool $aCuenta = false
+        public readonly bool $aCuenta = false,
+        public readonly ?CommissionType $type = null
     ) {
     }
 
@@ -38,7 +40,8 @@ class CreateCommissionDTO
             originLocationId: $data['origin_location_id'],
             destinationLocationId: $data['destination_location_id'],
             notes: $data['notes'] ?? null,
-            aCuenta: $data['a_cuenta'] ?? false
+            aCuenta: $data['a_cuenta'] ?? false,
+            type: isset($data['type']) ? CommissionType::from($data['type']) : null
         );
     }
 

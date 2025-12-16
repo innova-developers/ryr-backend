@@ -5,6 +5,7 @@ namespace App\Contexts\Commissions\Infrastructure\Http\Requests;
 use App\Shared\Enums\CommissionItemSize;
 use App\Shared\Enums\CommissionItemType;
 use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\CommissionType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 
@@ -23,6 +24,7 @@ class CreateCommissionRequest extends FormRequest
             'origin' => ['required', 'string', 'max:255'],
             'destination' => ['required', 'string', 'max:255'],
             'status' => ['required', new Enum(CommissionStatus::class)],
+            'type' => ['nullable', new Enum(CommissionType::class)],
             'origin_location_id' => ['required', 'integer', 'exists:locations,id'],
             'destination_location_id' => ['required', 'integer', 'exists:locations,id'],
             'items' => ['nullable', 'array'],

@@ -136,7 +136,8 @@ class CustomerController extends Controller
                 $request->input('observations'),
                 $request->boolean('is_premium', false),
                 $request->input('user_id', $currentCustomer->user_id), // Preservar user_id existente si no se proporciona
-                $user->branch_id
+                $user->branch_id,
+                $request->input('internal_user_id', $currentCustomer->internal_user_id) // Preservar internal_user_id existente si no se proporciona
             );
             $customer = $useCase($dto);
 

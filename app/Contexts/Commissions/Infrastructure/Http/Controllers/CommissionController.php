@@ -18,6 +18,7 @@ use App\Contexts\Commissions\Infrastructure\Http\Requests\UpdateCommissionReques
 use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
+use App\Services\FcmNotificationService;
 use App\Shared\Enums\CommissionStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,6 +32,7 @@ class CommissionController extends Controller
     private CustomerRepository $customerRepository;
     private DestinationRepository $destinationRepository;
     private CurrentAccountRepository $currentAccountRepository;
+    private FcmNotificationService $fcmNotificationService;
 
     public function __construct()
     {
@@ -38,6 +40,7 @@ class CommissionController extends Controller
         $this->customerRepository = app(CustomerRepository::class);
         $this->destinationRepository = app(DestinationRepository::class);
         $this->currentAccountRepository = app(CurrentAccountRepository::class);
+        $this->fcmNotificationService = app(FcmNotificationService::class);
     }
 
     public function store(CreateCommissionRequest $request): JsonResponse
@@ -48,7 +51,8 @@ class CommissionController extends Controller
                 $this->repository,
                 $this->customerRepository,
                 $this->destinationRepository,
-                $this->currentAccountRepository
+                $this->currentAccountRepository,
+                $this->fcmNotificationService
             );
             $commission = $useCase($dto);
 

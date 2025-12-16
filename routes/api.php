@@ -57,6 +57,7 @@ Route::apiResource('income-categories', IncomeCategoryController::class);
 // Rutas de cuenta corriente
 Route::prefix('current-accounts')->group(function () {
     Route::post('/', [CurrentAccountController::class, 'store']);
+    Route::post('/{id}/confirm', [CurrentAccountController::class, 'confirmTransaction']); // Debe ir antes de las rutas con {id}
     Route::get('/{id}', [CurrentAccountController::class, 'show']);
     Route::put('/{id}', [CurrentAccountController::class, 'update']);
     Route::delete('/{id}', [CurrentAccountController::class, 'destroy']);
@@ -111,6 +112,11 @@ Route::middleware(['auth:sanctum', 'adminOrCadete'])->group(function () {
         Route::get('/summary', [App\Http\Controllers\Admin\CadetePaymentController::class, 'getPaymentsSummary']);
         Route::get('/{id}', [App\Http\Controllers\Admin\CadetePaymentController::class, 'show']);
         Route::get('/cadete/{cadeteId}', [App\Http\Controllers\Admin\CadetePaymentController::class, 'getPaymentsByCadete']);
+    });
+
+    // Pool de cobranzas (clientes con deuda)
+    Route::prefix('admin/collection-pool')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\CollectionPoolController::class, 'index']);
     });
 });
 

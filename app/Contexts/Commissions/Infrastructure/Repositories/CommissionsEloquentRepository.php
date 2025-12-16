@@ -8,6 +8,7 @@ use App\Contexts\Commissions\Application\DTOs\ListCommissionsFiltersDTO;
 use App\Contexts\Commissions\Application\DTOs\UpdateCommissionDTO;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\CommissionType;
 use App\Shared\Enums\UserRole;
 use App\Shared\Models\Commission;
 use App\Shared\Models\CommissionItem;
@@ -15,6 +16,7 @@ use App\Shared\Models\CommissionLog;
 use App\Shared\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class CommissionsEloquentRepository implements CommissionsRepository
 {
@@ -31,6 +33,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission->destination_id = $destinationId;
             $commission->date = $dto->date;
             $commission->status = $dto->status;
+            $commission->type = $dto->type ?? CommissionType::ORDINARIA;
             $commission->user_id = $userId;
             $commission->branch_id = $user?->branch_id ?? 1; // Usar branch_id 1 como fallback
             $commission->total = $dto->total;
@@ -157,7 +160,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
             if ($user && $user->branch_id) {
                 // Cadetes, mostradores y administradores con sucursal solo ven comisiones de su sucursal
                 if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
-                    $query->where('branch_id', $user->branch_id);
+                    $query->where('commissions.branch_id', $user->branch_id);
                 }
             }
 
@@ -177,13 +180,19 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     });
                 }
 
+                if ($filters->customerCity) {
+                    $query->whereHas('client', function ($q) use ($filters) {
+                        $q->where('city', 'LIKE', "%{$filters->customerCity}%");
+                    });
+                }
+
                 if ($filters->destinationId) {
                     $query->where('destination_id', $filters->destinationId);
                 }
 
                 // Solo aplicar branchId si el usuario es administrador sin sucursal (para otros roles ya está filtrado arriba)
                 if ($filters->branchId && $user && $user->role === UserRole::ADMINISTRADOR && !$user->branch_id) {
-                    $query->where('branch_id', $filters->branchId);
+                    $query->where('commissions.branch_id', $filters->branchId);
                 }
 
                 if ($filters->userId) {
@@ -213,6 +222,15 @@ class CommissionsEloquentRepository implements CommissionsRepository
 
                 if ($filters->method) {
                     $query->where('payment_method', $filters->method->value);
+                }
+
+                // Filtrar por tipo solo si la columna existe y se proporciona el filtro
+                if ($filters->type && Schema::hasColumn('commissions', 'type')) {
+                    $query->where('type', $filters->type->value);
+                }
+
+                if ($filters->total !== null) {
+                    $query->where('total', $filters->total);
                 }
 
                 // Aplicar ordenamiento solo si no se proporciona commissionId
@@ -313,7 +331,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
             if ($user && $user->branch_id) {
                 // Cadetes, mostradores y administradores con sucursal solo ven comisiones de su sucursal
                 if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
-                    $query->where('branch_id', $user->branch_id);
+                    $query->where('commissions.branch_id', $user->branch_id);
                 }
             }
 
@@ -333,13 +351,19 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     });
                 }
 
+                if ($filters->customerCity) {
+                    $query->whereHas('client', function ($q) use ($filters) {
+                        $q->where('city', 'LIKE', "%{$filters->customerCity}%");
+                    });
+                }
+
                 if ($filters->destinationId) {
                     $query->where('destination_id', $filters->destinationId);
                 }
 
                 // Solo aplicar branchId si el usuario es administrador sin sucursal (para otros roles ya está filtrado arriba)
                 if ($filters->branchId && $user && $user->role === UserRole::ADMINISTRADOR && !$user->branch_id) {
-                    $query->where('branch_id', $filters->branchId);
+                    $query->where('commissions.branch_id', $filters->branchId);
                 }
 
                 if ($filters->userId) {

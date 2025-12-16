@@ -11,7 +11,7 @@ use App\Shared\Models\Transport;
 use App\Shared\Models\User;
 use App\Shared\Enums\UserRole;
 use App\DeliverySignature;
-use App\Services\GoogleMapsService;
+use App\Services\NominatimService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -288,17 +288,23 @@ class CadeteController extends Controller
                 }
 
                 // Crear la firma de entrega solo si se proporcionan datos
-                DeliverySignature::create([
+                $signatureData = [
                     'commission_id' => $commission->id,
                     'cadete_id' => $user->id,
-                    'receiver_name' => $request->receiver_name,
-                    'receiver_phone' => $request->receiver_phone,
+                    'receiver_name' => $request->receiver_name ?? '',
+                    'receiver_phone' => $request->receiver_phone ?? '',
                     'notes' => $request->notes,
-                    'signature_image' => $request->signature_image,
                     'delivery_timestamp' => $request->delivery_timestamp ?? now(),
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
-                ]);
+                ];
+                
+                // Solo incluir signature_image si está presente y no es null
+                if ($request->has('signature_image') && !empty($request->signature_image)) {
+                    $signatureData['signature_image'] = $request->signature_image;
+                }
+                
+                DeliverySignature::create($signatureData);
 
                 \Log::info('Firma de entrega registrada exitosamente', [
                     'cadete_id' => $user->id,
@@ -589,8 +595,8 @@ class CadeteController extends Controller
         // Construir query base usando cadete_id directamente
         $query = Commission::with([
             'client:id,name,last_name,phone,address',
-            'originLocation:id,name,address,origin,phone,schedule',
-            'destinationLocation:id,name,address,origin,phone,schedule',
+            'originLocation:id,name,address,origin,phone,schedule,latitude,longitude',
+            'destinationLocation:id,name,address,origin,phone,schedule,latitude,longitude',
             'items:id,commission_id,type,size,quantity,detail',
             'transport:id,plate,description',
             'deliverySignature:id,commission_id,receiver_name,receiver_phone,notes,delivery_timestamp'
@@ -598,8 +604,23 @@ class CadeteController extends Controller
         ->where('cadete_id', $user->id);
 
         // Aplicar filtros
+        // Si se envía el parámetro status, no aplicar el filtro de estados en proceso
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $query->where('status', strtoupper($request->status));
+        } else {
+            // Solo mostrar comisiones en estados en proceso si no se filtra por estado específico
+            $inProcessStatuses = [
+                CommissionStatus::CADETE_ASIGNADO->value,
+                CommissionStatus::CADETE_EN_CAMINO_ORIGEN->value,
+                CommissionStatus::EN_PUNTO_RETIRO->value,
+                CommissionStatus::ENCOMIENDA_RETIRADA->value,
+                CommissionStatus::EN_CAMINO_PLANTA->value,
+                CommissionStatus::EN_TRANSITO_DESTINO->value,
+                CommissionStatus::EN_SUCURSAL_DESTINO->value,
+                CommissionStatus::EN_PROCESO_ENTREGA->value,
+                CommissionStatus::EN_PLANTA->value,
+            ];
+            $query->whereIn('status', $inProcessStatuses);
         }
         
         if ($request->filled('date_from')) {
@@ -703,8 +724,19 @@ class CadeteController extends Controller
             ];
         });
 
-        // Calcular resumen basado en los filtros aplicados
-        $summary = $this->calculateDeliveriesSummaryWithFilters($query);
+        // Calcular resumen con TODAS las comisiones del cadete (sin filtro de estados en proceso)
+        $summaryQuery = Commission::where('cadete_id', $user->id);
+        
+        // Aplicar filtros de fecha si existen (pero no el filtro de estados)
+        if ($request->filled('date_from')) {
+            $summaryQuery->whereDate('date', '>=', $request->date_from);
+        }
+        
+        if ($request->filled('date_to')) {
+            $summaryQuery->whereDate('date', '<=', $request->date_to);
+        }
+        
+        $summary = $this->calculateDeliveriesSummaryWithFilters($summaryQuery);
 
         return response()->json([
             'success' => true,
@@ -1080,15 +1112,13 @@ class CadeteController extends Controller
         $totalDeliveries = $totalQuery->where('cadete_id', $cadeteId)->count();
 
         // Estados pendientes (solo comisiones recién asignadas)
+        // NOTA: PENDIENTE_PAGO, PAGO_VALIDACION y PAGO_CONFIRMADO se cuentan como completados
         $pending = $pendingQuery->where('cadete_id', $cadeteId)
                                ->whereIn('status', [
                                    CommissionStatus::CADETE_ASIGNADO,
                                    // Estados administrativos que se mapean a "En proceso" para el cadete
                                    CommissionStatus::SOLICITUD_RECIBIDA,
                                    CommissionStatus::BUSCANDO_CADETE,
-                                   CommissionStatus::PENDIENTE_PAGO,
-                                   CommissionStatus::PAGO_VALIDACION,
-                                   CommissionStatus::PAGO_CONFIRMADO,
                                    CommissionStatus::EN_SUCURSAL_DESTINO,
                                    CommissionStatus::CANCELADO,
                                    CommissionStatus::EN_ANALISIS
@@ -1108,10 +1138,14 @@ class CadeteController extends Controller
                                      ->count();
 
         // Estados completados exitosamente
+        // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
         $completed = $completedQuery->where('cadete_id', $cadeteId)
                                    ->whereIn('status', [
                                        CommissionStatus::ENTREGADO,
-                                       CommissionStatus::RETIRADO_SUCURSAL
+                                       CommissionStatus::RETIRADO_SUCURSAL,
+                                       CommissionStatus::PENDIENTE_PAGO,
+                                       CommissionStatus::PAGO_VALIDACION,
+                                       CommissionStatus::PAGO_CONFIRMADO
                                    ])
                                    ->count();
 
@@ -1127,10 +1161,14 @@ class CadeteController extends Controller
                                    ->count();
 
         // Calcular ganancias totales de comisiones completadas
+        // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
         $totalCommissionAmount = $earningsQuery->where('cadete_id', $cadeteId)
                                               ->whereIn('status', [
                                                   CommissionStatus::ENTREGADO,
-                                                  CommissionStatus::RETIRADO_SUCURSAL
+                                                  CommissionStatus::RETIRADO_SUCURSAL,
+                                                  CommissionStatus::PENDIENTE_PAGO,
+                                                  CommissionStatus::PAGO_VALIDACION,
+                                                  CommissionStatus::PAGO_CONFIRMADO
                                               ])
                                               ->sum('total');
         
@@ -1269,9 +1307,13 @@ class CadeteController extends Controller
     {
         switch ($status) {
             case 'paid':
+                // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
                 return $query->whereIn('status', [
                     CommissionStatus::ENTREGADO,
-                    CommissionStatus::RETIRADO_SUCURSAL
+                    CommissionStatus::RETIRADO_SUCURSAL,
+                    CommissionStatus::PENDIENTE_PAGO,
+                    CommissionStatus::PAGO_VALIDACION,
+                    CommissionStatus::PAGO_CONFIRMADO
                 ]);
             case 'pending':
                 return $query->whereIn('status', [
@@ -1293,18 +1335,25 @@ class CadeteController extends Controller
      */
     private function calculateEarningsSummary($commissions, string $periodLabel, float $commissionPercentage): array
     {
-        $totalCommissionAmount = $commissions->whereIn('status', [
-            CommissionStatus::ENTREGADO,
-            CommissionStatus::RETIRADO_SUCURSAL
-        ])->sum('total');
+        // Usar filter() para comparar correctamente los enums
+        // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
+        $deliveredCommissions = $commissions->filter(function ($commission) {
+            return $commission->status === CommissionStatus::ENTREGADO 
+                || $commission->status === CommissionStatus::RETIRADO_SUCURSAL
+                || $commission->status === CommissionStatus::PENDIENTE_PAGO
+                || $commission->status === CommissionStatus::PAGO_VALIDACION
+                || $commission->status === CommissionStatus::PAGO_CONFIRMADO;
+        });
+        
+        // Usar reduce() para sumar correctamente los totales
+        $totalCommissionAmount = $deliveredCommissions->reduce(function ($carry, $commission) {
+            return $carry + (float) $commission->total;
+        }, 0);
         
         // Calcular ganancias reales del cadete basadas en su porcentaje
         $totalEarnings = $totalCommissionAmount * ($commissionPercentage / 100);
         
-        $totalDeliveries = $commissions->whereIn('status', [
-            CommissionStatus::ENTREGADO,
-            CommissionStatus::RETIRADO_SUCURSAL
-        ])->count();
+        $totalDeliveries = $deliveredCommissions->count();
         
         $averagePerDelivery = $totalDeliveries > 0 ? $totalEarnings / $totalDeliveries : 0;
         
@@ -1327,10 +1376,18 @@ class CadeteController extends Controller
     {
         // Por ahora asumimos que todas las comisiones son en efectivo
         // TODO: Implementar lógica real de método de pago cuando esté disponible
-        $totalCommissionAmount = $commissions->whereIn('status', [
-            CommissionStatus::ENTREGADO,
-            CommissionStatus::RETIRADO_SUCURSAL
-        ])->sum('total');
+        // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
+        $deliveredCommissions = $commissions->filter(function ($commission) {
+            return $commission->status === CommissionStatus::ENTREGADO 
+                || $commission->status === CommissionStatus::RETIRADO_SUCURSAL
+                || $commission->status === CommissionStatus::PENDIENTE_PAGO
+                || $commission->status === CommissionStatus::PAGO_VALIDACION
+                || $commission->status === CommissionStatus::PAGO_CONFIRMADO;
+        });
+        
+        $totalCommissionAmount = $deliveredCommissions->reduce(function ($carry, $commission) {
+            return $carry + (float) $commission->total;
+        }, 0);
         
         // Calcular ganancias reales del cadete basadas en su porcentaje
         $cashEarnings = $totalCommissionAmount * ($commissionPercentage / 100);
@@ -1360,29 +1417,41 @@ class CadeteController extends Controller
     private function calculatePaymentStatus($commissions, float $commissionPercentage): array
     {
         $totalCommissions = $commissions->count();
-        $totalAmount = $commissions->sum('total');
+        $totalAmount = $commissions->reduce(function ($carry, $commission) {
+            return $carry + (float) $commission->total;
+        }, 0);
         
-        $paidCommissions = $commissions->whereIn('status', [
-            CommissionStatus::ENTREGADO,
-            CommissionStatus::RETIRADO_SUCURSAL
-        ]);
-        $paidCommissionAmount = $paidCommissions->sum('total');
+        // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
+        $paidCommissions = $commissions->filter(function ($commission) {
+            return $commission->status === CommissionStatus::ENTREGADO 
+                || $commission->status === CommissionStatus::RETIRADO_SUCURSAL
+                || $commission->status === CommissionStatus::PENDIENTE_PAGO
+                || $commission->status === CommissionStatus::PAGO_VALIDACION
+                || $commission->status === CommissionStatus::PAGO_CONFIRMADO;
+        });
+        $paidCommissionAmount = $paidCommissions->reduce(function ($carry, $commission) {
+            return $carry + (float) $commission->total;
+        }, 0);
         $paidEarnings = $paidCommissionAmount * ($commissionPercentage / 100);
         $paidCount = $paidCommissions->count();
         
-        $pendingCommissions = $commissions->whereIn('status', [
-            CommissionStatus::EN_TRANSITO_DESTINO,
-            CommissionStatus::EN_PROCESO_ENTREGA
-        ]);
-        $pendingCommissionAmount = $pendingCommissions->sum('total');
+        $pendingCommissions = $commissions->filter(function ($commission) {
+            return $commission->status === CommissionStatus::EN_TRANSITO_DESTINO
+                || $commission->status === CommissionStatus::EN_PROCESO_ENTREGA;
+        });
+        $pendingCommissionAmount = $pendingCommissions->reduce(function ($carry, $commission) {
+            return $carry + (float) $commission->total;
+        }, 0);
         $pendingEarnings = $pendingCommissionAmount * ($commissionPercentage / 100);
         $pendingCount = $pendingCommissions->count();
         
-        $cancelledCommissions = $commissions->whereIn('status', [
-            CommissionStatus::CANCELADO,
-            CommissionStatus::INTENTO_ENTREGA_FALLIDO
-        ]);
-        $cancelledCommissionAmount = $cancelledCommissions->sum('total');
+        $cancelledCommissions = $commissions->filter(function ($commission) {
+            return $commission->status === CommissionStatus::CANCELADO
+                || $commission->status === CommissionStatus::INTENTO_ENTREGA_FALLIDO;
+        });
+        $cancelledCommissionAmount = $cancelledCommissions->reduce(function ($carry, $commission) {
+            return $carry + (float) $commission->total;
+        }, 0);
         $cancelledEarnings = $cancelledCommissionAmount * ($commissionPercentage / 100);
         $cancelledCount = $cancelledCommissions->count();
         
@@ -1423,18 +1492,23 @@ class CadeteController extends Controller
                 return $commission->date && $commission->date->format('Y-m-d') === $currentDate->format('Y-m-d');
             });
             
-            $dayCommissionAmount = $dayCommissions->whereIn('status', [
-                CommissionStatus::ENTREGADO,
-                CommissionStatus::RETIRADO_SUCURSAL
-            ])->sum('total');
+            // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
+            $dayDeliveredCommissions = $dayCommissions->filter(function ($commission) {
+                return $commission->status === CommissionStatus::ENTREGADO 
+                    || $commission->status === CommissionStatus::RETIRADO_SUCURSAL
+                    || $commission->status === CommissionStatus::PENDIENTE_PAGO
+                    || $commission->status === CommissionStatus::PAGO_VALIDACION
+                    || $commission->status === CommissionStatus::PAGO_CONFIRMADO;
+            });
+            
+            $dayCommissionAmount = $dayDeliveredCommissions->reduce(function ($carry, $commission) {
+                return $carry + (float) $commission->total;
+            }, 0);
             
             // Calcular ganancias reales del cadete basadas en su porcentaje
             $dayEarnings = $dayCommissionAmount * ($commissionPercentage / 100);
             
-            $dayDeliveries = $dayCommissions->whereIn('status', [
-                CommissionStatus::ENTREGADO,
-                CommissionStatus::RETIRADO_SUCURSAL
-            ])->count();
+            $dayDeliveries = $dayDeliveredCommissions->count();
             
             // TODO: Implementar cálculo real de horas trabajadas
             $hoursWorked = $dayDeliveries > 0 ? min(8, $dayDeliveries * 0.5) : 0;
@@ -1460,15 +1534,23 @@ class CadeteController extends Controller
      */
     private function calculateTopRoutes($commissions, float $commissionPercentage): array
     {
-        $routes = $commissions->whereIn('status', [
-            CommissionStatus::ENTREGADO,
-            CommissionStatus::RETIRADO_SUCURSAL
-        ])->groupBy(function ($commission) {
+        // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
+        $deliveredCommissions = $commissions->filter(function ($commission) {
+            return $commission->status === CommissionStatus::ENTREGADO 
+                || $commission->status === CommissionStatus::RETIRADO_SUCURSAL
+                || $commission->status === CommissionStatus::PENDIENTE_PAGO
+                || $commission->status === CommissionStatus::PAGO_VALIDACION
+                || $commission->status === CommissionStatus::PAGO_CONFIRMADO;
+        });
+        
+        $routes = $deliveredCommissions->groupBy(function ($commission) {
             $origin = $commission->destination->origin ?? 'N/A';
             $destination = $commission->destination->destination ?? 'N/A';
             return $origin . ' → ' . $destination;
         })->map(function ($routeCommissions, $routeName) use ($commissionPercentage) {
-            $routeCommissionAmount = $routeCommissions->sum('total');
+            $routeCommissionAmount = $routeCommissions->reduce(function ($carry, $commission) {
+                return $carry + (float) $commission->total;
+            }, 0);
             // Calcular ganancias reales del cadete basadas en su porcentaje
             $earnings = $routeCommissionAmount * ($commissionPercentage / 100);
             $deliveries = $routeCommissions->count();
@@ -1502,10 +1584,14 @@ class CadeteController extends Controller
     private function calculatePerformanceMetrics($commissions, int $cadeteId): array
     {
         $totalDeliveries = $commissions->count();
-        $completedDeliveries = $commissions->whereIn('status', [
-            CommissionStatus::ENTREGADO,
-            CommissionStatus::RETIRADO_SUCURSAL
-        ])->count();
+        // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
+        $completedDeliveries = $commissions->filter(function ($commission) {
+            return $commission->status === CommissionStatus::ENTREGADO 
+                || $commission->status === CommissionStatus::RETIRADO_SUCURSAL
+                || $commission->status === CommissionStatus::PENDIENTE_PAGO
+                || $commission->status === CommissionStatus::PAGO_VALIDACION
+                || $commission->status === CommissionStatus::PAGO_CONFIRMADO;
+        })->count();
         
         $deliverySuccessRate = $totalDeliveries > 0 ? round(($completedDeliveries / $totalDeliveries) * 100, 1) : 0;
         
@@ -1529,10 +1615,14 @@ class CadeteController extends Controller
         $perPage = $request->get('per_page', 20);
         
         // Filtrar solo comisiones completadas
-        $completedCommissions = $commissions->whereIn('status', [
-            CommissionStatus::ENTREGADO,
-            CommissionStatus::RETIRADO_SUCURSAL
-        ]);
+        // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
+        $completedCommissions = $commissions->filter(function ($commission) {
+            return $commission->status === CommissionStatus::ENTREGADO 
+                || $commission->status === CommissionStatus::RETIRADO_SUCURSAL
+                || $commission->status === CommissionStatus::PENDIENTE_PAGO
+                || $commission->status === CommissionStatus::PAGO_VALIDACION
+                || $commission->status === CommissionStatus::PAGO_CONFIRMADO;
+        });
         
         // Simular pagos basados en comisiones (TODO: Implementar tabla real de pagos)
         $payments = $completedCommissions->map(function ($commission, $index) use ($commissionPercentage) {
@@ -1577,11 +1667,15 @@ class CadeteController extends Controller
      */
     private function calculateGrowthComparison(int $cadeteId, $startDate, $endDate, float $commissionPercentage): array
     {
+        // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
         $currentPeriodCommissionAmount = Commission::where('cadete_id', $cadeteId)
             ->whereBetween('date', [$startDate, $endDate])
             ->whereIn('status', [
                 CommissionStatus::ENTREGADO,
-                CommissionStatus::RETIRADO_SUCURSAL
+                CommissionStatus::RETIRADO_SUCURSAL,
+                CommissionStatus::PENDIENTE_PAGO,
+                CommissionStatus::PAGO_VALIDACION,
+                CommissionStatus::PAGO_CONFIRMADO
             ])
             ->sum('total');
         
@@ -1593,11 +1687,15 @@ class CadeteController extends Controller
         $previousStartDate = $startDate->copy()->subDays($periodLength);
         $previousEndDate = $startDate->copy()->subDay();
         
+        // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
         $previousPeriodCommissionAmount = Commission::where('cadete_id', $cadeteId)
             ->whereBetween('date', [$previousStartDate, $previousEndDate])
             ->whereIn('status', [
                 CommissionStatus::ENTREGADO,
-                CommissionStatus::RETIRADO_SUCURSAL
+                CommissionStatus::RETIRADO_SUCURSAL,
+                CommissionStatus::PENDIENTE_PAGO,
+                CommissionStatus::PAGO_VALIDACION,
+                CommissionStatus::PAGO_CONFIRMADO
             ])
             ->sum('total');
         
@@ -1640,19 +1738,46 @@ class CadeteController extends Controller
             return $location->getCoordinates();
         }
 
-        // Si no tiene coordenadas, las calculamos con Google Maps API
-        $googleMapsService = new GoogleMapsService();
-        $coordinates = $googleMapsService->getCoordinates(
-            $location->address,
-            $location->origin
-        );
+        // Si no tiene coordenadas, las calculamos con Nominatim (OpenStreetMap) - Gratuito
+        try {
+            $nominatimService = new \App\Services\NominatimService();
+            $coordinates = $nominatimService->getCoordinates(
+                $location->address,
+                $location->origin
+            );
 
-        // Si obtuvimos coordenadas, las guardamos en la base de datos para futuras consultas
-        if ($coordinates) {
-            $location->update([
-                'latitude' => $coordinates['latitude'],
-                'longitude' => $coordinates['longitude']
+            // Si obtuvimos coordenadas, las guardamos en la base de datos para futuras consultas
+            if ($coordinates) {
+                $location->update([
+                    'latitude' => $coordinates['latitude'],
+                    'longitude' => $coordinates['longitude']
+                ]);
+                
+                // Refrescar el modelo para que tenga las coordenadas actualizadas
+                $location->refresh();
+                
+                \Log::info('Coordenadas calculadas y guardadas para ubicación', [
+                    'location_id' => $location->id,
+                    'address' => $location->address,
+                    'origin' => $location->origin,
+                    'latitude' => $coordinates['latitude'],
+                    'longitude' => $coordinates['longitude']
+                ]);
+            } else {
+                \Log::warning('No se pudieron calcular coordenadas para ubicación', [
+                    'location_id' => $location->id,
+                    'address' => $location->address,
+                    'origin' => $location->origin
+                ]);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error al calcular coordenadas para ubicación', [
+                'location_id' => $location->id,
+                'address' => $location->address,
+                'origin' => $location->origin,
+                'error' => $e->getMessage()
             ]);
+            return null;
         }
 
         return $coordinates;

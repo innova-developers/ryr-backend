@@ -2,6 +2,7 @@
 
 namespace App\Shared\Models;
 
+use App\Shared\Enums\CurrentAccountStatus;
 use Database\Factories\CurrentAccountFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,6 +17,7 @@ class CurrentAccount extends Model
     protected $fillable = [
         'customer_id',
         'type',
+        'status',
         'amount',
         'description',
         'reference',
@@ -30,6 +32,7 @@ class CurrentAccount extends Model
         'amount' => 'decimal:2',
         'balance' => 'decimal:2',
         'transaction_date' => 'date',
+        'status' => CurrentAccountStatus::class,
     ];
 
     public function customer(): BelongsTo
@@ -71,6 +74,11 @@ class CurrentAccount extends Model
             'other' => 'Otro',
             default => 'No especificado',
         };
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return $this->status?->label() ?? 'Desconocido';
     }
 
     public static function newFactory(): CurrentAccountFactory

@@ -5,6 +5,7 @@ namespace App\Contexts\CurrentAccount\Infrastructure\Http\Controllers;
 use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Application\DTO\CurrentAccountFilterDTO;
 use App\Contexts\CurrentAccount\Application\DTO\UpdateCurrentAccountDTO;
+use App\Contexts\CurrentAccount\Application\UseCases\ConfirmTransactionUseCase;
 use App\Contexts\CurrentAccount\Application\UseCases\CreateCurrentAccountUseCase;
 use App\Contexts\CurrentAccount\Application\UseCases\DeleteCurrentAccountUseCase;
 use App\Contexts\CurrentAccount\Application\UseCases\GetCurrentAccountUseCase;
@@ -26,6 +27,7 @@ class CurrentAccountController extends Controller
         private readonly GetCurrentAccountUseCase $getUseCase,
         private readonly GetCustomerTransactionsUseCase $getTransactionsUseCase,
         private readonly GetCustomerBalanceUseCase $getBalanceUseCase,
+        private readonly ConfirmTransactionUseCase $confirmTransactionUseCase,
     ) {
     }
 
@@ -140,6 +142,29 @@ class CurrentAccountController extends Controller
             return response()->json([
                 'message' => 'Error al obtener el saldo: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Confirma un ingreso pendiente (cambia el estado de PENDIENTE a OK)
+     */
+    public function confirmTransaction(int $id): JsonResponse
+    {
+        try {
+            $transaction = ($this->confirmTransactionUseCase)($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Ingreso confirmado correctamente',
+                'data' => $transaction,
+            ], 200);
+        } catch (\Exception $e) {
+            $statusCode = str_contains($e->getMessage(), 'no encontrada') ? 404 : 400;
+            
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], $statusCode);
         }
     }
 }

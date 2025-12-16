@@ -52,10 +52,9 @@ class CommissionCadeteController extends Controller
             ], 400);
         }
 
-        // Actualizar la comisión
+        // Actualizar solo el cadete, mantener el estado actual de la comisión
         $commission->update([
-            'cadete_id' => $request->cadete_id,
-            'status' => CommissionStatus::CADETE_ASIGNADO
+            'cadete_id' => $request->cadete_id
         ]);
 
         // Crear notificación para el cadete
@@ -134,8 +133,8 @@ class CommissionCadeteController extends Controller
                 ],
             ];
 
-            // Enviar notificación a todos los cadetes con tokens FCM activos
-            $result = $this->fcmNotificationService->sendPushToAllCadetes($payload);
+            // Enviar notificación a todos los cadetes de la sucursal con tokens FCM activos
+            $result = $this->fcmNotificationService->sendPushToAllCadetes($payload, $commission->branch_id);
 
             Log::info('Notificaciones push enviadas a cadetes por nueva comisión disponible', [
                 'commission_id' => $commission->id,
@@ -323,7 +322,7 @@ class CommissionCadeteController extends Controller
                     'tracking_number' => $commission->id,
                     'status' => $commission->status->value,
                     'status_label' => $commission->status->getCadeteStatus(),
-                    'date' => $commission->date ? $commission->date->format('Y-m-d') : null,
+                    'date' => $commission->date ? $commission->date->format('d/m/Y') : null,
                     'total' => $commission->total,
                     'notes' => $commission->notes,
                     'client' => $commission->client ? [
@@ -422,10 +421,9 @@ class CommissionCadeteController extends Controller
                 ], 400);
             }
 
-            // Asignar la comisión al cadete autenticado
+            // Asignar la comisión al cadete autenticado, mantener el estado actual
             $commission->update([
-                'cadete_id' => $currentUser->id,
-                'status' => CommissionStatus::CADETE_ASIGNADO
+                'cadete_id' => $currentUser->id
             ]);
 
             // Crear notificación para el cadete

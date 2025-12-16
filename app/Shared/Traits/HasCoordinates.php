@@ -2,7 +2,7 @@
 
 namespace App\Shared\Traits;
 
-use App\Services\GoogleMapsService;
+use App\Services\NominatimService;
 use Illuminate\Support\Facades\Log;
 
 trait HasCoordinates
@@ -29,13 +29,13 @@ trait HasCoordinates
     }
 
     /**
-     * Calculate and set coordinates using Google Maps API
+     * Calculate and set coordinates using Nominatim (OpenStreetMap) - Gratuito
      */
     public function calculateAndSetCoordinates()
     {
         try {
-            $googleMapsService = new GoogleMapsService();
-            $coordinates = $googleMapsService->getCoordinates(
+            $nominatimService = new NominatimService();
+            $coordinates = $nominatimService->getCoordinates(
                 $this->address ?? '',
                 $this->origin ?? null
             );

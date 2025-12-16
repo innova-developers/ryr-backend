@@ -161,6 +161,7 @@ class CustomerEloquentRepository implements CustomerRepository
             $customer->is_premium = $dto->isPremium;
             $customer->user_id = $dto->userId;
             $customer->branch_id = $dto->branchId;
+            $customer->internal_user_id = $dto->internalUserId;
             $customer->save();
 
             // Si el email cambió, actualizar también el usuario asociado

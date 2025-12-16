@@ -6,6 +6,7 @@ use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Application\DTO\CurrentAccountFilterDTO;
 use App\Contexts\CurrentAccount\Application\DTO\UpdateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
+use App\Shared\Enums\CurrentAccountStatus;
 use App\Shared\Models\CurrentAccount;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -13,19 +14,31 @@ class CurrentAccountEloquentRepository implements CurrentAccountRepository
 {
     public function create(CreateCurrentAccountDTO $dto): CurrentAccount
     {
-        // Obtener el saldo actual del cliente
+        // Obtener el saldo actual del cliente (solo transacciones con estado OK)
         $currentBalance = $this->getCustomerBalance($dto->customerId);
 
+        // Asignar estado según el tipo: debit = OK, credit = PENDIENTE
+        $status = match ($dto->type) {
+            'debit' => CurrentAccountStatus::OK,
+            'credit' => CurrentAccountStatus::PENDIENTE,
+            default => CurrentAccountStatus::PENDIENTE,
+        };
+
         // Calcular el nuevo saldo
-        $newBalance = match ($dto->type) {
-            'credit' => $currentBalance + $dto->amount,
-            'debit' => $currentBalance - $dto->amount,
-            default => $currentBalance,
+        // Solo los débitos (OK) afectan el saldo inmediatamente
+        // Los créditos pendientes mantienen el mismo saldo hasta confirmarse
+        $newBalance = match ($status) {
+            CurrentAccountStatus::OK => match ($dto->type) {
+                'debit' => $currentBalance - $dto->amount,
+                default => $currentBalance,
+            },
+            CurrentAccountStatus::PENDIENTE => $currentBalance, // Los créditos pendientes no afectan el saldo
         };
 
         return CurrentAccount::create([
             'customer_id' => $dto->customerId,
             'type' => $dto->type,
+            'status' => $status,
             'amount' => $dto->amount,
             'description' => $dto->description,
             'reference' => $dto->reference,
@@ -138,7 +151,9 @@ class CurrentAccountEloquentRepository implements CurrentAccountRepository
 
     public function getCustomerBalance(int $customerId): float
     {
+        // Solo considerar transacciones con estado OK para el cálculo del saldo
         $lastTransaction = CurrentAccount::where('customer_id', $customerId)
+            ->where('status', CurrentAccountStatus::OK->value)
             ->orderBy('transaction_date', 'desc')
             ->orderBy('id', 'desc')
             ->first();
@@ -151,9 +166,39 @@ class CurrentAccountEloquentRepository implements CurrentAccountRepository
         return $this->findByCustomerId($customerId, $filter);
     }
 
+    public function confirmTransaction(int $id): CurrentAccount
+    {
+        $transaction = $this->findById($id);
+
+        if (!$transaction) {
+            throw new \Exception('Transacción no encontrada');
+        }
+
+        // Verificar que la transacción esté en estado PENDIENTE
+        if ($transaction->status !== CurrentAccountStatus::PENDIENTE) {
+            throw new \Exception('Solo se pueden confirmar transacciones pendientes');
+        }
+
+        // Verificar que sea un crédito (ingreso)
+        if ($transaction->type !== 'credit') {
+            throw new \Exception('Solo se pueden confirmar transacciones de tipo crédito (ingreso)');
+        }
+
+        // Cambiar el estado a OK
+        $transaction->status = CurrentAccountStatus::OK;
+        $transaction->save();
+
+        // Recalcular todos los balances del cliente porque ahora este crédito afecta el saldo
+        $this->recalculateBalances($transaction->customer_id);
+
+        return $transaction->fresh();
+    }
+
     private function recalculateBalances(int $customerId): void
     {
+        // Solo recalcular balances de transacciones con estado OK
         $transactions = CurrentAccount::where('customer_id', $customerId)
+            ->where('status', CurrentAccountStatus::OK->value)
             ->orderBy('transaction_date', 'asc')
             ->orderBy('id', 'asc')
             ->get();

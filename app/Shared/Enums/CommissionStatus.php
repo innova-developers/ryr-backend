@@ -12,6 +12,8 @@ enum CommissionStatus: string
     case EN_PUNTO_RETIRO = 'EN_PUNTO_RETIRO';
     case ENCOMIENDA_RETIRADA = 'ENCOMIENDA_RETIRADA';
     case EN_CAMINO_PLANTA = 'EN_CAMINO_PLANTA';
+
+    case EN_PLANTA = 'EN PLANTA';
     case EN_TRANSITO_DESTINO = 'EN_TRANSITO_DESTINO';
     case EN_SUCURSAL_DESTINO = 'EN_SUCURSAL_DESTINO';
     case EN_PROCESO_ENTREGA = 'EN_PROCESO_ENTREGA';
@@ -65,6 +67,7 @@ enum CommissionStatus: string
             self::PENDIENTE_PAGO, self::PAGO_VALIDACION, self::PAGO_CONFIRMADO,
             self::EN_SUCURSAL_DESTINO, self::CANCELADO, self::EN_ANALISIS => 'En proceso',
             self::EN_SUCURSAL => 'En sucursal',
+            self::EN_PLANTA => 'En planta',
         };
     }
 
@@ -101,6 +104,7 @@ enum CommissionStatus: string
             self::CANCELADO => 'Cancelado',
             self::EN_ANALISIS => 'En análisis',
             self::EN_SUCURSAL => 'En sucursal',
+            self::EN_PLANTA => 'En planta',
         };
     }
 
@@ -137,6 +141,7 @@ enum CommissionStatus: string
             self::CANCELADO => 'Cancelado',
             self::EN_ANALISIS => 'En análisis',
             self::EN_SUCURSAL => 'En sucursal',
+            self::EN_PLANTA => 'En planta',
         };
     }
 
@@ -174,7 +179,8 @@ enum CommissionStatus: string
             'En devolución al remitente' => self::EN_DEVOLUCION,
             'Devuelto al remitente' => self::DEVUELTO_REMITENTE,
             'En sucursal' => self::EN_SUCURSAL,
-            default => throw new \InvalidArgumentException("Estado del cadete no válido: {$cadeteStatus}")
+            'En planta' => self::EN_PLANTA,
+            
         };
     }
 
@@ -200,6 +206,7 @@ enum CommissionStatus: string
             self::DISPONIBLE_RETIRO->value,
             self::EN_DEVOLUCION->value,
             self::DEVUELTO_REMITENTE->value,
+            self::EN_PLANTA->value,
         ];
 
         $labels = [
@@ -218,7 +225,8 @@ enum CommissionStatus: string
             'Disponible para retiro en sucursal',
             'En devolución al remitente',
             'Devuelto al remitente',
-            'En sucursal'
+            'En sucursal',
+            'En planta',
         ];
 
         return array_merge($enumValues, $labels);

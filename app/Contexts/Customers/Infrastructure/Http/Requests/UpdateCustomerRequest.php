@@ -33,6 +33,7 @@ class UpdateCustomerRequest extends FormRequest
             'observations' => 'nullable|string',
             'is_premium' => 'boolean',
             'user_id' => 'nullable|exists:users,id',
+            'internal_user_id' => 'nullable|exists:users,id',
         ];
     }
 
