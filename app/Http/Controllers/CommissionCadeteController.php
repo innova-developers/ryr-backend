@@ -423,7 +423,8 @@ class CommissionCadeteController extends Controller
 
             // Asignar la comisión al cadete autenticado, mantener el estado actual
             $commission->update([
-                'cadete_id' => $currentUser->id
+                'cadete_id' => $currentUser->id,
+                'status' => CommissionStatus::CADETE_ASIGNADO->value
             ]);
 
             // Crear notificación para el cadete
