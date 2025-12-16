@@ -696,13 +696,13 @@ class CadeteController extends Controller
                 'pickup_address' => $commission->originLocation ? 
                     $commission->originLocation->name . ', ' . $commission->originLocation->address  . ' ,' . $commission->originLocation->origin : 'N/A',
                 'pickup_phone' => $commission->originLocation ? $commission->originLocation->phone  : 'N/A',
-                'pickup_latitude' => $pickupCoordinates['latitude'] ?? null,
-                'pickup_longitude' => $pickupCoordinates['longitude'] ?? null,
+                'pickup_latitude' => $pickupCoordinates ? ($pickupCoordinates['latitude'] ?? null) : null,
+                'pickup_longitude' => $pickupCoordinates ? ($pickupCoordinates['longitude'] ?? null) : null,
                 'delivery_address' => $commission->destinationLocation ? 
                     $commission->destinationLocation->name . ', ' . $commission->destinationLocation->address  . ' ,' . $commission->destinationLocation->origin : 'N/A',
                 'delivery_phone' => $commission->destinationLocation ? $commission->destinationLocation->phone  : 'N/A',
-                'delivery_latitude' => $deliveryCoordinates['latitude'] ?? null,
-                'delivery_longitude' => $deliveryCoordinates['longitude'] ?? null,
+                'delivery_latitude' => $deliveryCoordinates ? ($deliveryCoordinates['latitude'] ?? null) : null,
+                'delivery_longitude' => $deliveryCoordinates ? ($deliveryCoordinates['longitude'] ?? null) : null,
                 'status' => $commission->status->getCadeteStatus(),
                 'status_label' => $commission->status->getCadeteStatus(),
                 'estimated_pickup_time' => $commission->originLocation ? $commission->originLocation->schedule : 'N/A',
@@ -875,16 +875,16 @@ class CadeteController extends Controller
                     'name' => $commission->originLocation->name,
                     'address' => $commission->originLocation->address,
                     'phone' => $commission->originLocation->phone,
-                    'latitude' => $pickupCoordinates['latitude'] ?? null,
-                    'longitude' => $pickupCoordinates['longitude'] ?? null,
+                    'latitude' => $pickupCoordinates ? ($pickupCoordinates['latitude'] ?? null) : null,
+                    'longitude' => $pickupCoordinates ? ($pickupCoordinates['longitude'] ?? null) : null,
                 ] : null,
                 'destination' => $commission->destinationLocation ? [
                     'id' => $commission->destinationLocation->id,
                     'name' => $commission->destinationLocation->name,
                     'address' => $commission->destinationLocation->address,
                     'phone' => $commission->destinationLocation->phone,
-                    'latitude' => $deliveryCoordinates['latitude'] ?? null,
-                    'longitude' => $deliveryCoordinates['longitude'] ?? null,
+                    'latitude' => $deliveryCoordinates ? ($deliveryCoordinates['latitude'] ?? null) : null,
+                    'longitude' => $deliveryCoordinates ? ($deliveryCoordinates['longitude'] ?? null) : null,
                 ] : null,
                 'items' => $commission->items->map(function ($item) {
                     return [
@@ -1763,12 +1763,15 @@ class CadeteController extends Controller
                     'latitude' => $coordinates['latitude'],
                     'longitude' => $coordinates['longitude']
                 ]);
+                
+                return $coordinates;
             } else {
                 \Log::warning('No se pudieron calcular coordenadas para ubicación', [
                     'location_id' => $location->id,
                     'address' => $location->address,
                     'origin' => $location->origin
                 ]);
+                return null;
             }
         } catch (\Exception $e) {
             \Log::error('Error al calcular coordenadas para ubicación', [
@@ -1779,7 +1782,5 @@ class CadeteController extends Controller
             ]);
             return null;
         }
-
-        return $coordinates;
     }
 }

@@ -116,14 +116,14 @@ readonly class UpdateCommissionUseCase
                 // Si es EXTRAORDINARIA: solo queda en PENDIENTE_PAGO (sin crear movimiento)
             } else {
                 // Para otros estados, crear log normal
-                $logDto = new CreateCommissionLogDTO(
-                    commissionId: $dto->id,
-                    userId: Auth::id(),
-                    previousStatus: $existingCommission->status->value,
-                    newStatus: $dto->status->value,
-                    details: 'Comisión actualizada'
-                );
-                $this->commissionRepository->createLog($logDto);
+            $logDto = new CreateCommissionLogDTO(
+                commissionId: $dto->id,
+                userId: Auth::id(),
+                previousStatus: $existingCommission->status->value,
+                newStatus: $dto->status->value,
+                details: 'Comisión actualizada'
+            );
+            $this->commissionRepository->createLog($logDto);
             }
 
             return CommissionMapper::fromEntityToArray($this->commissionRepository->findById($dto->id));

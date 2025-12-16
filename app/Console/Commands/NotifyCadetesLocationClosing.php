@@ -132,8 +132,8 @@ class NotifyCadetesLocationClosing extends Command
                         $this->line("  - No se pudieron parsear rangos del destino");
                     }
                 } else {
-                    $this->line("  - Destino sin horario");
-                }
+                        $this->line("  - Destino sin horario");
+                    }
 
                 // Enviar notificaciones si es necesario
                 if (!$commission->cadete) {
@@ -159,7 +159,7 @@ class NotifyCadetesLocationClosing extends Command
                 }
 
                 if (!$hasNotifications) {
-                    $this->line("  - No se requiere notificación");
+                        $this->line("  - No se requiere notificación");
                     $notificationsSkipped++;
                 }
             } catch (\Exception $e) {
