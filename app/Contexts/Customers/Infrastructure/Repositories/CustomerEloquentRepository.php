@@ -15,7 +15,7 @@ class CustomerEloquentRepository implements CustomerRepository
 {
     public function get(?GetCustomersFiltersDTO $filters = null): array
     {
-        $query = Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id', 'created_at')
+        $query = Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id', 'observations', 'created_at')
             ->with(['user:id,name']);
 
         // Filtrar por sucursal según el rol del usuario
@@ -65,6 +65,7 @@ class CustomerEloquentRepository implements CustomerRepository
                         'city' => $customer->city,
                         'phone' => $customer->phone,
                         'is_premium' => $customer->is_premium,
+                        'observations' => $customer->observations,
                         'user' => optional($customer->user),
                         'branch' => optional($customer->branch),
                         'balance' => $customer->current_balance,
@@ -95,6 +96,7 @@ class CustomerEloquentRepository implements CustomerRepository
                     'city' => $customer->city,
                     'phone' => $customer->phone,
                     'is_premium' => $customer->is_premium,
+                    'observations' => $customer->observations,
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),
                     'balance' => $customer->current_balance,
@@ -193,7 +195,7 @@ class CustomerEloquentRepository implements CustomerRepository
 
     public function search(string $query): array
     {
-        $searchQuery = Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id', 'created_at')
+        $searchQuery = Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id', 'observations', 'created_at')
             ->with(['user:id,name']);
 
         // Filtrar por sucursal según el rol del usuario
@@ -223,6 +225,7 @@ class CustomerEloquentRepository implements CustomerRepository
                     'city' => $customer->city,
                     'phone' => $customer->phone,
                     'is_premium' => $customer->is_premium,
+                    'observations' => $customer->observations,
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),
                     'balance' => $customer->current_balance,
