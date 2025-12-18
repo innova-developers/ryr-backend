@@ -94,9 +94,20 @@ class CommissionCadeteController extends Controller
 
         $previousCadeteId = $commission->cadete_id;
 
+        $initialStatus = [
+            CommissionStatus::CADETE_ASIGNADO,
+            CommissionStatus::CADETE_EN_CAMINO_ORIGEN,
+            CommissionStatus::EN_PUNTO_RETIRO,
+            CommissionStatus::ENCOMIENDA_RETIRADA,
+            CommissionStatus::EN_CAMINO_PLANTA,
+            CommissionStatus::EN_TRANSITO_DESTINO,
+            CommissionStatus::EN_PROCESO_ENTREGA,
+        ];
+
         // Actualizar la comisión
         $commission->update([
             'cadete_id' => null,
+            'status' => in_array($commission->status, $initialStatus) ? CommissionStatus::BUSCANDO_CADETE->value : $commission->status
         ]);
 
         // Notificar a todos los cadetes que hay una nueva comisión disponible
@@ -276,12 +287,24 @@ class CommissionCadeteController extends Controller
                 'date_to' => 'nullable|date|after_or_equal:date_from',
             ]);
 
+            $statusesAvailableToShow = [
+                CommissionStatus::SOLICITUD_RECIBIDA,
+                CommissionStatus::BUSCANDO_CADETE,
+                CommissionStatus::CADETE_ASIGNADO,
+                CommissionStatus::CADETE_EN_CAMINO_ORIGEN,
+                CommissionStatus::EN_PUNTO_RETIRO,
+                CommissionStatus::ENCOMIENDA_RETIRADA,
+                CommissionStatus::EN_CAMINO_PLANTA,
+                CommissionStatus::EN_PLANTA,
+                CommissionStatus::EN_TRANSITO_DESTINO,
+                CommissionStatus::EN_SUCURSAL_DESTINO,
+                CommissionStatus::EN_PROCESO_ENTREGA,
+            ];
+
             // Query base: comisiones sin cadete asignado y del branch_id del usuario
             $query = Commission::whereNull('cadete_id')
                 ->where('branch_id', $currentUser->branch_id)
-                ->where('status', '!=', CommissionStatus::CANCELADO)
-                ->where('status', '!=', CommissionStatus::ENTREGADO)
-                ->where('status', '!=', CommissionStatus::DEVUELTO_REMITENTE);
+                ->whereIn('status', $statusesAvailableToShow);
 
             // Aplicar filtros opcionales
             if (isset($validated['status'])) {
@@ -420,10 +443,18 @@ class CommissionCadeteController extends Controller
                 ], 400);
             }
 
+            $initialStatus = [
+                CommissionStatus::BUSCANDO_CADETE,
+                CommissionStatus::SOLICITUD_RECIBIDA,
+                CommissionStatus::CADETE_ASIGNADO,
+                CommissionStatus::CADETE_EN_CAMINO_ORIGEN,
+                CommissionStatus::EN_PUNTO_RETIRO
+            ];
+
             // Asignar la comisión al cadete autenticado, mantener el estado actual
             $commission->update([
                 'cadete_id' => $currentUser->id,
-                'status' => $commission->status === CommissionStatus::BUSCANDO_CADETE ? CommissionStatus::CADETE_ASIGNADO->value : $commission->status
+                'status' => in_array($commission->status, $initialStatus) ? CommissionStatus::CADETE_ASIGNADO->value : $commission->status
             ]);
 
             // Crear notificación para el cadete
