@@ -351,5 +351,196 @@ class CollectionPoolController
             ], 500);
         }
     }
+
+    /**
+     * Obtiene los datos de un cliente específico con deuda
+     * Mantiene la misma estructura de datos que el endpoint index
+     */
+    public function show(int $id): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            // Verificar que el usuario tenga uno de los roles permitidos
+            $allowedRoles = [UserRole::ADMINISTRADOR, UserRole::COBRADOR, UserRole::MOSTRADOR];
+            if (!in_array($user->role, $allowedRoles)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permisos para acceder a este recurso',
+                ], 403);
+            }
+
+            // Verificar si la columna status existe antes de filtrar
+            $hasStatusColumn = \Schema::hasColumn('current_accounts', 'status');
+            
+            // Obtener el cliente y calcular su saldo
+            $customerWithBalance = Customer::select('customers.*')
+                ->selectSub(function ($query) use ($hasStatusColumn) {
+                    $subquery = $query->select('balance')
+                        ->from('current_accounts')
+                        ->whereColumn('current_accounts.customer_id', 'customers.id');
+                    
+                    // Solo filtrar por status si la columna existe
+                    if ($hasStatusColumn) {
+                        $subquery->where('status', CurrentAccountStatus::OK->value);
+                    }
+                    
+                    $subquery->orderBy('transaction_date', 'desc')
+                        ->orderBy('id', 'desc')
+                        ->limit(1);
+                }, 'current_balance')
+                ->where('customers.id', $id)
+                ->first();
+
+            if (!$customerWithBalance) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cliente no encontrado',
+                ], 404);
+            }
+
+            // Verificar si tiene deuda (aunque el endpoint puede devolver el cliente aunque no tenga deuda)
+            $balance = $customerWithBalance->current_balance ?? 0;
+
+            // Cargar relaciones necesarias
+            $customer = Customer::with(['branch:id,name', 'internalUser:id,name,email'])
+                ->find($id);
+
+            if (!$customer) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cliente no encontrado',
+                ], 404);
+            }
+
+            // Calcular total de movimientos pendientes de confirmar
+            $pendingAmount = 0;
+            if ($hasStatusColumn) {
+                $pendingTransactions = CurrentAccount::where('customer_id', $customer->id)
+                    ->where('status', CurrentAccountStatus::PENDIENTE->value)
+                    ->where('type', 'credit') // Solo créditos pendientes
+                    ->sum('amount');
+                $pendingAmount = (float) $pendingTransactions;
+            }
+
+            // Verificar si la columna type existe en la tabla commissions
+            $hasTypeColumn = Schema::hasColumn('commissions', 'type');
+            
+            // Obtener solo comisiones ORDINARIAS o EXTRAORDINARIAS con total > 0 y estado PAGO_VALIDACION
+            $commissionsQuery = Commission::with([
+                'items:id,commission_id,type,size,quantity,detail,unit_price,subtotal',
+                'destination:id,origin,destination,fixed_price',
+                'originLocation:id,name,address,origin,phone',
+                'destinationLocation:id,name,address,origin,phone',
+                'branch:id,name',
+            ])
+            ->where('client_id', $customer->id)
+            ->where('status', CommissionStatus::PAGO_VALIDACION->value)
+            ->where('total', '>', 0);
+            
+            // Solo filtrar por tipo si la columna existe
+            if ($hasTypeColumn) {
+                $commissionsQuery->whereIn('type', [CommissionType::ORDINARIA->value, CommissionType::EXTRAORDINARIA->value]);
+            }
+            
+            $commissions = $commissionsQuery
+                ->orderBy('date', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($commission) {
+                    return [
+                        'id' => $commission->id,
+                        'client_id' => $commission->client_id,
+                        'date' => $commission->date->format('Y-m-d'),
+                        'status' => $commission->status->value,
+                        'status_label' => $commission->status->getAdminStatus(),
+                        'type' => $commission->type?->value ?? null,
+                        'type_label' => $commission->type?->label() ?? null,
+                        'total' => (float) $commission->total,
+                        'payment_method' => $commission->payment_method?->value,
+                        'payment_method_label' => $commission->payment_method_label,
+                        'origin' => $commission->destination?->origin,
+                        'destination' => $commission->destination?->destination,
+                        'origin_location_id' => $commission->origin_location_id,
+                        'destination_location_id' => $commission->destination_location_id,
+                        'origin_location' => $commission->originLocation ? [
+                            'id' => $commission->originLocation->id,
+                            'name' => $commission->originLocation->name,
+                            'address' => $commission->originLocation->address,
+                            'city' => $commission->originLocation->origin,
+                            'phone' => $commission->originLocation->phone,
+                        ] : null,
+                        'destination_location' => $commission->destinationLocation ? [
+                            'id' => $commission->destinationLocation->id,
+                            'name' => $commission->destinationLocation->name,
+                            'address' => $commission->destinationLocation->address,
+                            'city' => $commission->destinationLocation->origin,
+                            'phone' => $commission->destinationLocation->phone,
+                        ] : null,
+                        'items' => $commission->items->map(function ($item) {
+                            return [
+                                'id' => $item->id,
+                                'type' => $item->type,
+                                'size' => $item->size,
+                                'quantity' => $item->quantity,
+                                'detail' => $item->detail,
+                                'unit_price' => (float) $item->unit_price,
+                                'subtotal' => (float) $item->subtotal,
+                            ];
+                        }),
+                        'branch' => $commission->branch ? [
+                            'id' => $commission->branch->id,
+                            'name' => $commission->branch->name,
+                        ] : null,
+                        'notes' => $commission->notes,
+                        'created_at' => $commission->created_at->toISOString(),
+                        'updated_at' => $commission->updated_at->toISOString(),
+                    ];
+                });
+
+            // Construir la respuesta con la misma estructura que index
+            $data = [
+                'id' => $customer->id,
+                'dni' => $customer->dni,
+                'name' => $customer->name,
+                'last_name' => $customer->last_name,
+                'full_name' => $customer->full_name,
+                'email' => $customer->email,
+                'mobile' => $customer->mobile,
+                'phone' => $customer->phone,
+                'address' => $customer->address,
+                'city' => $customer->city,
+                'branch' => $customer->branch ? [
+                    'id' => $customer->branch->id,
+                    'name' => $customer->branch->name,
+                ] : null,
+                'internal_user_id' => $customer->internal_user_id,
+                'is_assigned' => !is_null($customer->internal_user_id),
+                'internal_user' => $customer->internalUser ? [
+                    'id' => $customer->internalUser->id,
+                    'name' => $customer->internalUser->name,
+                    'email' => $customer->internalUser->email,
+                ] : null,
+                'current_balance' => (float) $balance,
+                'debt_amount' => abs((float) $balance),
+                'pending' => $pendingAmount,
+                'commissions' => $commissions,
+                'commissions_count' => $commissions->count(),
+            ];
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cliente obtenido correctamente',
+                'data' => $data,
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener el cliente',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }
 
