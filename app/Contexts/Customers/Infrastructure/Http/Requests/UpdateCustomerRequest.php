@@ -20,7 +20,7 @@ class UpdateCustomerRequest extends FormRequest
         $customerId = $this->route('customer');
 
         return [
-            'dni' => 'required|int|max:99999999|min:1000000|unique:customers,dni,' . $customerId,
+            'dni' => 'required|int|unique:customers,dni,' . $customerId,
             'name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'mobile' => 'nullable|string|max:20',
