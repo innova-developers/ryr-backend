@@ -11,6 +11,7 @@ use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
 use App\Services\FcmNotificationService;
+use App\Services\WhatsAppService;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\CurrentAccount;
 use App\Shared\Models\Destination;
@@ -26,7 +27,8 @@ readonly class CreateCommissionUseCase
         private CustomerRepository    $customerRepository,
         private DestinationRepository $destinationRepository,
         private CurrentAccountRepository $currentAccountRepository,
-        private FcmNotificationService $fcmNotificationService
+        private FcmNotificationService $fcmNotificationService,
+        private WhatsAppService $whatsAppService
     ) {
     }
 
@@ -64,6 +66,9 @@ readonly class CreateCommissionUseCase
             );
 
             $this->commissionRepository->createLog($logDto);
+
+            // Enviar WhatsApp al cliente cuando se crea la comisión
+            $this->sendWhatsAppOnCommissionCreated($commission->id);
 
             // Si el estado es BUSCANDO_CADETE, notificar a todos los cadetes de la sucursal
             if ($commissionStatus === CommissionStatus::BUSCANDO_CADETE) {
@@ -194,6 +199,83 @@ readonly class CreateCommissionUseCase
             // Log el error pero no fallar la transacción principal
             Log::error('Error al notificar cadetes sobre nueva comisión disponible (creación)', [
                 'commission_id' => $commission->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Envía WhatsApp al cliente cuando se crea una comisión
+     */
+    private function sendWhatsAppOnCommissionCreated(int $commissionId): void
+    {
+        try {
+            // Obtener la comisión con todas las relaciones necesarias
+            $commission = $this->commissionRepository->findById($commissionId);
+            
+            if (!$commission) {
+                Log::warning('No se pudo enviar WhatsApp de creación: comisión no encontrada', [
+                    'commission_id' => $commissionId,
+                ]);
+                return;
+            }
+
+            // Cargar relaciones necesarias
+            if (!$commission->relationLoaded('client')) {
+                $commission->load('client');
+            }
+            if (!$commission->relationLoaded('originLocation')) {
+                $commission->load('originLocation');
+            }
+            if (!$commission->relationLoaded('destinationLocation')) {
+                $commission->load('destinationLocation');
+            }
+
+            $customer = $commission->client;
+            
+            if (!$customer) {
+                Log::warning('No se pudo enviar WhatsApp de creación: cliente no encontrado', [
+                    'commission_id' => $commissionId,
+                ]);
+                return;
+            }
+
+            // Obtener teléfono del cliente
+            $phone = $customer->mobile ?: $customer->phone;
+            
+            if (!$phone) {
+                Log::info('No se envió WhatsApp de creación: cliente sin teléfono', [
+                    'commission_id' => $commissionId,
+                    'customer_id' => $customer->id,
+                ]);
+                return;
+            }
+
+            // Enviar WhatsApp usando el servicio existente
+            $success = $this->whatsAppService->sendCommissionCreatedNotification(
+                $phone,
+                $commissionId,
+                $customer->full_name,
+                $commission
+            );
+
+            if ($success) {
+                Log::info('WhatsApp de creación de comisión enviado', [
+                    'commission_id' => $commissionId,
+                    'customer_id' => $customer->id,
+                    'phone' => $phone,
+                ]);
+            } else {
+                Log::warning('No se pudo enviar WhatsApp de creación de comisión', [
+                    'commission_id' => $commissionId,
+                    'customer_id' => $customer->id,
+                    'phone' => $phone,
+                ]);
+            }
+        } catch (\Exception $e) {
+            // Log el error pero no fallar la transacción principal
+            Log::error('Error enviando WhatsApp de creación de comisión', [
+                'commission_id' => $commissionId,
                 'error' => $e->getMessage(),
             ]);
         }

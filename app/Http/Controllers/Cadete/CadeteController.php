@@ -590,6 +590,18 @@ class CadeteController extends Controller
      */
     public function deliveries(Request $request): JsonResponse
     {
+        return $this->getDeliveries($request, true);
+    }
+
+    /**
+     * Función privada común para obtener entregas con o sin filtro de estados en proceso
+     * 
+     * @param Request $request
+     * @param bool $filterInProcessStatuses Si es true, aplica filtro de estados en proceso cuando no se especifica status
+     * @return JsonResponse
+     */
+    private function getDeliveries(Request $request, bool $filterInProcessStatuses): JsonResponse
+    {
         $user = Auth::user();
         
         // Construir query base usando cadete_id directamente
@@ -607,9 +619,11 @@ class CadeteController extends Controller
         // Si se envía el parámetro status, no aplicar el filtro de estados en proceso
         if ($request->filled('status')) {
             $query->where('status', strtoupper($request->status));
-        } else {
+        } elseif ($filterInProcessStatuses) {
             // Solo mostrar comisiones en estados en proceso si no se filtra por estado específico
             $inProcessStatuses = [
+                CommissionStatus::SOLICITUD_RECIBIDA->value,
+                CommissionStatus::BUSCANDO_CADETE->value,
                 CommissionStatus::CADETE_ASIGNADO->value,
                 CommissionStatus::CADETE_EN_CAMINO_ORIGEN->value,
                 CommissionStatus::EN_PUNTO_RETIRO->value,
@@ -1782,5 +1796,13 @@ class CadeteController extends Controller
             ]);
             return null;
         }
+    }
+
+    /**
+     * GET /cadete/deliveries-history - Historial de entregas del cadete
+     */
+    public function deliveriesHistory(Request $request): JsonResponse
+    {
+        return $this->getDeliveries($request, false);
     }
 }

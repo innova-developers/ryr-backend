@@ -19,6 +19,7 @@ use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
 use App\Services\FcmNotificationService;
+use App\Services\WhatsAppService;
 use App\Shared\Enums\CommissionStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,6 +34,7 @@ class CommissionController extends Controller
     private DestinationRepository $destinationRepository;
     private CurrentAccountRepository $currentAccountRepository;
     private FcmNotificationService $fcmNotificationService;
+    private WhatsAppService $whatsAppService;
 
     public function __construct()
     {
@@ -41,6 +43,7 @@ class CommissionController extends Controller
         $this->destinationRepository = app(DestinationRepository::class);
         $this->currentAccountRepository = app(CurrentAccountRepository::class);
         $this->fcmNotificationService = app(FcmNotificationService::class);
+        $this->whatsAppService = app(WhatsAppService::class);
     }
 
     public function store(CreateCommissionRequest $request): JsonResponse
@@ -52,7 +55,8 @@ class CommissionController extends Controller
                 $this->customerRepository,
                 $this->destinationRepository,
                 $this->currentAccountRepository,
-                $this->fcmNotificationService
+                $this->fcmNotificationService,
+                $this->whatsAppService
             );
             $commission = $useCase($dto);
 

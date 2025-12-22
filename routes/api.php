@@ -203,6 +203,7 @@ Route::prefix('cadete')->middleware(['auth:sanctum', CadeteMiddleware::class])->
     Route::get('/profile', [App\Http\Controllers\Cadete\CadeteController::class, 'profile']);
     Route::put('/profile', [App\Http\Controllers\Cadete\CadeteController::class, 'updateProfile']);
     Route::get('/deliveries', [App\Http\Controllers\Cadete\CadeteController::class, 'deliveries']);
+    Route::get('/deliveries-history', [App\Http\Controllers\Cadete\CadeteController::class, 'deliveriesHistory']);
     Route::get('/shipments', [App\Http\Controllers\Cadete\CadeteController::class, 'shipments']); // Alias para compatibilidad
     Route::put('/deliveries/{id}', [App\Http\Controllers\Cadete\CadeteController::class, 'updateShipmentStatus']);
     Route::put('/shipments/{id}', [App\Http\Controllers\Cadete\CadeteController::class, 'updateShipmentStatus']); // Alias para compatibilidad

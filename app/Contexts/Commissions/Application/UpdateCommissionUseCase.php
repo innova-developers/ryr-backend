@@ -7,6 +7,7 @@ use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
 use App\Contexts\Commissions\Infrastructure\Mappers\CommissionMapper;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
+use App\Contexts\CurrentAccount\Application\DTO\UpdateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
@@ -77,6 +78,9 @@ readonly class UpdateCommissionUseCase
             if ($dto->items !== null && !empty($dto->items)) {
                 $this->commissionRepository->addItems($dto->id, $dto->items);
             }
+
+            // Actualizar el movimiento en cuenta corriente si existe (cuando se recalcula el total)
+            $this->updateCurrentAccountTransaction($dto->id, $recalculatedTotal, $dto->origin, $dto->destination);
 
             // Obtener el tipo de comisión antes de procesar el estado
             $commissionType = $existingCommission->type;
@@ -210,5 +214,36 @@ readonly class UpdateCommissionUseCase
         );
 
         $this->currentAccountRepository->create($currentAccountDTO);
+    }
+
+    /**
+     * Actualiza el movimiento en cuenta corriente asociado a una comisión cuando se recalcula el total
+     */
+    private function updateCurrentAccountTransaction(int $commissionId, float $newTotal, string $origin, string $destination): void
+    {
+        $reference = "COM-{$commissionId}";
+        $currentAccountTransaction = CurrentAccount::where('reference', $reference)->first();
+
+        if ($currentAccountTransaction) {
+            // Actualizar el monto y la descripción con el nuevo total
+            $updateDTO = new UpdateCurrentAccountDTO(
+                id: $currentAccountTransaction->id,
+                type: null,
+                amount: $newTotal,
+                description: "Comisión #{$commissionId} - {$origin} a {$destination}",
+                reference: null,
+                transactionDate: null,
+                paymentMethod: null,
+                observations: null,
+            );
+
+            $this->currentAccountRepository->update($updateDTO);
+
+            Log::info('Movimiento en cuenta corriente actualizado por recálculo de total', [
+                'commission_id' => $commissionId,
+                'reference' => $reference,
+                'new_total' => $newTotal,
+            ]);
+        }
     }
 }

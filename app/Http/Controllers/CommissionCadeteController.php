@@ -95,13 +95,11 @@ class CommissionCadeteController extends Controller
         $previousCadeteId = $commission->cadete_id;
 
         $initialStatus = [
+            CommissionStatus::SOLICITUD_RECIBIDA,
+            CommissionStatus::BUSCANDO_CADETE,
             CommissionStatus::CADETE_ASIGNADO,
             CommissionStatus::CADETE_EN_CAMINO_ORIGEN,
-            CommissionStatus::EN_PUNTO_RETIRO,
-            CommissionStatus::ENCOMIENDA_RETIRADA,
-            CommissionStatus::EN_CAMINO_PLANTA,
-            CommissionStatus::EN_TRANSITO_DESTINO,
-            CommissionStatus::EN_PROCESO_ENTREGA,
+            CommissionStatus::EN_PUNTO_RETIRO
         ];
 
         // Actualizar la comisión

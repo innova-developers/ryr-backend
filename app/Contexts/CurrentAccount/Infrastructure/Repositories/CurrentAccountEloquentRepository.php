@@ -8,6 +8,7 @@ use App\Contexts\CurrentAccount\Application\DTO\UpdateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Shared\Enums\CurrentAccountStatus;
 use App\Shared\Models\CurrentAccount;
+use App\Shared\Models\Customer;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class CurrentAccountEloquentRepository implements CurrentAccountRepository
@@ -190,6 +191,12 @@ class CurrentAccountEloquentRepository implements CurrentAccountRepository
 
         // Recalcular todos los balances del cliente porque ahora este crédito afecta el saldo
         $this->recalculateBalances($transaction->customer_id);
+
+        // Verificar si el saldo del cliente quedó en 0 y limpiar internal_user_id si es así
+        $customerBalance = $this->getCustomerBalance($transaction->customer_id);
+        if ($customerBalance == 0) {
+            Customer::where('id', $transaction->customer_id)->update(['internal_user_id' => null]);
+        }
 
         return $transaction->fresh();
     }

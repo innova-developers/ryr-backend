@@ -137,24 +137,31 @@ class WhatsAppService
             $message .= "📝 *Detalles:* {$details}\n\n";
         }
 
-        // Agregar información de ubicaciones si está disponible
-        if ($commission && $commission->originLocation && $commission->destinationLocation) {
-            $message .= "📍 *Ubicaciones:*\n\n";
-            $message .= "*Origen:*\n";
-            $message .= "• Nombre: {$commission->originLocation->name}\n";
-            $message .= "• Dirección: {$commission->originLocation->address}\n";
-            $message .= "• Ciudad: {$commission->originLocation->origin}\n";
-            $message .= "• Teléfono: {$commission->originLocation->phone}\n";
-            $message .= "• Horario: {$commission->originLocation->schedule}\n\n";
+        $message .= "🔍 Puedes hacer seguimiento de tu envío desde nuestra web:\n";
+        $message .= "{$trackingUrl}\n\n";
+        $message .= "También puedes acceder a tu panel de cliente para ver todos tus envíos y gestiones.\n\n";
+        $message .= "Gracias por confiar en RYR Comisiones! 🚛";
 
-            $message .= "*Destino:*\n";
-            $message .= "• Nombre: {$commission->destinationLocation->name}\n";
-            $message .= "• Dirección: {$commission->destinationLocation->address}\n";
-            $message .= "• Ciudad: {$commission->destinationLocation->origin}\n";
-            $message .= "• Teléfono: {$commission->destinationLocation->phone}\n";
-            $message .= "• Horario: {$commission->destinationLocation->schedule}\n\n";
-        }
+        return $this->sendMessage($phone, $message);
+    }
 
+    /**
+     * Envía WhatsApp al cliente cuando se crea una comisión
+     */
+    public function sendCommissionCreatedNotification(
+        string $phone,
+        int $commissionId,
+        string $customerName,
+        ?object $commission = null
+    ): bool {
+        $trackingUrl = config('app.url') . "/tracking/{$commissionId}";
+
+        $message = "🚚 *RYR Comisiones*\n\n";
+        $message .= "Hola {$customerName},\n\n";
+        $message .= "🏁 Tu comisión fue cargada a nuestro sistema con éxito!.\n\n";
+        $message .= "📋 *Envío #{$commissionId}*\n\n";
+
+    
         $message .= "🔍 Puedes hacer seguimiento de tu envío desde nuestra web:\n";
         $message .= "{$trackingUrl}\n\n";
         $message .= "También puedes acceder a tu panel de cliente para ver todos tus envíos y gestiones.\n\n";
