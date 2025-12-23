@@ -4,6 +4,7 @@ namespace App\Contexts\Commissions\Application;
 
 use App\Contexts\Commissions\Application\DTOs\UpdateCommissionDTO;
 use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
+use App\Contexts\Commissions\Application\DTOs\CommissionItemDTO;
 use App\Contexts\Commissions\Infrastructure\Mappers\CommissionMapper;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
@@ -13,6 +14,7 @@ use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\CommissionType;
+use App\Shared\Enums\CommissionItemSize;
 use App\Shared\Models\CurrentAccount;
 use App\Shared\Models\Location;
 use Illuminate\Support\Facades\Auth;
@@ -45,16 +47,19 @@ readonly class UpdateCommissionUseCase
             }
             $this->validateLocations($dto->originLocationId, $dto->destinationLocationId);
 
+            // Recalcular precios de items si faltan valores (cuando viene desde la app de cadetes)
+            $recalculatedItems = $this->recalculateItemsPrices($dto->items, $destination);
+
             // Recalcular el total: fixed_price de destination + suma de subtotales de items
             $itemsTotal = 0.0;
-            if ($dto->items !== null && !empty($dto->items)) {
-                foreach ($dto->items as $item) {
+            if ($recalculatedItems !== null && !empty($recalculatedItems)) {
+                foreach ($recalculatedItems as $item) {
                     $itemsTotal += $item->subtotal;
                 }
             }
             $recalculatedTotal = $destination->fixed_price + $itemsTotal;
 
-            // Crear un nuevo DTO con el total recalculado
+            // Crear un nuevo DTO con el total recalculado y los items con precios recalculados
             $updatedDto = new UpdateCommissionDTO(
                 id: $dto->id,
                 clientId: $dto->clientId,
@@ -62,7 +67,7 @@ readonly class UpdateCommissionUseCase
                 origin: $dto->origin,
                 destination: $dto->destination,
                 status: $dto->status,
-                items: $dto->items,
+                items: $recalculatedItems,
                 total: $recalculatedTotal,
                 originLocationId: $dto->originLocationId,
                 destinationLocationId: $dto->destinationLocationId,
@@ -73,10 +78,10 @@ readonly class UpdateCommissionUseCase
             // Actualizar la comisión con el total recalculado
             $this->commissionRepository->update($updatedDto, $destination->id);
             
-            // Eliminar items existentes y agregar los nuevos
+            // Eliminar items existentes y agregar los nuevos (con precios recalculados)
             $this->commissionRepository->deleteItems($dto->id);
-            if ($dto->items !== null && !empty($dto->items)) {
-                $this->commissionRepository->addItems($dto->id, $dto->items);
+            if ($recalculatedItems !== null && !empty($recalculatedItems)) {
+                $this->commissionRepository->addItems($dto->id, $recalculatedItems);
             }
 
             // Actualizar el movimiento en cuenta corriente si existe (cuando se recalcula el total)
@@ -245,5 +250,63 @@ readonly class UpdateCommissionUseCase
                 'new_total' => $newTotal,
             ]);
         }
+    }
+
+    /**
+     * Recalcula los precios de los items cuando faltan valores (unit_price o subtotal = 0)
+     * Esto ocurre cuando la actualización viene desde la app de cadetes que no tiene acceso a los precios
+     */
+    private function recalculateItemsPrices(?array $items, \App\Shared\Models\Destination $destination): ?array
+    {
+        if ($items === null || empty($items)) {
+            return $items;
+        }
+
+        $recalculatedItems = [];
+        foreach ($items as $item) {
+            $unitPrice = $item->unitPrice;
+            $subtotal = $item->subtotal;
+
+            // Si unit_price o subtotal son 0 o nulos, recalcular usando los precios del destination
+            if ($unitPrice <= 0 || $subtotal <= 0) {
+                // Solo recalcular si el item tiene tamaño (ORDINARIA)
+                if ($item->size !== null) {
+                    // Determinar el precio unitario según el tamaño
+                    if ($item->size === CommissionItemSize::SMALL) {
+                        $unitPrice = $destination->small_bulk_price;
+                    } elseif ($item->size === CommissionItemSize::LARGE) {
+                        $unitPrice = $destination->large_bulk_price;
+                    } else {
+                        // Si no es CHICO ni GRANDE, mantener el precio original o usar un valor por defecto
+                        $unitPrice = $unitPrice > 0 ? $unitPrice : 0;
+                    }
+
+                    // Recalcular el subtotal
+                    $subtotal = $unitPrice * $item->quantity;
+                } else {
+                    // Para items EXTRAORDINARIOS sin tamaño, mantener los valores originales
+                    // Si ambos son 0, mantenerlos en 0
+                    $unitPrice = $unitPrice > 0 ? $unitPrice : 0;
+                    $subtotal = $subtotal > 0 ? $subtotal : 0;
+                }
+            }
+
+            // Crear un nuevo DTO con los valores recalculados
+            $recalculatedItems[] = new CommissionItemDTO(
+                id: $item->id,
+                commissionId: $item->commissionId,
+                type: $item->type,
+                size: $item->size,
+                quantity: $item->quantity,
+                unitPrice: $unitPrice,
+                subtotal: $subtotal,
+                detail: $item->detail,
+                createdAt: $item->createdAt,
+                updatedAt: $item->updatedAt,
+                deletedAt: $item->deletedAt
+            );
+        }
+
+        return $recalculatedItems;
     }
 }
