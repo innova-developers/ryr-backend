@@ -72,7 +72,8 @@ readonly class UpdateCommissionUseCase
                 originLocationId: $dto->originLocationId,
                 destinationLocationId: $dto->destinationLocationId,
                 notes: $dto->notes,
-                aCuenta: $dto->aCuenta
+                aCuenta: $dto->aCuenta,
+                type: $dto->type
             );
 
             // Actualizar la comisión con el total recalculado

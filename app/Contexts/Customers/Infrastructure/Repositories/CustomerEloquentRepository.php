@@ -6,10 +6,12 @@ use App\Contexts\Customers\Application\DTO\CreateCustomerDTO;
 use App\Contexts\Customers\Application\DTO\GetCustomersFiltersDTO;
 use App\Contexts\Customers\Application\DTO\UpdateCustomerDTO;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
+use App\Shared\Enums\CurrentAccountStatus;
 use App\Shared\Enums\UserRole;
 use App\Shared\Models\Customer;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CustomerEloquentRepository implements CustomerRepository
 {
@@ -35,6 +37,49 @@ class CustomerEloquentRepository implements CustomerRepository
                   ->orWhere('email', 'like', '%' . $filters->search . '%')
                   ->orWhere('dni', 'like', '%' . $filters->search . '%')
                   ->orWhere('city', 'like', '%' . $filters->search . '%');
+            });
+        }
+
+        // Si resume=true, filtrar solo clientes con saldo != 0 en el rango de fechas
+        if ($filters && $filters->resume) {
+            // Construir parámetros para la subconsulta
+            $dateConditions = '';
+            $bindings = [CurrentAccountStatus::OK->value];
+            
+            if ($filters->dateFrom) {
+                $dateConditions .= 'AND ca2.transaction_date >= ?';
+                $bindings[] = $filters->dateFrom;
+            }
+            if ($filters->dateTo) {
+                $dateConditions .= 'AND ca2.transaction_date <= ?';
+                $bindings[] = $filters->dateTo;
+            }
+            
+            // Filtrar clientes que tengan un balance != 0 en el último registro del rango de fechas
+            $query->whereIn('customers.id', function ($subquery) use ($filters, $dateConditions, $bindings) {
+                $subquery->select('ca1.customer_id')
+                    ->from('current_accounts as ca1')
+                    ->where('ca1.status', CurrentAccountStatus::OK->value)
+                    ->where('ca1.balance', '!=', 0);
+                
+                // Aplicar filtro de rango de fechas si se proporciona
+                if ($filters->dateFrom) {
+                    $subquery->where('ca1.transaction_date', '>=', $filters->dateFrom);
+                }
+                if ($filters->dateTo) {
+                    $subquery->where('ca1.transaction_date', '<=', $filters->dateTo);
+                }
+                
+                // Filtrar solo el último registro por cliente en el rango de fechas
+                $subquery->whereRaw("ca1.id = (
+                    SELECT ca2.id 
+                    FROM current_accounts ca2 
+                    WHERE ca2.customer_id = ca1.customer_id 
+                    AND ca2.status = ?
+                    {$dateConditions}
+                    ORDER BY ca2.transaction_date DESC, ca2.id DESC 
+                    LIMIT 1
+                )", $bindings);
             });
         }
 

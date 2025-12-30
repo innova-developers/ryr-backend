@@ -92,6 +92,7 @@ class CommissionController extends Controller
                 'total' => $validatedData['total'] ?? $existingCommission->total,
                 'notes' => $validatedData['notes'] ?? $existingCommission->notes,
                 'a_cuenta' => $validatedData['a_cuenta'] ?? false,
+                'type' => $validatedData['type'] ?? $existingCommission->type->value,
             ];
             
             $dto = UpdateCommissionDTO::fromArray($data);

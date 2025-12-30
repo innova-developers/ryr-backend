@@ -69,6 +69,10 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission->notes = $dto->notes;
             $commission->origin_location_id = $dto->originLocationId;
             $commission->destination_location_id = $dto->destinationLocationId;
+            // Actualizar el tipo de comisión si se proporciona
+            if ($dto->type !== null) {
+                $commission->type = $dto->type;
+            }
             $commission->save();
         } catch (\Exception $e) {
             throw new \Exception('Error al actualizar comisión: ' . $e->getMessage());

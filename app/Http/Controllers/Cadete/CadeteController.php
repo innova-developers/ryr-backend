@@ -2,10 +2,16 @@
 
 namespace App\Http\Controllers\Cadete;
 
+use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
+use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
+use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
+use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Shared\Enums\CommissionItemSize;
 use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\CommissionType;
 use App\Shared\Models\Commission;
 use App\Shared\Models\CommissionLog;
+use App\Shared\Models\CurrentAccount;
 use App\Shared\Models\ShipmentLocation;
 use App\Shared\Models\Transport;
 use App\Shared\Models\User;
@@ -233,6 +239,9 @@ class CadeteController extends Controller
             $oldStatusValue = $oldStatus->value;
             $oldStatusLabel = $oldStatus->getCadeteStatus();
             
+            // Guardar el tipo de comisión antes de actualizar
+            $commissionType = $commission->type;
+            
             // Convertir el estado del cadete al estado administrativo
             $adminStatus = CommissionStatus::fromCadeteStatus($request->status);
             $newStatusValue = $adminStatus->value;
@@ -271,22 +280,6 @@ class CadeteController extends Controller
             // Si se marca como entregado y se proporcionan datos de firma, guardar la firma
             if (($request->status === 'Entregado' || $newStatusValue === CommissionStatus::ENTREGADO->value) 
                 && ($request->has('receiver_name') || $request->has('signature_image'))) {
-                // Verificar que no exista ya una firma para esta comisión
-                $existingSignature = DeliverySignature::where('commission_id', $commission->id)->first();
-                
-                if ($existingSignature) {
-                    \Log::warning('Cadete intentó crear firma duplicada', [
-                        'cadete_id' => $user->id,
-                        'commission_id' => $commission->id,
-                        'existing_signature_id' => $existingSignature->id
-                    ]);
-                    
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Ya existe una firma para esta comisión'
-                    ], 400);
-                }
-
                 // Crear la firma de entrega solo si se proporcionan datos
                 $signatureData = [
                     'commission_id' => $commission->id,
@@ -313,6 +306,52 @@ class CadeteController extends Controller
                     'receiver_phone' => $request->receiver_phone,
                     'has_signature' => !empty($request->signature_image)
                 ]);
+            }
+
+            // Si el nuevo estado es ENTREGADO, ejecutar el flujo de PENDIENTE_PAGO -> PAGO_VALIDACION
+            if ($adminStatus === CommissionStatus::ENTREGADO) {
+                // Obtener repositorios
+                $commissionRepository = app(CommissionsRepository::class);
+                $currentAccountRepository = app(CurrentAccountRepository::class);
+
+                // Cambiar estado a PENDIENTE_PAGO primero
+                $commissionRepository->updateStatus($commission->id, CommissionStatus::PENDIENTE_PAGO);
+                
+                // Crear log de cambio a PENDIENTE_PAGO
+                $logDto = new CreateCommissionLogDTO(
+                    commissionId: $commission->id,
+                    userId: Auth::id(),
+                    previousStatus: CommissionStatus::ENTREGADO->value,
+                    newStatus: CommissionStatus::PENDIENTE_PAGO->value,
+                    details: 'Comisión actualizada'
+                );
+                $commissionRepository->createLog($logDto);
+
+                // Si es ORDINARIA: automáticamente cambiar a PAGO_VALIDACION y crear movimiento
+                if ($commissionType === CommissionType::ORDINARIA) {
+                    // Actualizar estado a PAGO_VALIDACION
+                    $commissionRepository->updateStatus($commission->id, CommissionStatus::PAGO_VALIDACION);
+                    
+                    // Crear log del cambio automático a PAGO_VALIDACION
+                    $logDtoAuto = new CreateCommissionLogDTO(
+                        commissionId: $commission->id,
+                        userId: Auth::id(),
+                        previousStatus: CommissionStatus::PENDIENTE_PAGO->value,
+                        newStatus: CommissionStatus::PAGO_VALIDACION->value,
+                        details: 'Cambio automático a PAGO_VALIDACION (comisión ordinaria)'
+                    );
+                    $commissionRepository->createLog($logDtoAuto);
+
+                    // Obtener la comisión actualizada para crear el movimiento
+                    $updatedCommission = $commissionRepository->findById($commission->id);
+                    
+                    // Crear movimiento en cuenta corriente
+                    $this->createCurrentAccountTransaction($updatedCommission, $currentAccountRepository);
+                }
+                // Si es EXTRAORDINARIA: solo queda en PENDIENTE_PAGO (sin crear movimiento)
+                
+                // Refrescar la comisión para obtener el estado final actualizado
+                $commission->refresh();
             }
 
             // Log de confirmación de actualización
@@ -1804,5 +1843,43 @@ class CadeteController extends Controller
     public function deliveriesHistory(Request $request): JsonResponse
     {
         return $this->getDeliveries($request, false);
+    }
+
+    /**
+     * Crea una transacción en cuenta corriente por el monto de la comisión como saldo deudor
+     */
+    private function createCurrentAccountTransaction($commission, CurrentAccountRepository $currentAccountRepository): void
+    {
+        // Verificar si ya existe una transacción con esta referencia para evitar duplicados
+        $reference = "COM-{$commission->id}";
+        if (CurrentAccount::where('reference', $reference)->exists()) {
+            \Log::info('Transacción en cuenta corriente ya existe para esta comisión', [
+                'commission_id' => $commission->id,
+                'reference' => $reference,
+            ]);
+            return;
+        }
+
+        // Asegurar que la relación destination esté cargada
+        if (!$commission->relationLoaded('destination')) {
+            $commission->load('destination');
+        }
+
+        $origin = $commission->destination ? $commission->destination->origin : 'Origen';
+        $destination = $commission->destination ? $commission->destination->destination : 'Destino';
+
+        $currentAccountDTO = new CreateCurrentAccountDTO(
+            customerId: $commission->client_id,
+            type: 'debit', // Saldo negativo (deuda)
+            amount: $commission->total,
+            description: "Comisión #{$commission->id} - {$origin} a {$destination}",
+            reference: $reference,
+            transactionDate: $commission->date->format('Y-m-d'),
+            paymentMethod: null,
+            observations: "Comisión registrada a cuenta corriente como saldo deudor",
+            userId: Auth::id() ?? 1, // Usar ID 1 como fallback si no hay usuario autenticado
+        );
+
+        $currentAccountRepository->create($currentAccountDTO);
     }
 }
