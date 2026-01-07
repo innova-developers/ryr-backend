@@ -764,7 +764,7 @@ class CadeteController extends Controller
                 'created_at' => $commission->created_at->toISOString(),
                 'updated_at' => $commission->updated_at->toISOString(),
                 'notes' => $commission->notes ?? 'Sin notas adicionales',
-                'items_count' => $commission->items->count(),
+                'items_count' => $commission->items->sum('quantity') ?? 0,
                 'weight_kg' => $commission->items->sum('weight') ?? 0,
                 'dimensions' => $this->calculateDimensions($commission->items),
                 'signature_data' => $commission->deliverySignature ? [
