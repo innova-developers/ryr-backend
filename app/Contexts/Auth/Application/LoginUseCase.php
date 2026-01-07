@@ -46,7 +46,8 @@ class LoginUseCase
                     UserRole::ADMINISTRADOR, 
                     UserRole::MOSTRADOR, 
                     UserRole::CADETE,
-                    UserRole::CADETE_EXTERNO
+                    UserRole::CADETE_EXTERNO,
+                    UserRole::COBRADOR
                 ])) {
                     throw new InvalidScopeException($userRole->value, $scope);
                 }
