@@ -17,7 +17,7 @@ class UpdateCustomerRequest extends FormRequest
      */
     public function rules(): array
     {
-        $customerId = $this->route('customer');
+        $customerId = $this->route('id') ?? $this->route('customer');
 
         return [
             'dni' => 'required|int|unique:customers,dni,' . $customerId,

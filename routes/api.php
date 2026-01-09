@@ -99,7 +99,7 @@ Route::middleware(['auth:sanctum', 'adminOrCadete'])->group(function () {
     Route::get('customers/search', [CustomerController::class, 'search']);
     
     // Actualizar cliente (permitido para cobradores)
-    Route::put('/customers/{customer}', [CustomerController::class, 'update']);
+    Route::put('/customers/{id}', [CustomerController::class, 'update']);
     
     // Listado de usuarios (solo lectura para cadetes)
     Route::get('/users', [UserController::class, 'index']);
@@ -141,8 +141,8 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
     Route::get('/commissions/{commission}/assigned-cadete', [App\Http\Controllers\CommissionCadeteController::class, 'getAssignedCadete']);
     Route::get('/commissions/available', [App\Http\Controllers\CommissionCadeteController::class, 'getAvailableCommissions']);
 
-    // Clientes
-    Route::apiResource('customers', CustomerController::class);
+    // Clientes (excluyendo update que está en adminOrCadete para permitir cobradores)
+    Route::apiResource('customers', CustomerController::class)->except(['update']);
 
     // Cuenta corriente de clientes
     Route::prefix('customers/{customerId}/current-account')->group(function () {

@@ -29,7 +29,7 @@ class AdminOrCadeteMiddleware
             UserRole::COBRADOR
         ];
         
-        if (! in_array($user->role, $allowedRoles)) {
+        if (! in_array($user->role, $allowedRoles, true)) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
 
