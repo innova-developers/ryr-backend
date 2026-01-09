@@ -98,6 +98,9 @@ Route::middleware(['auth:sanctum', 'adminOrCadete'])->group(function () {
     // Búsqueda de clientes (necesaria para crear comisiones)
     Route::get('customers/search', [CustomerController::class, 'search']);
     
+    // Actualizar cliente (permitido para cobradores)
+    Route::put('/customers/{customer}', [CustomerController::class, 'update']);
+    
     // Listado de usuarios (solo lectura para cadetes)
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/users/{id}', [UserController::class, 'show']);
