@@ -20,12 +20,13 @@ class AdminOrCadeteMiddleware
             return response()->json(['message' => 'No autorizado'], 403);
         }
 
-        // Permitir acceso a administradores, mostradores y cadetes
+        // Permitir acceso a administradores, mostradores, cadetes y cobradores
         $allowedRoles = [
             UserRole::ADMINISTRADOR, 
             UserRole::MOSTRADOR, 
             UserRole::CADETE,
-            UserRole::CADETE_EXTERNO
+            UserRole::CADETE_EXTERNO,
+            UserRole::COBRADOR
         ];
         
         if (! in_array($user->role, $allowedRoles)) {

@@ -70,7 +70,7 @@ Route::post('/commissions/public', [App\Http\Controllers\Public\PublicCommission
 // Rutas públicas para clientes
 Route::post('/customers/public', [App\Http\Controllers\Public\PublicCustomerController::class, 'store']);
 
-// Rutas compartidas para administradores, mostradores y cadetes
+// Rutas compartidas para administradores, mostradores, cadetes y cobradores
 Route::middleware(['auth:sanctum', 'adminOrCadete'])->group(function () {
     // Nueva comisión
     Route::post('/commissions', [CommissionController::class, 'store']);
