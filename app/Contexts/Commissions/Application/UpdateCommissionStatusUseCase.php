@@ -111,13 +111,8 @@ class UpdateCommissionStatusUseCase
                     $this->createFailedDeliveryCommission($commission);
                 }
 
-                // Enviar notificaciones al cliente (email y WhatsApp)
-                $this->notificationService->notifyStatusChange(
-                    $commission,
-                    $previousStatus->value,
-                    $finalStatus,
-                    $details
-                );
+                // Enviar notificaciones al cliente (solo email, WhatsApp solo se envía al crear la comisión)
+                // El WhatsApp se envía únicamente cuando se crea la comisión (POST), no en cambios de estado
 
                 // Crear notificación push para el cadete
                 $this->pushNotificationService->createCommissionStatusNotification(

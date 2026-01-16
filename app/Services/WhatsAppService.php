@@ -161,7 +161,12 @@ class WhatsAppService
         $message .= "🏁 Tu comisión fue cargada a nuestro sistema con éxito!.\n\n";
         $message .= "📋 *Envío #{$commissionId}*\n\n";
 
-    
+        // Agregar notas si existen
+        if ($commission && isset($commission->notes) && !empty(trim($commission->notes))) {
+            $message .= "📝 *Mensaje:*\n";
+            $message .= trim($commission->notes) . "\n\n";
+        }
+
         $message .= "🔍 Puedes hacer seguimiento de tu envío desde nuestra web:\n";
         $message .= "{$trackingUrl}\n\n";
         $message .= "También puedes acceder a tu panel de cliente para ver todos tus envíos y gestiones.\n\n";

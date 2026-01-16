@@ -202,6 +202,7 @@ class CommissionController extends Controller
                 'created_at' => $commission['created_at'],
                 'updated_at' => $commission['updated_at'],
                 'items_count' => array_sum(array_column($commission['items'] ?? [], 'quantity')),
+                'notes' => $commission['notes'] ?? null,
                 'message' => 'Para más información, inicia sesión en tu cuenta de cliente.',
             ];
 
