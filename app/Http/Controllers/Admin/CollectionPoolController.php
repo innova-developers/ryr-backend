@@ -542,5 +542,119 @@ class CollectionPoolController
             ], 500);
         }
     }
+
+    /**
+     * Obtiene todas las transacciones pendientes de todos los clientes asignados
+     * en una sola llamada, optimizando el número de requests
+     */
+    public function getPendingTransactions(Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            
+            // Verificar que el usuario tenga uno de los roles permitidos
+            $allowedRoles = [UserRole::ADMINISTRADOR, UserRole::COBRADOR, UserRole::MOSTRADOR];
+            if (!in_array($user->role, $allowedRoles)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No tienes permisos para acceder a este recurso',
+                ], 403);
+            }
+
+            // Obtener parámetros de filtrado
+            $internalUserId = $request->input('internal_user_id');
+            
+            // Filtrar por sucursal según el rol del usuario
+            $branchId = $user->branch_id && in_array($user->role, [UserRole::MOSTRADOR, UserRole::COBRADOR]) 
+                ? $user->branch_id 
+                : $request->input('branch_id');
+
+            // Obtener IDs de clientes asignados con deuda
+            // Primero obtener clientes con deuda
+            $hasStatusColumn = \Schema::hasColumn('current_accounts', 'status');
+            
+            $customersWithBalance = Customer::select('customers.*')
+                ->selectSub(function ($query) use ($hasStatusColumn) {
+                    $subquery = $query->select('balance')
+                        ->from('current_accounts')
+                        ->whereColumn('current_accounts.customer_id', 'customers.id');
+                    
+                    if ($hasStatusColumn) {
+                        $subquery->where('status', CurrentAccountStatus::OK->value);
+                    }
+                    
+                    $subquery->orderBy('transaction_date', 'desc')
+                        ->orderBy('id', 'desc')
+                        ->limit(1);
+                }, 'current_balance')
+                ->havingRaw('COALESCE(current_balance, 0) < 0')
+                ->whereNotNull('internal_user_id');
+
+            // Filtrar por usuario interno específico
+            if ($internalUserId) {
+                $customersWithBalance->where('internal_user_id', $internalUserId);
+            } else if (!in_array($user->role, [UserRole::ADMINISTRADOR])) {
+                // Si no es admin, solo ver sus propios clientes asignados
+                $customersWithBalance->where('internal_user_id', $user->id);
+            }
+
+            // Filtrar por sucursal si aplica
+            if ($branchId) {
+                $customersWithBalance->where('branch_id', $branchId);
+            }
+
+            $customerIds = $customersWithBalance->pluck('id')->toArray();
+
+            if (empty($customerIds)) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [],
+                ], 200);
+            }
+
+            // Obtener todas las transacciones pendientes de estos clientes en una sola query
+            $pendingTransactions = CurrentAccount::with(['customer:id,name,last_name,dni', 'verifiedBy:id,name,email'])
+                ->whereIn('customer_id', $customerIds)
+                ->where('status', CurrentAccountStatus::PENDIENTE->value)
+                ->where('type', 'credit') // Solo créditos pueden estar pendientes
+                ->orderBy('transaction_date', 'desc')
+                ->orderBy('id', 'desc')
+                ->get()
+                ->map(function ($transaction) {
+                    return [
+                        'id' => $transaction->id,
+                        'customer_id' => $transaction->customer_id,
+                        'customer_name' => $transaction->customer ? ($transaction->customer->name . ' ' . $transaction->customer->last_name) : 'Cliente desconocido',
+                        'customer_dni' => $transaction->customer->dni ?? null,
+                        'type' => $transaction->type,
+                        'amount' => (float) $transaction->amount,
+                        'description' => $transaction->description,
+                        'reference' => $transaction->reference,
+                        'transaction_date' => $transaction->transaction_date->format('Y-m-d'),
+                        'payment_method' => $transaction->payment_method,
+                        'status' => $transaction->status,
+                        'created_at' => $transaction->created_at->toISOString(),
+                        'verified_by' => $transaction->verifiedBy ? [
+                            'name' => $transaction->verifiedBy->name,
+                            'email' => $transaction->verifiedBy->email,
+                        ] : null,
+                        'verified_at' => $transaction->verified_at ? $transaction->verified_at->toISOString() : null,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $pendingTransactions,
+            ], 200);
+        } catch (\Exception $e) {
+            \Log::error('Error en CollectionPoolController::getPendingTransactions: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener las transacciones pendientes: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }
 

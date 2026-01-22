@@ -120,6 +120,7 @@ Route::middleware(['auth:sanctum', 'adminOrCadete'])->group(function () {
     // Pool de cobranzas (clientes con deuda)
     Route::prefix('admin/collection-pool')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\CollectionPoolController::class, 'index']);
+        Route::get('/pending-transactions', [App\Http\Controllers\Admin\CollectionPoolController::class, 'getPendingTransactions']);
         Route::get('/{id}', [App\Http\Controllers\Admin\CollectionPoolController::class, 'show']);
     });
 });
