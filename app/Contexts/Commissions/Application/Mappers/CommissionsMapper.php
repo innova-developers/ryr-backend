@@ -164,7 +164,7 @@ class CommissionsMapper
                         'updated_at' => $item->updated_at ?? null,
                     ];
                 })->toArray() ?? [],
-                'logs' => optional($commission->logs)->map(function ($item) {
+                'logs' => optional($commission->logs)->sortByDesc('created_at')->map(function ($item) {
                     return [
                         'id' => $item->id ?? null,
                         'previous_status' => $item->previous_status ?? null,
@@ -174,7 +174,7 @@ class CommissionsMapper
                         'updated_at' => $item->updated_at ?? null,
                         'user' => optional($item->user)->name,
                     ];
-                })->toArray() ?? [],
+                })->values()->toArray() ?? [],
                 'signature_data' => $commission->deliverySignature ? [
                     'receiver_name' => $commission->deliverySignature->receiver_name,
                     'receiver_phone' => $commission->deliverySignature->receiver_phone,
