@@ -31,7 +31,13 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission = new Commission();
             $commission->client_id = $dto->clientId;
             $commission->destination_id = $destinationId;
-            $commission->date = $dto->date;
+            // Asegurar que la fecha no sea posterior a hoy
+            $commissionDate = $dto->date;
+            $today = new \DateTime();
+            if ($commissionDate > $today) {
+                $commissionDate = $today;
+            }
+            $commission->date = $commissionDate;
             $commission->status = $dto->status;
             $commission->type = $dto->type ?? CommissionType::ORDINARIA;
             $commission->user_id = $userId;
@@ -63,7 +69,13 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission = Commission::findOrFail($dto->id);
             $commission->client_id = $dto->clientId;
             $commission->destination_id = $destinationId;
-            $commission->date = $dto->date;
+            // Asegurar que la fecha no sea posterior a hoy
+            $commissionDate = $dto->date;
+            $today = new \DateTime();
+            if ($commissionDate > $today) {
+                $commissionDate = $today;
+            }
+            $commission->date = $commissionDate;
             $commission->status = $dto->status;
             $commission->total = $dto->total;
             $commission->notes = $dto->notes;
