@@ -14,6 +14,7 @@ use App\Contexts\CurrentAccount\Application\UseCases\GetCustomerTransactionsUseC
 use App\Contexts\CurrentAccount\Application\UseCases\UpdateCurrentAccountUseCase;
 use App\Contexts\CurrentAccount\Infrastructure\Http\Requests\CreateCurrentAccountRequest;
 use App\Contexts\CurrentAccount\Infrastructure\Http\Requests\UpdateCurrentAccountRequest;
+use App\Contexts\CurrentAccount\Infrastructure\Http\Resources\CurrentAccountResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -119,6 +120,11 @@ class CurrentAccountController extends Controller
         try {
             $filter = CurrentAccountFilterDTO::fromArray($request->all());
             $transactions = ($this->getTransactionsUseCase)($customerId, $filter);
+
+            // Usar Resource para asegurar que verified_by y verified_at se incluyan
+            $transactions->getCollection()->transform(function ($transaction) {
+                return new CurrentAccountResource($transaction);
+            });
 
             return response()->json($transactions);
         } catch (\Exception $e) {
