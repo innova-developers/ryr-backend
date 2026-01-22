@@ -26,6 +26,8 @@ class CurrentAccount extends Model
         'payment_method',
         'observations',
         'user_id',
+        'verified_by_user_id',
+        'verified_at',
     ];
 
     protected $casts = [
@@ -33,6 +35,7 @@ class CurrentAccount extends Model
         'balance' => 'decimal:2',
         'transaction_date' => 'date',
         'status' => CurrentAccountStatus::class,
+        'verified_at' => 'datetime',
     ];
 
     public function customer(): BelongsTo
@@ -43,6 +46,11 @@ class CurrentAccount extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function verifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by_user_id');
     }
 
     public function getFormattedAmountAttribute(): string
