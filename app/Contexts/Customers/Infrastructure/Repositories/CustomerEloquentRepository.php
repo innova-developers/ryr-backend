@@ -110,11 +110,8 @@ class CustomerEloquentRepository implements CustomerRepository
                         'city' => $customer->city,
                         'phone' => $customer->phone,
                         'is_premium' => $customer->is_premium,
-<<<<<<< HEAD
                         'auto_calculate_iva' => $customer->auto_calculate_iva,
-=======
                         'observations' => $customer->observations,
->>>>>>> dev
                         'user' => optional($customer->user),
                         'branch' => optional($customer->branch),
                         'balance' => $customer->current_balance,
@@ -145,11 +142,8 @@ class CustomerEloquentRepository implements CustomerRepository
                     'city' => $customer->city,
                     'phone' => $customer->phone,
                     'is_premium' => $customer->is_premium,
-<<<<<<< HEAD
                     'auto_calculate_iva' => $customer->auto_calculate_iva,
-=======
                     'observations' => $customer->observations,
->>>>>>> dev
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),
                     'balance' => $customer->current_balance,
@@ -250,12 +244,7 @@ class CustomerEloquentRepository implements CustomerRepository
 
     public function search(string $query): array
     {
-<<<<<<< HEAD
-        return Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'user_id', 'created_at')
-            ->with(['user:id,name'])
-            ->where(function ($q) use ($query) {
-=======
-        $searchQuery = Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id', 'observations', 'created_at')
+        $searchQuery = Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'user_id', 'observations', 'created_at')
             ->with(['user:id,name']);
 
         // Filtrar por sucursal según el rol del usuario
@@ -268,7 +257,6 @@ class CustomerEloquentRepository implements CustomerRepository
         }
 
         return $searchQuery->where(function ($q) use ($query) {
->>>>>>> dev
                 $q->where('name', 'like', "%{$query}%")
                     ->orWhere('last_name', 'like', "%{$query}%")
                     ->orWhere('email', 'like', "%{$query}%")
@@ -286,11 +274,8 @@ class CustomerEloquentRepository implements CustomerRepository
                     'city' => $customer->city,
                     'phone' => $customer->phone,
                     'is_premium' => $customer->is_premium,
-<<<<<<< HEAD
                     'auto_calculate_iva' => $customer->auto_calculate_iva,
-=======
                     'observations' => $customer->observations,
->>>>>>> dev
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),
                     'balance' => $customer->current_balance,
