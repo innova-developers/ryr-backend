@@ -6,8 +6,10 @@ use App\Contexts\Incomes\Application\DTOs\CreateIncomeDTO;
 use App\Contexts\Incomes\Application\DTOs\IncomeFilterDTO;
 use App\Contexts\Incomes\Application\DTOs\UpdateIncomeDTO;
 use App\Contexts\Incomes\Domain\Repositories\IncomesRepository;
+use App\Shared\Enums\UserRole;
 use App\Shared\Models\Income;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Auth;
 
 class IncomesEloquentRepository implements IncomesRepository
 {
@@ -29,7 +31,31 @@ class IncomesEloquentRepository implements IncomesRepository
             ->when($filterDTO->dateFrom, fn ($q) => $q->where('date', '>=', $filterDTO->dateFrom))
             ->when($filterDTO->dateTo, fn ($q) => $q->where('date', '<=', $filterDTO->dateTo))
             ->when($filterDTO->categoryId, fn ($q) => $q->where('income_category_id', $filterDTO->categoryId))
-            ->when($filterDTO->userId, fn ($q) => $q->where('user_id', $filterDTO->userId));
+            ->when($filterDTO->userId, fn ($q) => $q->where('user_id', $filterDTO->userId))
+            ->when($filterDTO->search, function ($q) use ($filterDTO) {
+                $searchTerm = '%' . $filterDTO->search . '%';
+                return $q->where(function ($query) use ($searchTerm) {
+                    $query->where('detail', 'LIKE', $searchTerm)
+                        ->orWhere('amount', 'LIKE', $searchTerm)
+                        ->orWhereHas('category', function ($categoryQuery) use ($searchTerm) {
+                            $categoryQuery->where('name', 'LIKE', $searchTerm);
+                        })
+                        ->orWhereHas('user', function ($userQuery) use ($searchTerm) {
+                            $userQuery->where('name', 'LIKE', $searchTerm);
+                        });
+                });
+            });
+
+        // Filtrar por sucursal según el rol del usuario
+        $user = Auth::user();
+        if ($user && $user->branch_id) {
+            // Cadetes, mostradores y administradores con sucursal solo ven ingresos de usuarios de su sucursal
+            if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
+                $query->whereHas('user', function ($q) use ($user) {
+                    $q->where('branch_id', $user->branch_id);
+                });
+            }
+        }
 
         return $query->get();
     }

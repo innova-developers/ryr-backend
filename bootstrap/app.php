@@ -4,6 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Console\Scheduling\Schedule;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -15,7 +16,17 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'isAdmin' => \App\Shared\Middleware\UserAdminMiddleware::class,
+            'adminOrCadete' => \App\Http\Middleware\AdminOrCadeteMiddleware::class,
+            'cadete' => \App\Http\Middleware\CadeteMiddleware::class,
+            'client.auth' => \App\Http\Middleware\ClientAuthMiddleware::class,
         ]);
+    })
+    ->withSchedule(function (Schedule $schedule) {
+        // Notificar a cadetes cuando un comercio está por cerrar (cada 5 minutos)
+        $schedule->command('cadetes:notify-location-closing')
+            ->everyFiveMinutes()
+            ->withoutOverlapping()
+            ->runInBackground();
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->render(function (AuthenticationException $e, $request) {

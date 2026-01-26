@@ -23,7 +23,7 @@ class CreateUserTest extends TestCase
         $branch = Branch::factory()->create();
         $payload = [
             'name' => 'Nuevo Usuario',
-            'email' => 'nuevo@ejemplo.com',
+            'email' => 'nuevo@ryrcomisiones.com',
             'password' => 'password123',
             'role' => UserRole::ADMINISTRADOR->value,
             'branch_id' => $branch->id,
@@ -35,9 +35,9 @@ class CreateUserTest extends TestCase
 
         $response = $this->actingAs($admin)->postJson('/api/users', $payload);
         $response->assertStatus(201)
-            ->assertJsonFragment(['email' => 'nuevo@ejemplo.com', 'branch_id' => $branch->id]);
+            ->assertJsonFragment(['email' => 'nuevo@ryrcomisiones.com', 'branch_id' => $branch->id]);
         $this->assertDatabaseHas('users', [
-            'email' => 'nuevo@ejemplo.com',
+            'email' => 'nuevo@ryrcomisiones.com',
             'branch_id' => $branch->id,
             'base_salary' => 5000.00,
             'commission_percentage' => 10.00,
@@ -50,7 +50,7 @@ class CreateUserTest extends TestCase
         $branch = Branch::factory()->create();
         $payload = [
             'name' => 'Usuario',
-            'email' => 'usuario@ejemplo.com',
+            'email' => 'usuario@ryrcomisiones.com',
             'password' => 'password123',
             'role' => UserRole::MOSTRADOR->value,
             'branch_id' => $branch->id,
@@ -63,7 +63,7 @@ class CreateUserTest extends TestCase
         $response = $this->actingAs($user)->postJson('/api/users', $payload);
         $response->assertStatus(403);
         $response->assertJson(['message' => 'No autorizado']);
-        $this->assertDatabaseMissing('users', ['email' => 'usuario@ejemplo.com']);
+        $this->assertDatabaseMissing('users', ['email' => 'usuario@ryrcomisiones.com']);
     }
 
     public function test_admin_cannot_create_user_with_invalid_data(): void
@@ -91,7 +91,7 @@ class CreateUserTest extends TestCase
         $branch = Branch::factory()->create();
         $payload = [
             'name' => 'Usuario Sin Salario',
-            'email' => 'sin-salario@ejemplo.com',
+            'email' => 'sin-salario@ryrcomisiones.com',
             'password' => 'password123',
             'role' => UserRole::MOSTRADOR->value,
             'branch_id' => $branch->id,
@@ -102,7 +102,7 @@ class CreateUserTest extends TestCase
         $response = $this->actingAs($admin)->postJson('/api/users', $payload);
         $response->assertStatus(201);
         $this->assertDatabaseHas('users', [
-            'email' => 'sin-salario@ejemplo.com',
+            'email' => 'sin-salario@ryrcomisiones.com',
             'base_salary' => null,
             'commission_percentage' => null,
         ]);
@@ -114,7 +114,7 @@ class CreateUserTest extends TestCase
         $branch = Branch::factory()->create();
         $payload = [
             'name' => 'Usuario',
-            'email' => 'usuario@ejemplo.com',
+            'email' => 'usuario@ryrcomisiones.com',
             'password' => 'password123',
             'role' => UserRole::MOSTRADOR->value,
             'branch_id' => $branch->id,

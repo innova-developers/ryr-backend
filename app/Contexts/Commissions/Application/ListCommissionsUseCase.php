@@ -16,6 +16,7 @@ class ListCommissionsUseCase
     public function __invoke(ListCommissionsFiltersDTO $filters): array
     {
         $result = $this->repository->findAllWithItems($filters);
+        $totals = $this->repository->getTotals($filters);
 
         return [
             'data' => CommissionsMapper::fromDomainToArray($result->items()),
@@ -24,6 +25,7 @@ class ListCommissionsUseCase
                 'last_page' => $result->lastPage(),
                 'per_page' => $result->perPage(),
                 'total' => $result->total(),
+                'totals' => $totals,
             ],
         ];
     }

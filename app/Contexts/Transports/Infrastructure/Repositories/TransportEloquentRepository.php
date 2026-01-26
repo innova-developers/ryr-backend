@@ -6,13 +6,26 @@ use App\Contexts\Transports\Application\DTOs\CreateTransportDTO;
 use App\Contexts\Transports\Application\DTOs\GetTransportsFiltersDTO;
 use App\Contexts\Transports\Application\DTOs\UpdateTransportDTO;
 use App\Contexts\Transports\Domain\Repositories\TransportRepository;
+use App\Shared\Enums\UserRole;
 use App\Shared\Models\Transport;
+use Illuminate\Support\Facades\Auth;
 
 class TransportEloquentRepository implements TransportRepository
 {
     public function findAll(?GetTransportsFiltersDTO $filters = null): array
     {
         $query = Transport::query();
+
+        // Filtrar por sucursal según el rol del usuario
+        $user = Auth::user();
+        if ($user && $user->branch_id) {
+            // Cadetes, mostradores y administradores con sucursal solo ven transportes de cadetes de su sucursal
+            if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
+                $query->whereHas('cadete', function ($q) use ($user) {
+                    $q->where('branch_id', $user->branch_id);
+                });
+            }
+        }
 
         // Aplicar filtro de búsqueda
         if ($filters && $filters->search) {

@@ -12,6 +12,8 @@ enum CommissionStatus: string
     case EN_PUNTO_RETIRO = 'EN_PUNTO_RETIRO';
     case ENCOMIENDA_RETIRADA = 'ENCOMIENDA_RETIRADA';
     case EN_CAMINO_PLANTA = 'EN_CAMINO_PLANTA';
+
+    case EN_PLANTA = 'EN_PLANTA';
     case EN_TRANSITO_DESTINO = 'EN_TRANSITO_DESTINO';
     case EN_SUCURSAL_DESTINO = 'EN_SUCURSAL_DESTINO';
     case EN_PROCESO_ENTREGA = 'EN_PROCESO_ENTREGA';
@@ -20,6 +22,7 @@ enum CommissionStatus: string
     
     // Estados de incidencia
     case INTENTO_ENTREGA_FALLIDO = 'INTENTO_ENTREGA_FALLIDO';
+    case INTENTO_RETIRO_FALLIDO = 'INTENTO_RETIRO_FALLIDO';
     case REPROGRAMANDO_ENTREGA = 'REPROGRAMANDO_ENTREGA';
     case DISPONIBLE_RETIRO = 'DISPONIBLE_RETIRO';
     case EN_DEVOLUCION = 'EN_DEVOLUCION';
@@ -31,6 +34,8 @@ enum CommissionStatus: string
     case PENDIENTE_PAGO = 'PENDIENTE_PAGO';
     case PAGO_VALIDACION = 'PAGO_VALIDACION';
     case PAGO_CONFIRMADO = 'PAGO_CONFIRMADO';
+
+    case EN_SUCURSAL = 'EN_SUCURSAL';
 
     /**
      * Obtiene el estado para mostrar al cadete
@@ -51,6 +56,7 @@ enum CommissionStatus: string
             
             // Estados de incidencia que puede reportar el cadete
             self::INTENTO_ENTREGA_FALLIDO => 'Intento de entrega fallido',
+            self::INTENTO_RETIRO_FALLIDO => 'Intento de retiro fallido',
             self::REPROGRAMANDO_ENTREGA => 'Reprogramando entrega',
             self::DISPONIBLE_RETIRO => 'Disponible para retiro en sucursal',
             self::EN_DEVOLUCION => 'En devolución al remitente',
@@ -60,6 +66,8 @@ enum CommissionStatus: string
             self::SOLICITUD_RECIBIDA, self::BUSCANDO_CADETE, 
             self::PENDIENTE_PAGO, self::PAGO_VALIDACION, self::PAGO_CONFIRMADO,
             self::EN_SUCURSAL_DESTINO, self::CANCELADO, self::EN_ANALISIS => 'En proceso',
+            self::EN_SUCURSAL => 'En sucursal',
+            self::EN_PLANTA => 'En planta',
         };
     }
 
@@ -88,12 +96,15 @@ enum CommissionStatus: string
             
             // Estados de incidencia
             self::INTENTO_ENTREGA_FALLIDO => 'Intento de entrega fallido',
+            self::INTENTO_RETIRO_FALLIDO => 'Intento de retiro fallido',
             self::REPROGRAMANDO_ENTREGA => 'Reprogramando entrega',
             self::DISPONIBLE_RETIRO => 'Disponible para retiro',
             self::EN_DEVOLUCION => 'En devolución',
             self::DEVUELTO_REMITENTE => 'Devuelto al remitente',
             self::CANCELADO => 'Cancelado',
             self::EN_ANALISIS => 'En análisis',
+            self::EN_SUCURSAL => 'En sucursal',
+            self::EN_PLANTA => 'En planta',
         };
     }
 
@@ -122,12 +133,15 @@ enum CommissionStatus: string
             
             // Estados de incidencia
             self::INTENTO_ENTREGA_FALLIDO => 'Intento de entrega fallido',
+            self::INTENTO_RETIRO_FALLIDO => 'Intento de retiro fallido',
             self::REPROGRAMANDO_ENTREGA => 'Reprogramando entrega',
             self::DISPONIBLE_RETIRO => 'Disponible para retiro',
             self::EN_DEVOLUCION => 'En devolución',
             self::DEVUELTO_REMITENTE => 'Devuelto al remitente',
             self::CANCELADO => 'Cancelado',
             self::EN_ANALISIS => 'En análisis',
+            self::EN_SUCURSAL => 'En sucursal',
+            self::EN_PLANTA => 'En planta',
         };
     }
 
@@ -159,12 +173,14 @@ enum CommissionStatus: string
             
             // Estados de incidencia que puede reportar el cadete
             'Intento de entrega fallido' => self::INTENTO_ENTREGA_FALLIDO,
+            'Intento de retiro fallido' => self::INTENTO_RETIRO_FALLIDO,
             'Reprogramando entrega' => self::REPROGRAMANDO_ENTREGA,
             'Disponible para retiro en sucursal' => self::DISPONIBLE_RETIRO,
             'En devolución al remitente' => self::EN_DEVOLUCION,
             'Devuelto al remitente' => self::DEVUELTO_REMITENTE,
+            'En sucursal' => self::EN_SUCURSAL,
+            'En planta' => self::EN_PLANTA,
             
-            default => throw new \InvalidArgumentException("Estado del cadete no válido: {$cadeteStatus}")
         };
     }
 
@@ -185,10 +201,12 @@ enum CommissionStatus: string
             self::ENTREGADO->value,
             self::RETIRADO_SUCURSAL->value,
             self::INTENTO_ENTREGA_FALLIDO->value,
+            self::INTENTO_RETIRO_FALLIDO->value,
             self::REPROGRAMANDO_ENTREGA->value,
             self::DISPONIBLE_RETIRO->value,
             self::EN_DEVOLUCION->value,
             self::DEVUELTO_REMITENTE->value,
+            self::EN_PLANTA->value,
         ];
 
         $labels = [
@@ -202,10 +220,13 @@ enum CommissionStatus: string
             'Entregado',
             'Retirado en sucursal',
             'Intento de entrega fallido',
+            'Intento de retiro fallido',
             'Reprogramando entrega',
             'Disponible para retiro en sucursal',
             'En devolución al remitente',
-            'Devuelto al remitente'
+            'Devuelto al remitente',
+            'En sucursal',
+            'En planta',
         ];
 
         return array_merge($enumValues, $labels);

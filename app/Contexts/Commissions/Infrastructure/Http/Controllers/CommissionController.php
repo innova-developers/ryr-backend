@@ -5,15 +5,21 @@ namespace App\Contexts\Commissions\Infrastructure\Http\Controllers;
 use App\Contexts\Commissions\Application\CreateCommissionUseCase;
 use App\Contexts\Commissions\Application\DeleteCommissionUseCase;
 use App\Contexts\Commissions\Application\DTOs\CreateCommissionDTO;
+use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
 use App\Contexts\Commissions\Application\DTOs\ListCommissionsFiltersDTO;
+use App\Contexts\Commissions\Application\DTOs\UpdateCommissionDTO;
 use App\Contexts\Commissions\Application\GetCommissionUseCase;
 use App\Contexts\Commissions\Application\ListCommissionsUseCase;
 use App\Contexts\Commissions\Application\UpdateCommissionStatusUseCase;
+use App\Contexts\Commissions\Application\UpdateCommissionUseCase;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Contexts\Commissions\Infrastructure\Http\Requests\CreateCommissionRequest;
+use App\Contexts\Commissions\Infrastructure\Http\Requests\UpdateCommissionRequest;
 use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
+use App\Services\FcmNotificationService;
+use App\Services\WhatsAppService;
 use App\Shared\Enums\CommissionStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,6 +33,8 @@ class CommissionController extends Controller
     private CustomerRepository $customerRepository;
     private DestinationRepository $destinationRepository;
     private CurrentAccountRepository $currentAccountRepository;
+    private FcmNotificationService $fcmNotificationService;
+    private WhatsAppService $whatsAppService;
 
     public function __construct()
     {
@@ -34,6 +42,8 @@ class CommissionController extends Controller
         $this->customerRepository = app(CustomerRepository::class);
         $this->destinationRepository = app(DestinationRepository::class);
         $this->currentAccountRepository = app(CurrentAccountRepository::class);
+        $this->fcmNotificationService = app(FcmNotificationService::class);
+        $this->whatsAppService = app(WhatsAppService::class);
     }
 
     public function store(CreateCommissionRequest $request): JsonResponse
@@ -44,7 +54,9 @@ class CommissionController extends Controller
                 $this->repository,
                 $this->customerRepository,
                 $this->destinationRepository,
-                $this->currentAccountRepository
+                $this->currentAccountRepository,
+                $this->fcmNotificationService,
+                $this->whatsAppService
             );
             $commission = $useCase($dto);
 
@@ -52,6 +64,57 @@ class CommissionController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error al crear la comisión',
+                'error' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    public function update(UpdateCommissionRequest $request, int $id): JsonResponse
+    {
+        try {
+            // Obtener la comisión existente
+            $existingCommission = $this->repository->findById($id);
+            
+            // Obtener datos validados del request
+            $validatedData = $request->validated();
+            
+            // Combinar datos existentes con los nuevos datos
+            $data = [
+                'id' => $id,
+                'client_id' => $validatedData['client_id'] ?? $existingCommission->client_id,
+                'date' => $validatedData['date'] ?? $existingCommission->date->format('Y-m-d'),
+                'origin' => $validatedData['origin'] ?? $existingCommission->destination->origin,
+                'destination' => $validatedData['destination'] ?? $existingCommission->destination->destination,
+                'status' => $validatedData['status'] ?? $existingCommission->status->value,
+                'origin_location_id' => $validatedData['origin_location_id'] ?? $existingCommission->origin_location_id,
+                'destination_location_id' => $validatedData['destination_location_id'] ?? $existingCommission->destination_location_id,
+                'items' => $validatedData['items'] ?? null,
+                'total' => $validatedData['total'] ?? $existingCommission->total,
+                'notes' => $validatedData['notes'] ?? $existingCommission->notes,
+                'a_cuenta' => $validatedData['a_cuenta'] ?? false,
+                'type' => $validatedData['type'] ?? $existingCommission->type->value,
+            ];
+            
+            $dto = UpdateCommissionDTO::fromArray($data);
+            $useCase = new UpdateCommissionUseCase(
+                $this->repository,
+                $this->customerRepository,
+                $this->destinationRepository,
+                $this->currentAccountRepository
+            );
+            $commission = $useCase($dto);
+
+            return response()->json($commission, 200);
+        } catch (\Exception $e) {
+            if (str_contains($e->getMessage(), 'Comisión no encontrada')) {
+                return response()->json([
+                    'message' => 'Comisión no encontrada',
+                    'error' => $e->getMessage(),
+                ], 404);
+            }
+
+            return response()->json([
+                'message' => 'Error al actualizar la comisión',
                 'error' => $e->getMessage(),
             ], 400);
         }
@@ -118,7 +181,7 @@ class CommissionController extends Controller
             // Información pública limitada para tracking
             $publicData = [
                 'tracking_id' => $commission['id'],
-                'tracking_number' => 'RYR' . str_pad($commission['id'], 9, '0', STR_PAD_LEFT),
+                'tracking_number' => $commission['id'],
                 'status' => $commission['status'],
                 'status_label' => $commission['status_label'] ?? null,
                 'origin' => [
@@ -138,7 +201,9 @@ class CommissionController extends Controller
                 'date' => $commission['date'],
                 'created_at' => $commission['created_at'],
                 'updated_at' => $commission['updated_at'],
-                'items_count' => count($commission['items'] ?? []),
+                'items_count' => array_sum(array_column($commission['items'] ?? [], 'quantity')),
+                'notes' => $commission['notes'] ?? null,
+                'logs' => $commission['logs'] ?? [], // Incluir logs para mostrar historial
                 'message' => 'Para más información, inicia sesión en tu cuenta de cliente.',
             ];
 
@@ -196,10 +261,58 @@ class CommissionController extends Controller
                 'commission' => [
                     'id' => $commission->id,
                     'status' => $commission->status,
-                    'branch' => [
+                    'branch' => $branch ? [
                         'id' => $branch->id,
                         'name' => $branch->name,
-                    ],
+                    ] : null,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            if (str_contains($e->getMessage(), 'Comisión no encontrada')) {
+                return response()->json(['error' => $e->getMessage()], 404);
+            }
+
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updateBranch(int $id, Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'branch_id' => ['required', 'integer', 'exists:branches,id'],
+            ]);
+
+            $commission = $this->repository->findById($id);
+            if (!$commission) {
+                return response()->json([
+                    'message' => 'Comisión no encontrada',
+                ], 404);
+            }
+
+            $oldBranchId = $commission->branch_id;
+            $commission->branch_id = $validated['branch_id'];
+            $commission->save();
+            
+            // Obtener nombre de la sucursal para el log
+            $branch = \App\Shared\Models\Branch::find($validated['branch_id']);
+            $branchName = $branch ? $branch->name : "ID {$validated['branch_id']}";
+
+            // Crear log de la actualización
+            $logDTO = new CreateCommissionLogDTO(
+                commissionId: $id,
+                userId: Auth::id() ?? 1,
+                previousStatus: $commission->status->value,
+                newStatus: $commission->status->value,
+                details: "Sucursal actualizada de ID {$oldBranchId} a: {$branchName} (ID: {$validated['branch_id']})"
+            );
+            $this->repository->createLog($logDTO);
+
+            return response()->json([
+                'message' => 'Sucursal de la comisión actualizada correctamente',
+                'commission' => [
+                    'id' => $commission->id,
+                    'branch_id' => $commission->branch_id,
                 ],
             ]);
         } catch (\Exception $e) {

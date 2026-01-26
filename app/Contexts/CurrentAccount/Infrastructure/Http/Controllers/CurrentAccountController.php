@@ -5,6 +5,7 @@ namespace App\Contexts\CurrentAccount\Infrastructure\Http\Controllers;
 use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Application\DTO\CurrentAccountFilterDTO;
 use App\Contexts\CurrentAccount\Application\DTO\UpdateCurrentAccountDTO;
+use App\Contexts\CurrentAccount\Application\UseCases\ConfirmTransactionUseCase;
 use App\Contexts\CurrentAccount\Application\UseCases\CreateCurrentAccountUseCase;
 use App\Contexts\CurrentAccount\Application\UseCases\DeleteCurrentAccountUseCase;
 use App\Contexts\CurrentAccount\Application\UseCases\GetCurrentAccountUseCase;
@@ -13,6 +14,7 @@ use App\Contexts\CurrentAccount\Application\UseCases\GetCustomerTransactionsUseC
 use App\Contexts\CurrentAccount\Application\UseCases\UpdateCurrentAccountUseCase;
 use App\Contexts\CurrentAccount\Infrastructure\Http\Requests\CreateCurrentAccountRequest;
 use App\Contexts\CurrentAccount\Infrastructure\Http\Requests\UpdateCurrentAccountRequest;
+use App\Contexts\CurrentAccount\Infrastructure\Http\Resources\CurrentAccountResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -26,6 +28,7 @@ class CurrentAccountController extends Controller
         private readonly GetCurrentAccountUseCase $getUseCase,
         private readonly GetCustomerTransactionsUseCase $getTransactionsUseCase,
         private readonly GetCustomerBalanceUseCase $getBalanceUseCase,
+        private readonly ConfirmTransactionUseCase $confirmTransactionUseCase,
     ) {
     }
 
@@ -118,6 +121,11 @@ class CurrentAccountController extends Controller
             $filter = CurrentAccountFilterDTO::fromArray($request->all());
             $transactions = ($this->getTransactionsUseCase)($customerId, $filter);
 
+            // Usar Resource para asegurar que verified_by y verified_at se incluyan
+            $transactions->getCollection()->transform(function ($transaction) {
+                return new CurrentAccountResource($transaction);
+            });
+
             return response()->json($transactions);
         } catch (\Exception $e) {
             return response()->json([
@@ -140,6 +148,29 @@ class CurrentAccountController extends Controller
             return response()->json([
                 'message' => 'Error al obtener el saldo: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Confirma un ingreso pendiente (cambia el estado de PENDIENTE a OK)
+     */
+    public function confirmTransaction(int $id): JsonResponse
+    {
+        try {
+            $transaction = ($this->confirmTransactionUseCase)($id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Ingreso confirmado correctamente',
+                'data' => $transaction,
+            ], 200);
+        } catch (\Exception $e) {
+            $statusCode = str_contains($e->getMessage(), 'no encontrada') ? 404 : 400;
+            
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], $statusCode);
         }
     }
 }

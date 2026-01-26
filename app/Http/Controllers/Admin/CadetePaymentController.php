@@ -222,6 +222,14 @@ class CadetePaymentController extends Controller
                 'reference_number' => $payment->reference_number,
                 'transaction_id' => $payment->transaction_id,
                 'paid_at' => $payment->paid_at,
+                'payment_proof' => $payment->hasPaymentProof() ? [
+                    'filename' => $payment->payment_proof_filename,
+                    'url' => $payment->payment_proof_url,
+                    'mime_type' => $payment->payment_proof_mime_type,
+                    'size' => $payment->payment_proof_size,
+                    'size_formatted' => $payment->payment_proof_size_formatted,
+                    'uploaded_at' => $payment->payment_proof_uploaded_at,
+                ] : null,
                 'cadete' => $payment->cadete,
                 'admin' => $payment->admin,
                 'created_at' => $payment->created_at,
@@ -327,8 +335,15 @@ class CadetePaymentController extends Controller
     /**
      * PATCH /api/admin/cadete-payments/{id}/mark-as-paid - Marcar como pagado
      */
-    public function markAsPaid(int $id): JsonResponse
+    public function markAsPaid(Request $request, int $id): JsonResponse
     {
+        // Validar los campos del request
+        $request->validate([
+            'receipt' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240', // Máximo 10MB
+            'transaction_id' => 'nullable|string|max:100',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
         // Buscar el pago manualmente
         $payment = CadetePayment::find($id);
 
@@ -346,11 +361,42 @@ class CadetePaymentController extends Controller
             ], 400);
         }
 
-        $payment->markAsPaid();
+        // Procesar el archivo si se envía
+        $paymentProofData = null;
+        if ($request->hasFile('receipt')) {
+            $file = $request->file('receipt');
+            
+            // Generar nombre único para el archivo
+            $filename = time() . '_' . $file->getClientOriginalName();
+            
+            // Guardar el archivo en storage/app/public/payment_proofs
+            $path = $file->storeAs('payment_proofs', $filename, 'public');
+            
+            $paymentProofData = [
+                'payment_proof_filename' => $file->getClientOriginalName(),
+                'payment_proof_path' => $path,
+                'payment_proof_mime_type' => $file->getMimeType(),
+                'payment_proof_size' => $file->getSize(),
+                'payment_proof_uploaded_at' => now(),
+            ];
+        }
+
+        // Preparar datos adicionales del pago
+        $additionalData = [];
+        if ($request->filled('transaction_id')) {
+            $additionalData['transaction_id'] = $request->transaction_id;
+        }
+        if ($request->filled('notes')) {
+            $additionalData['notes'] = $request->notes;
+        }
+
+        // Marcar como pagado con o sin comprobante
+        $payment->markAsPaid($paymentProofData, $additionalData);
 
         return response()->json([
             'success' => true,
-            'message' => 'Pago marcado como pagado exitosamente',
+            'message' => 'Pago marcado como pagado exitosamente' . 
+                         ($paymentProofData ? ' con comprobante adjunto' : ''),
             'data' => $payment->fresh(['cadete:id,name,email', 'admin:id,name,email'])
         ]);
     }
@@ -709,5 +755,39 @@ class CadetePaymentController extends Controller
             'commission_based' => 'Comisión Pura',
             default => $contractType,
         };
+    }
+
+    /**
+     * GET /api/admin/cadete-payments/{id}/download-proof - Descargar comprobante de pago
+     */
+    public function downloadProof(int $id)
+    {
+        // Buscar el pago manualmente
+        $payment = CadetePayment::find($id);
+
+        if (!$payment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pago no encontrado'
+            ], 404);
+        }
+
+        if (!$payment->hasPaymentProof()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este pago no tiene comprobante de pago'
+            ], 404);
+        }
+
+        $filePath = storage_path('app/public/' . $payment->payment_proof_path);
+        
+        if (!file_exists($filePath)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El archivo del comprobante no se encuentra'
+            ], 404);
+        }
+
+        return response()->download($filePath, $payment->payment_proof_filename);
     }
 }

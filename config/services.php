@@ -41,4 +41,16 @@ return [
         'token' => env('WHATSAPP_API_TOKEN'),
     ],
 
+    'google_maps' => [
+        'api_key' => env('GOOGLE_MAPS_API_KEY'),
+    ],
+
+    'firebase' => [
+        'credentials_path' => env('FIREBASE_CREDENTIALS_PATH', storage_path('app/firebase-credentials.json')),
+    ],
+
+    'groq' => [
+        'api_key' => env('GROQ_API_KEY'),
+    ],
+
 ];

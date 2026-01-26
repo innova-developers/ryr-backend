@@ -3,6 +3,8 @@
 namespace App\Shared\Models;
 
 use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\CommissionType;
+use App\Shared\Enums\PaymentMethod;
 use App\DeliverySignature;
 use Database\Factories\CommissionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,7 +25,10 @@ class Commission extends Model
         'branch_id',
         'date',
         'status',
+        'type',
+        'payment_method',
         'total',
+        'notes',
         'user_id',
         'origin_location_id',
         'destination_location_id',
@@ -34,6 +39,8 @@ class Commission extends Model
     protected $casts = [
         'date' => 'date',
         'status' => CommissionStatus::class,
+        'type' => CommissionType::class,
+        'payment_method' => PaymentMethod::class,
         'total' => 'decimal:2',
     ];
 
@@ -90,6 +97,11 @@ class Commission extends Model
     public function deliverySignature(): HasOne
     {
         return $this->hasOne(DeliverySignature::class);
+    }
+
+    public function getPaymentMethodLabelAttribute(): ?string
+    {
+        return $this->payment_method?->label();
     }
 
     public static function newFactory(): CommissionFactory

@@ -3,6 +3,7 @@
 namespace App\Contexts\Commissions\Application\DTOs;
 
 use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\CommissionType;
 use DateTime;
 
 class CreateCommissionDTO
@@ -13,11 +14,13 @@ class CreateCommissionDTO
         public readonly string $origin,
         public readonly string $destination,
         public readonly CommissionStatus $status,
-        public readonly array $items,
+        public readonly ?array $items,
         public readonly float $total,
         public readonly int $originLocationId,
         public readonly int $destinationLocationId,
-        public readonly bool $aCuenta = false
+        public readonly ?string $notes = null,
+        public readonly bool $aCuenta = false,
+        public readonly ?CommissionType $type = null
     ) {
     }
 
@@ -32,11 +35,13 @@ class CreateCommissionDTO
             origin: $data['origin'],
             destination: $data['destination'],
             status: CommissionStatus::from($data['status']),
-            items: array_map(fn ($item) => CommissionItemDTO::fromArray($item), $data['items']),
+            items: isset($data['items']) && !empty($data['items']) ? array_map(fn ($item) => CommissionItemDTO::fromArray($item), $data['items']) : null,
             total: $data['total'],
             originLocationId: $data['origin_location_id'],
             destinationLocationId: $data['destination_location_id'],
-            aCuenta: $data['a_cuenta'] ?? false
+            notes: $data['notes'] ?? null,
+            aCuenta: $data['a_cuenta'] ?? false,
+            type: isset($data['type']) ? CommissionType::from($data['type']) : null
         );
     }
 
@@ -48,10 +53,11 @@ class CreateCommissionDTO
             'origin' => $this->origin,
             'destination' => $this->destination,
             'status' => $this->status->value,
-            'items' => array_map(fn ($item) => $item->toArray(), $this->items),
+            'items' => $this->items ? array_map(fn ($item) => $item->toArray(), $this->items) : null,
             'total' => $this->total,
             'origin_location_id' => $this->originLocationId,
             'destination_location_id' => $this->destinationLocationId,
+            'notes' => $this->notes,
             'a_cuenta' => $this->aCuenta,
         ];
     }

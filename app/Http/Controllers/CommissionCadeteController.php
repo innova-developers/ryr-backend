@@ -2,18 +2,26 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\FcmNotificationService;
+use App\Services\NotificationService;
 use App\Shared\Models\Commission;
 use App\Shared\Models\User;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\UserRole;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Routing\Controller;
 
 class CommissionCadeteController extends Controller
 {
+    public function __construct(
+        private readonly NotificationService $notificationService,
+        private readonly FcmNotificationService $fcmNotificationService
+    ) {
+    }
     /**
      * Asociar un cadete a una comisión
      */
@@ -44,11 +52,13 @@ class CommissionCadeteController extends Controller
             ], 400);
         }
 
-        // Actualizar la comisión
+        // Actualizar solo el cadete, mantener el estado actual de la comisión
         $commission->update([
-            'cadete_id' => $request->cadete_id,
-            'status' => CommissionStatus::CADETE_ASIGNADO
+            'cadete_id' => $request->cadete_id
         ]);
+
+        // Crear notificación para el cadete
+        $this->notificationService->createCommissionAssignedNotification($commission);
 
         return response()->json([
             'message' => 'Cadete asignado exitosamente',
@@ -60,8 +70,10 @@ class CommissionCadeteController extends Controller
     /**
      * Desasociar un cadete de una comisión
      */
-    public function unassignCadete(Commission $commission): JsonResponse
+    public function unassignCadete(Request $request, Commission $commission): JsonResponse
     {
+        $currentUser = $request->user();
+
         // Verificar que la comisión tenga un cadete asignado
         if (!$commission->cadete_id) {
             return response()->json([
@@ -69,21 +81,83 @@ class CommissionCadeteController extends Controller
             ], 400);
         }
 
+        // Si el usuario es un cadete, solo puede desasignarse a sí mismo
+        if ($currentUser && in_array($currentUser->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO])) {
+            if ($commission->cadete_id !== $currentUser->id) {
+                return response()->json([
+                    'message' => 'No autorizado. Solo puedes desasignarte de tus propias comisiones.'
+                ], 403);
+            }
+        }
+
         // Nota: Ahora se permite desasignar cadetes en cualquier estado de la comisión
 
         $previousCadeteId = $commission->cadete_id;
 
+        $initialStatus = [
+            CommissionStatus::SOLICITUD_RECIBIDA,
+            CommissionStatus::BUSCANDO_CADETE,
+            CommissionStatus::CADETE_ASIGNADO,
+            CommissionStatus::CADETE_EN_CAMINO_ORIGEN,
+            CommissionStatus::EN_PUNTO_RETIRO
+        ];
+
         // Actualizar la comisión
         $commission->update([
             'cadete_id' => null,
-            'status' => CommissionStatus::BUSCANDO_CADETE
+            'status' => in_array($commission->status, $initialStatus) ? CommissionStatus::BUSCANDO_CADETE->value : $commission->status
         ]);
+
+        // Notificar a todos los cadetes que hay una nueva comisión disponible
+        $this->notifyAllCadetesNewCommission($commission->fresh());
 
         return response()->json([
             'message' => 'Cadete desasignado exitosamente',
             'commission' => $commission->fresh(),
             'previous_cadete_id' => $previousCadeteId
         ], 200);
+    }
+
+    /**
+     * Notifica a todos los cadetes que hay una nueva comisión disponible en el pool
+     */
+    private function notifyAllCadetesNewCommission($commission): void
+    {
+        try {
+            // Preparar datos de la notificación
+            $origin = $commission->originLocation ? $commission->originLocation->name : 'Origen';
+            $destination = $commission->destinationLocation ? $commission->destinationLocation->name : 'Destino';
+
+            $payload = [
+                'title' => 'Nueva comisión disponible',
+                'body' => "Nueva comisión #{$commission->id} disponible: {$origin} → {$destination}",
+                'data' => [
+                    'type' => 'new_commission_available',
+                    'commission_id' => $commission->id,
+                    'status' => $commission->status->value,
+                    'origin' => $origin,
+                    'destination' => $destination,
+                    'total' => $commission->total,
+                ],
+            ];
+
+            // Enviar notificación a todos los cadetes de la sucursal con tokens FCM activos
+            $result = $this->fcmNotificationService->sendPushToAllCadetes($payload, $commission->branch_id);
+
+            Log::info('Notificaciones push enviadas a cadetes por nueva comisión disponible', [
+                'commission_id' => $commission->id,
+                'branch_id' => $commission->branch_id,
+                'total_cadetes' => $result['total_users'] ?? 0,
+                'successful' => $result['successful'] ?? 0,
+                'failed' => $result['failed'] ?? 0,
+            ]);
+        } catch (\Exception $e) {
+            // Log el error pero no fallar la operación
+            Log::error('Error al notificar cadetes sobre nueva comisión disponible', [
+                'commission_id' => $commission->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -120,9 +194,11 @@ class CommissionCadeteController extends Controller
 
         // Actualizar la comisión
         $commission->update([
-            'cadete_id' => $request->cadete_id,
-            'status' => CommissionStatus::CADETE_ASIGNADO
+            'cadete_id' => $request->cadete_id
         ]);
+
+        // Crear notificación para el nuevo cadete
+        $this->notificationService->createCommissionAssignedNotification($commission);
 
         return response()->json([
             'message' => 'Cadete cambiado exitosamente',
@@ -155,12 +231,23 @@ class CommissionCadeteController extends Controller
      */
     public function getCommissionsByCadete(Request $request, User $cadete): JsonResponse
     {
+        $currentUser = $request->user();
+        
         // Verificar que el usuario sea un cadete
         if (!in_array($cadete->role->value, ['cadete', 'cadete_externo'])) {
             return response()->json([
                 'message' => 'El usuario especificado no es un cadete',
                 'user_role' => $cadete->role->value
             ], 400);
+        }
+
+        // Si el usuario actual es un cadete, solo puede ver sus propias comisiones
+        if ($currentUser && in_array($currentUser->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO])) {
+            if ($currentUser->id !== $cadete->id) {
+                return response()->json([
+                    'message' => 'No autorizado. Solo puedes ver tus propias comisiones.',
+                ], 403);
+            }
         }
 
         $commissions = Commission::where('cadete_id', $cadete->id)
@@ -173,5 +260,238 @@ class CommissionCadeteController extends Controller
             'commissions' => $commissions,
             'total' => $commissions->count()
         ], 200);
+    }
+
+    /**
+     * Obtener comisiones disponibles (sin cadete asignado) - Pool de comisiones
+     */
+    public function getAvailableCommissions(Request $request): JsonResponse
+    {
+        try {
+            // Obtener el usuario autenticado
+            $currentUser = $request->user();
+            
+            if (!$currentUser || !$currentUser->branch_id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Usuario no autenticado o sin sucursal asignada'
+                ], 401);
+            }
+
+            // Validar filtros opcionales
+            $validated = $request->validate([
+                'status' => 'nullable|string',
+                'date_from' => 'nullable|date',
+                'date_to' => 'nullable|date|after_or_equal:date_from',
+            ]);
+
+            $statusesAvailableToShow = [
+                CommissionStatus::SOLICITUD_RECIBIDA,
+                CommissionStatus::BUSCANDO_CADETE,
+                CommissionStatus::CADETE_ASIGNADO,
+                CommissionStatus::CADETE_EN_CAMINO_ORIGEN,
+                CommissionStatus::EN_PUNTO_RETIRO,
+                CommissionStatus::ENCOMIENDA_RETIRADA,
+                CommissionStatus::EN_CAMINO_PLANTA,
+                CommissionStatus::EN_PLANTA,
+                CommissionStatus::EN_TRANSITO_DESTINO,
+                CommissionStatus::EN_SUCURSAL_DESTINO,
+                CommissionStatus::EN_PROCESO_ENTREGA,
+            ];
+
+            // Query base: comisiones sin cadete asignado y del branch_id del usuario
+            $query = Commission::whereNull('cadete_id')
+                ->where('branch_id', $currentUser->branch_id)
+                ->whereIn('status', $statusesAvailableToShow);
+
+            // Aplicar filtros opcionales
+            if (isset($validated['status'])) {
+                try {
+                    $status = CommissionStatus::from($validated['status']);
+                    $query->where('status', $status);
+                } catch (\ValueError $e) {
+                    // Si el status no es válido, ignorar el filtro
+                }
+            }
+
+            if (isset($validated['date_from'])) {
+                $query->whereDate('date', '>=', $validated['date_from']);
+            }
+
+            if (isset($validated['date_to'])) {
+                $query->whereDate('date', '<=', $validated['date_to']);
+            }
+
+            // Cargar relaciones necesarias
+            $commissions = $query->with([
+                'client',
+                'destination',
+                'branch',
+                'originLocation',
+                'destinationLocation',
+                'items',
+                'user'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+            // Formatear respuesta
+            $formattedCommissions = $commissions->map(function ($commission) {
+                return [
+                    'id' => $commission->id,
+                    'tracking_number' => $commission->id,
+                    'status' => $commission->status->value,
+                    'status_label' => $commission->status->getCadeteStatus(),
+                    'date' => $commission->date ? $commission->date->format('d/m/Y') : null,
+                    'total' => $commission->total,
+                    'notes' => $commission->notes,
+                    'client' => $commission->client ? [
+                        'id' => $commission->client->id,
+                        'name' => $commission->client->name . ' ' . $commission->client->last_name,
+                        'phone' => $commission->client->phone,
+                        'email' => $commission->client->email,
+                    ] : null,
+                    'origin' => $commission->originLocation ? [
+                        'id' => $commission->originLocation->id,
+                        'name' => $commission->originLocation->name,
+                        'address' => $commission->originLocation->address,
+                        'phone' => $commission->originLocation->phone,
+                        'city' => $commission->originLocation->origin ?? null,
+                        'hours' => $commission->originLocation->schedule ?? null,
+                    ] : null,
+                    'destination' => $commission->destinationLocation ? [
+                        'id' => $commission->destinationLocation->id,
+                        'name' => $commission->destinationLocation->name,
+                        'address' => $commission->destinationLocation->address,
+                        'phone' => $commission->destinationLocation->phone,
+                        'city' => $commission->destinationLocation->origin ?? null,
+                        'hours' => $commission->destinationLocation->schedule ?? null,
+                    ] : null,
+                    'branch' => $commission->branch ? [
+                        'id' => $commission->branch->id,
+                        'name' => $commission->branch->name,
+                    ] : null,
+                    'items' => $commission->items->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'type' => $item->type?->value,
+                            'size' => $item->size?->value,
+                            'quantity' => $item->quantity,
+                            'unit_price' => $item->unit_price,
+                            'subtotal' => $item->subtotal,
+                            'detail' => $item->detail,
+                        ];
+                    }),
+                    'created_at' => $commission->created_at?->toISOString(),
+                    'updated_at' => $commission->updated_at?->toISOString(),
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $formattedCommissions,
+                'total' => $formattedCommissions->count(),
+                'filters' => $validated,
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al obtener comisiones disponibles',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Autoasignar una comisión al cadete autenticado
+     */
+    public function selfAssignCommission(Request $request, Commission $commission): JsonResponse
+    {
+        try {
+            $currentUser = $request->user();
+
+            // Verificar que el usuario autenticado sea un cadete
+            if (!$currentUser || !in_array($currentUser->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo los cadetes pueden autoasignarse comisiones'
+                ], 403);
+            }
+
+            // Verificar que la comisión no tenga cadete asignado
+            if ($commission->cadete_id !== null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Esta comisión ya tiene un cadete asignado',
+                    'assigned_cadete_id' => $commission->cadete_id
+                ], 400);
+            }
+
+            // Verificar que la comisión no esté cancelada o en estado final
+            if (in_array($commission->status, [
+                CommissionStatus::CANCELADO,
+                CommissionStatus::ENTREGADO,
+                CommissionStatus::DEVUELTO_REMITENTE
+            ])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se puede asignar una comisión en estado final',
+                    'status' => $commission->status->value
+                ], 400);
+            }
+
+            $initialStatus = [
+                CommissionStatus::BUSCANDO_CADETE,
+                CommissionStatus::SOLICITUD_RECIBIDA,
+                CommissionStatus::CADETE_ASIGNADO,
+                CommissionStatus::CADETE_EN_CAMINO_ORIGEN,
+                CommissionStatus::EN_PUNTO_RETIRO
+            ];
+
+            // Asignar la comisión al cadete autenticado, mantener el estado actual
+            $commission->update([
+                'cadete_id' => $currentUser->id,
+                'status' => in_array($commission->status, $initialStatus) ? CommissionStatus::CADETE_ASIGNADO->value : $commission->status
+            ]);
+
+            // Crear notificación para el cadete
+            $this->notificationService->createCommissionAssignedNotification($commission);
+
+            // Cargar relaciones para la respuesta
+            $commission->load(['client', 'destination', 'branch', 'originLocation', 'destinationLocation', 'items']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Comisión asignada exitosamente',
+                'commission' => [
+                    'id' => $commission->id,
+                    'status' => $commission->status->value,
+                    'status_label' => $commission->status->getCadeteStatus(),
+                    'cadete_id' => $commission->cadete_id,
+                    'client' => $commission->client ? [
+                        'id' => $commission->client->id,
+                        'name' => $commission->client->name . ' ' . $commission->client->last_name,
+                    ] : null,
+                    'origin' => $commission->originLocation ? [
+                        'id' => $commission->originLocation->id,
+                        'name' => $commission->originLocation->name,
+                        'address' => $commission->originLocation->address,
+                    ] : null,
+                    'destination' => $commission->destinationLocation ? [
+                        'id' => $commission->destinationLocation->id,
+                        'name' => $commission->destinationLocation->name,
+                        'address' => $commission->destinationLocation->address,
+                    ] : null,
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al autoasignar la comisión',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

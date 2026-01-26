@@ -25,8 +25,13 @@ class CommissionsMapper
                     'branch_id' => $commission->branch_id ?? null,
                     'date' => $commission->date,
                     'status' => $commission->status,
+                    'type' => $commission->type?->value ?? null,
+                    'type_label' => $commission->type?->label() ?? null,
+                    'payment_method' => $commission->payment_method?->value ?? null,
+                    'payment_method_label' => $commission->payment_method?->label() ?? null,
                     'user_id' => $commission->user_id,
                     'total' => $commission->total,
+                    'notes' => $commission->notes,
                     'created_at' => $commission->created_at,
                     'updated_at' => $commission->updated_at,
                     'client' => [
@@ -120,6 +125,7 @@ class CommissionsMapper
                     'phone' => optional($commission->destinationLocation)->phone,
                     'schedule' => optional($commission->destinationLocation)->schedule,
                 ],
+                'notes' => $commission->notes ?? null,
                 'branch_id' => $commission->branch_id ?? null,
                 'branch' => [
                     'id' => optional($commission->branch)->id,
@@ -128,6 +134,10 @@ class CommissionsMapper
                 'current_branch' => optional(optional(optional($commission->logs)->last())->user)->branch->name ?? null,
                 'date' => optional($commission->date)->format('Y-m-d H:i:s') ?? null,
                 'status' => $commission->status ?? null,
+                'type' => $commission->type?->value ?? null,
+                'type_label' => $commission->type?->label() ?? null,
+                'payment_method' => $commission->payment_method?->value ?? null,
+                'payment_method_label' => $commission->payment_method?->label() ?? null,
                 'user_id' => $commission->user_id ?? null,
                 'user' => [
                     'id' => optional($commission->user)->id,
@@ -154,7 +164,7 @@ class CommissionsMapper
                         'updated_at' => $item->updated_at ?? null,
                     ];
                 })->toArray() ?? [],
-                'logs' => optional($commission->logs)->map(function ($item) {
+                'logs' => optional($commission->logs)->sortByDesc('created_at')->map(function ($item) {
                     return [
                         'id' => $item->id ?? null,
                         'previous_status' => $item->previous_status ?? null,
@@ -164,7 +174,7 @@ class CommissionsMapper
                         'updated_at' => $item->updated_at ?? null,
                         'user' => optional($item->user)->name,
                     ];
-                })->toArray() ?? [],
+                })->values()->toArray() ?? [],
                 'signature_data' => $commission->deliverySignature ? [
                     'receiver_name' => $commission->deliverySignature->receiver_name,
                     'receiver_phone' => $commission->deliverySignature->receiver_phone,

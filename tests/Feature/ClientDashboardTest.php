@@ -180,7 +180,7 @@ class ClientDashboardTest extends TestCase
         // Verificar que solo devuelve las comisiones del cliente
         $shipments = $response->json('shipments');
         $this->assertCount(2, $shipments);
-        $this->assertEquals('RYR' . str_pad($commission1->id, 9, '0', STR_PAD_LEFT), $shipments[0]['tracking_number']);
+        $this->assertEquals($commission1->id, $shipments[0]['tracking_number']);
     }
 
     public function test_client_can_get_account_balance()
