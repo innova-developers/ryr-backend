@@ -20,6 +20,7 @@ class UpdateCustomerDTO
     public bool $autoCalculateIva;
     public ?int $userId;
     public int $branchId;
+    public ?int $internalUserId;
     public function __construct(
         int $id,
         int $dni,
@@ -36,7 +37,8 @@ class UpdateCustomerDTO
         bool $isPremium = false,
         bool $autoCalculateIva = true,
         ?int $userId = null,
-        int $branchId
+        int $branchId,
+        ?int $internalUserId = null
     ) {
         $this->id = $id;
         $this->dni = $dni;
@@ -54,6 +56,7 @@ class UpdateCustomerDTO
         $this->autoCalculateIva = $autoCalculateIva;
         $this->userId = $userId;
         $this->branchId = $branchId;
+        $this->internalUserId = $internalUserId;
     }
 
 }

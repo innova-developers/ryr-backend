@@ -127,15 +127,30 @@ class CadetePaymentController extends Controller
 
         $commissions = $commissionsQuery->get();
 
-        // Calcular métricas de comisiones
-        $deliveredCommissions = $commissions->where('status', \App\Shared\Enums\CommissionStatus::ENTREGADO->value);
-        $pendingCommissions = $commissions->whereNotIn('status', [
-            \App\Shared\Enums\CommissionStatus::ENTREGADO->value,
-            \App\Shared\Enums\CommissionStatus::CANCELADO->value
-        ]);
+        // Calcular métricas de comisiones usando reduce para sumar correctamente
+        // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
+        $deliveredCommissions = $commissions->filter(function ($commission) {
+            return $commission->status === \App\Shared\Enums\CommissionStatus::ENTREGADO 
+                || $commission->status === \App\Shared\Enums\CommissionStatus::RETIRADO_SUCURSAL
+                || $commission->status === \App\Shared\Enums\CommissionStatus::PENDIENTE_PAGO
+                || $commission->status === \App\Shared\Enums\CommissionStatus::PAGO_VALIDACION
+                || $commission->status === \App\Shared\Enums\CommissionStatus::PAGO_CONFIRMADO;
+        });
+        
+        $pendingCommissions = $commissions->filter(function ($commission) {
+            return $commission->status !== \App\Shared\Enums\CommissionStatus::ENTREGADO 
+                && $commission->status !== \App\Shared\Enums\CommissionStatus::RETIRADO_SUCURSAL
+                && $commission->status !== \App\Shared\Enums\CommissionStatus::PENDIENTE_PAGO
+                && $commission->status !== \App\Shared\Enums\CommissionStatus::PAGO_VALIDACION
+                && $commission->status !== \App\Shared\Enums\CommissionStatus::PAGO_CONFIRMADO
+                && $commission->status !== \App\Shared\Enums\CommissionStatus::CANCELADO;
+        });
 
-        // Ganancias totales (comisiones finalizadas)
-        $totalEarnings = $deliveredCommissions->sum('total') * ($commissionPercentage / 100);
+        // Ganancias totales (comisiones finalizadas) - usar reduce para sumar correctamente
+        $totalCommissionAmount = $deliveredCommissions->reduce(function ($carry, $commission) {
+            return $carry + (float) $commission->total;
+        }, 0);
+        $totalEarnings = $totalCommissionAmount * ($commissionPercentage / 100);
         
         // Cantidad de entregas
         $deliveriesCount = $deliveredCommissions->count();
@@ -144,22 +159,44 @@ class CadetePaymentController extends Controller
         $averagePerDelivery = $deliveriesCount > 0 ? $totalEarnings / $deliveriesCount : 0;
         
         // Pendiente (comisiones no entregadas)
-        $pendingEarnings = $pendingCommissions->sum('total') * ($commissionPercentage / 100);
+        $pendingCommissionAmount = $pendingCommissions->reduce(function ($carry, $commission) {
+            return $carry + (float) $commission->total;
+        }, 0);
+        $pendingEarnings = $pendingCommissionAmount * ($commissionPercentage / 100);
         
         // Ganancias últimos 7 días
+        // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
         $last7Days = now()->subDays(7);
-        $last7DaysEarnings = $commissions
-            ->where('status', \App\Shared\Enums\CommissionStatus::ENTREGADO->value)
-            ->where('updated_at', '>=', $last7Days)
-            ->sum('total') * ($commissionPercentage / 100);
+        $last7DaysCommissions = $commissions->filter(function ($commission) use ($last7Days) {
+            return ($commission->status === \App\Shared\Enums\CommissionStatus::ENTREGADO 
+                || $commission->status === \App\Shared\Enums\CommissionStatus::RETIRADO_SUCURSAL
+                || $commission->status === \App\Shared\Enums\CommissionStatus::PENDIENTE_PAGO
+                || $commission->status === \App\Shared\Enums\CommissionStatus::PAGO_VALIDACION
+                || $commission->status === \App\Shared\Enums\CommissionStatus::PAGO_CONFIRMADO)
+                && $commission->updated_at >= $last7Days;
+        });
+        $last7DaysCommissionAmount = $last7DaysCommissions->reduce(function ($carry, $commission) {
+            return $carry + (float) $commission->total;
+        }, 0);
+        $last7DaysEarnings = $last7DaysCommissionAmount * ($commissionPercentage / 100);
         
         // Comisión promedio
-        $averageCommission = $commissions->count() > 0 ? $commissions->avg('total') : 0;
+        $totalAllCommissions = $commissions->reduce(function ($carry, $commission) {
+            return $carry + (float) $commission->total;
+        }, 0);
+        $averageCommission = $commissions->count() > 0 ? $totalAllCommissions / $commissions->count() : 0;
         
         // Entregas hoy
+        // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
         $todayDeliveries = $commissions
-            ->where('status', \App\Shared\Enums\CommissionStatus::ENTREGADO->value)
-            ->where('updated_at', '>=', now()->startOfDay())
+            ->filter(function ($commission) {
+                return ($commission->status === \App\Shared\Enums\CommissionStatus::ENTREGADO 
+                    || $commission->status === \App\Shared\Enums\CommissionStatus::RETIRADO_SUCURSAL
+                    || $commission->status === \App\Shared\Enums\CommissionStatus::PENDIENTE_PAGO
+                    || $commission->status === \App\Shared\Enums\CommissionStatus::PAGO_VALIDACION
+                    || $commission->status === \App\Shared\Enums\CommissionStatus::PAGO_CONFIRMADO)
+                    && $commission->updated_at >= now()->startOfDay();
+            })
             ->count();
         
         // Próximo pago (primer pago pendiente)
@@ -193,7 +230,9 @@ class CadetePaymentController extends Controller
                 'total_commissions' => $commissions->count(),
                 'delivered_commissions' => $deliveredCommissions->count(),
                 'pending_commissions' => $pendingCommissions->count(),
-                'cancelled_commissions' => $commissions->where('status', \App\Shared\Enums\CommissionStatus::CANCELADO->value)->count(),
+                'cancelled_commissions' => $commissions->filter(function ($commission) {
+                    return $commission->status === \App\Shared\Enums\CommissionStatus::CANCELADO;
+                })->count(),
             ],
             
             // Resumen de pagos (compatibilidad)

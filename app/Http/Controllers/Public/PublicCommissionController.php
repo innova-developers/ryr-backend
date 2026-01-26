@@ -139,7 +139,7 @@ class PublicCommissionController
                     'date' => $commission->date,
                     'origin' => $commissionData['origin'],
                     'destination' => $commissionData['destination'],
-                    'items_count' => count($commissionData['items'] ?? []),
+                    'items_count' => array_sum(array_column($commissionData['items'] ?? [], 'quantity')),
                     'notes' => $commission->notes,
                 ],
             ], 201);

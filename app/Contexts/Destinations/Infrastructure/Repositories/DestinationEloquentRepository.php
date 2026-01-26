@@ -114,7 +114,7 @@ class DestinationEloquentRepository implements DestinationRepository
         try {
             return Destination::where('origin', $dto->origin)
                 ->where('destination', $dto->destination)
-                ->select('fixed_price', 'small_bulk_price', 'large_bulk_price')
+                ->select('id', 'fixed_price', 'small_bulk_price', 'large_bulk_price')
                 ->first();
         } catch (\Exception $exception) {
             throw new \Exception('Error al obtener tarifas: ' . $exception->getMessage());

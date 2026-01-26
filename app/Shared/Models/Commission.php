@@ -3,6 +3,7 @@
 namespace App\Shared\Models;
 
 use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\CommissionType;
 use App\Shared\Enums\PaymentMethod;
 use App\DeliverySignature;
 use Database\Factories\CommissionFactory;
@@ -24,6 +25,7 @@ class Commission extends Model
         'branch_id',
         'date',
         'status',
+        'type',
         'payment_method',
         'total',
         'iva_amount',
@@ -39,6 +41,7 @@ class Commission extends Model
     protected $casts = [
         'date' => 'date',
         'status' => CommissionStatus::class,
+        'type' => CommissionType::class,
         'payment_method' => PaymentMethod::class,
         'total' => 'decimal:2',
         'iva_amount' => 'decimal:2',

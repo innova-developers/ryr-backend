@@ -41,7 +41,14 @@ class LoginUseCase
     {
         switch ($scope) {
             case 'web':
-                if ($userRole !== UserRole::ADMINISTRADOR && $userRole !== UserRole::MOSTRADOR) {
+                // Permitir acceso a administradores, mostradores y cadetes
+                if (!in_array($userRole, [
+                    UserRole::ADMINISTRADOR, 
+                    UserRole::MOSTRADOR, 
+                    UserRole::CADETE,
+                    UserRole::CADETE_EXTERNO,
+                    UserRole::COBRADOR
+                ])) {
                     throw new InvalidScopeException($userRole->value, $scope);
                 }
                 break;

@@ -6,15 +6,25 @@ use App\Contexts\Branchs\Application\DTO\CreateBranchDTO;
 use App\Contexts\Branchs\Application\DTO\GetBranchesFiltersDTO;
 use App\Contexts\Branchs\Application\DTO\UpdateBranchDTO;
 use App\Contexts\Branchs\Domain\Repositories\BranchRepository;
+use App\Shared\Enums\UserRole;
 use App\Shared\Models\Branch;
 use Exception;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Auth;
 
 class BranchEloquentRepository implements BranchRepository
 {
     public function get(?GetBranchesFiltersDTO $filters = null): array
     {
         $query = Branch::select('id', 'name', 'address', 'schedule', 'phone', 'secondary_phone');
+
+        // Filtrar por sucursal según el rol del usuario
+        $user = Auth::user();
+        if ($user && $user->branch_id !== null && $user->branch_id > 0) {
+            // Si el usuario tiene una sucursal asignada, solo puede ver su propia sucursal
+            // (excepto administradores sin sucursal que pueden ver todas)
+            $query->where('id', $user->branch_id);
+        }
 
         // Aplicar filtro de búsqueda
         if ($filters && $filters->search) {

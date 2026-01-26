@@ -24,7 +24,7 @@ use App\Shared\Models\CurrentAccount;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\CommissionItemType;
 use App\Shared\Enums\CommissionItemSize;
-use App\Services\GoogleMapsService;
+use App\Services\NominatimService;
 
 class MigrateCompleteSystem extends Command
 {
@@ -518,18 +518,18 @@ class MigrateCompleteSystem extends Command
         $this->info("   📍 Procesando ubicaciones en lotes de {$this->locationsBatchSize}...");
         
         $totalProcessed = 0;
-        $googleMapsService = null;
+        $nominatimService = null;
         
-        // Solo inicializar GoogleMapsService si no se omiten coordenadas
+        // Solo inicializar NominatimService si no se omiten coordenadas
         if (!$this->skipCoordinates) {
-            $googleMapsService = new GoogleMapsService();
+            $nominatimService = new NominatimService();
         }
         
         DB::connection('mysql_old')
             ->table('locaciones')
             ->orderBy('idlocaciones')
-            ->chunk($this->locationsBatchSize, function ($oldLocations) use (&$totalProcessed, $googleMapsService) {
-                DB::transaction(function () use ($oldLocations, &$totalProcessed, $googleMapsService) {
+            ->chunk($this->locationsBatchSize, function ($oldLocations) use (&$totalProcessed, $nominatimService) {
+                DB::transaction(function () use ($oldLocations, &$totalProcessed, $nominatimService) {
                     foreach ($oldLocations as $oldLocation) {
                         $totalProcessed++;
                         
@@ -552,14 +552,14 @@ class MigrateCompleteSystem extends Command
                         ];
                         
                         // Calcular coordenadas solo si no se omiten
-                        if (!$this->skipCoordinates && $googleMapsService) {
+                        if (!$this->skipCoordinates && $nominatimService) {
                             try {
-                                $coordinates = $googleMapsService->getCoordinates($address, $city);
+                                $coordinates = $nominatimService->getCoordinates($address, $city);
                                 $locationData['latitude'] = $coordinates['latitude'] ?? null;
                                 $locationData['longitude'] = $coordinates['longitude'] ?? null;
                                 
-                                // Pausa para evitar límites de API
-                                usleep(500000); // 0.5 segundos - más conservador
+                                // Pausa para evitar límites de API (Nominatim requiere mínimo 1 segundo)
+                                sleep(1); // 1 segundo entre requests
                             } catch (\Throwable $e) {
                                 $this->warn("   ⚠️  Error obteniendo coordenadas para {$address}, {$city}: " . $e->getMessage());
                                 $locationData['latitude'] = null;
@@ -599,7 +599,7 @@ class MigrateCompleteSystem extends Command
         $this->info("   📍 Calculando coordenadas para ubicaciones existentes...");
         
         $totalProcessed = 0;
-        $googleMapsService = new GoogleMapsService();
+        $nominatimService = new NominatimService();
         
         // Obtener ubicaciones que no tienen coordenadas
         $locationsWithoutCoordinates = DB::table('locations')
@@ -616,7 +616,7 @@ class MigrateCompleteSystem extends Command
         }
         
         foreach ($locationsWithoutCoordinates->chunk($this->locationsBatchSize) as $locationChunk) {
-            DB::transaction(function () use ($locationChunk, &$totalProcessed, $googleMapsService) {
+            DB::transaction(function () use ($locationChunk, &$totalProcessed, $nominatimService) {
                 foreach ($locationChunk as $location) {
                     $totalProcessed++;
                     
@@ -625,7 +625,7 @@ class MigrateCompleteSystem extends Command
                     }
                     
                     try {
-                        $coordinates = $googleMapsService->getCoordinates($location->address, $location->origin);
+                        $coordinates = $nominatimService->getCoordinates($location->address, $location->origin);
                         
                         DB::table('locations')
                             ->where('id', $location->id)
@@ -635,8 +635,8 @@ class MigrateCompleteSystem extends Command
                                 'updated_at' => now(),
                             ]);
                             
-                        // Pausa para evitar límites de API
-                        usleep(500000); // 0.5 segundos
+                        // Pausa para evitar límites de API (Nominatim requiere mínimo 1 segundo)
+                        sleep(1); // 1 segundo entre requests
                         
                     } catch (\Throwable $e) {
                         $this->warn("   ⚠️  Error obteniendo coordenadas para {$location->address}, {$location->origin}: " . $e->getMessage());

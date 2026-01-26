@@ -66,6 +66,18 @@ class LocationsEloquentRepository implements LocationsRepositoryInterface
     public function create(CreateLocationDTO $dto): Location
     {
         try {
+            // Verificar si ya existe una locación con el mismo name, address y origin
+            $existingLocation = Location::where('name', $dto->name)
+                ->where('address', $dto->address)
+                ->where('origin', $dto->origin)
+                ->first();
+
+            // Si ya existe, retornar la existente sin crear una nueva
+            if ($existingLocation) {
+                return $existingLocation;
+            }
+
+            // Si no existe, crear la nueva locación
             $location = new Location();
             $location->name = $dto->name;
             $location->address = $dto->address;

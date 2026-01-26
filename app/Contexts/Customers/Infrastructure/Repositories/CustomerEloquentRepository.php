@@ -6,15 +6,28 @@ use App\Contexts\Customers\Application\DTO\CreateCustomerDTO;
 use App\Contexts\Customers\Application\DTO\GetCustomersFiltersDTO;
 use App\Contexts\Customers\Application\DTO\UpdateCustomerDTO;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
+use App\Shared\Enums\CurrentAccountStatus;
+use App\Shared\Enums\UserRole;
 use App\Shared\Models\Customer;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CustomerEloquentRepository implements CustomerRepository
 {
     public function get(?GetCustomersFiltersDTO $filters = null): array
     {
-        $query = Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'user_id', 'created_at')
+        $query = Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'user_id', 'observations', 'created_at')
             ->with(['user:id,name']);
+
+        // Filtrar por sucursal según el rol del usuario
+        $user = Auth::user();
+        if ($user && $user->branch_id) {
+            // Cadetes, mostradores y administradores con sucursal solo ven clientes de su sucursal
+            if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
+                $query->where('branch_id', $user->branch_id);
+            }
+        }
 
         // Aplicar filtro de búsqueda
         if ($filters && $filters->search) {
@@ -24,6 +37,49 @@ class CustomerEloquentRepository implements CustomerRepository
                   ->orWhere('email', 'like', '%' . $filters->search . '%')
                   ->orWhere('dni', 'like', '%' . $filters->search . '%')
                   ->orWhere('city', 'like', '%' . $filters->search . '%');
+            });
+        }
+
+        // Si resume=true, filtrar solo clientes con saldo != 0 en el rango de fechas
+        if ($filters && $filters->resume) {
+            // Construir parámetros para la subconsulta
+            $dateConditions = '';
+            $bindings = [CurrentAccountStatus::OK->value];
+            
+            if ($filters->dateFrom) {
+                $dateConditions .= 'AND ca2.transaction_date >= ?';
+                $bindings[] = $filters->dateFrom;
+            }
+            if ($filters->dateTo) {
+                $dateConditions .= 'AND ca2.transaction_date <= ?';
+                $bindings[] = $filters->dateTo;
+            }
+            
+            // Filtrar clientes que tengan un balance != 0 en el último registro del rango de fechas
+            $query->whereIn('customers.id', function ($subquery) use ($filters, $dateConditions, $bindings) {
+                $subquery->select('ca1.customer_id')
+                    ->from('current_accounts as ca1')
+                    ->where('ca1.status', CurrentAccountStatus::OK->value)
+                    ->where('ca1.balance', '!=', 0);
+                
+                // Aplicar filtro de rango de fechas si se proporciona
+                if ($filters->dateFrom) {
+                    $subquery->where('ca1.transaction_date', '>=', $filters->dateFrom);
+                }
+                if ($filters->dateTo) {
+                    $subquery->where('ca1.transaction_date', '<=', $filters->dateTo);
+                }
+                
+                // Filtrar solo el último registro por cliente en el rango de fechas
+                $subquery->whereRaw("ca1.id = (
+                    SELECT ca2.id 
+                    FROM current_accounts ca2 
+                    WHERE ca2.customer_id = ca1.customer_id 
+                    AND ca2.status = ?
+                    {$dateConditions}
+                    ORDER BY ca2.transaction_date DESC, ca2.id DESC 
+                    LIMIT 1
+                )", $bindings);
             });
         }
 
@@ -54,7 +110,11 @@ class CustomerEloquentRepository implements CustomerRepository
                         'city' => $customer->city,
                         'phone' => $customer->phone,
                         'is_premium' => $customer->is_premium,
+<<<<<<< HEAD
                         'auto_calculate_iva' => $customer->auto_calculate_iva,
+=======
+                        'observations' => $customer->observations,
+>>>>>>> dev
                         'user' => optional($customer->user),
                         'branch' => optional($customer->branch),
                         'balance' => $customer->current_balance,
@@ -85,7 +145,11 @@ class CustomerEloquentRepository implements CustomerRepository
                     'city' => $customer->city,
                     'phone' => $customer->phone,
                     'is_premium' => $customer->is_premium,
+<<<<<<< HEAD
                     'auto_calculate_iva' => $customer->auto_calculate_iva,
+=======
+                    'observations' => $customer->observations,
+>>>>>>> dev
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),
                     'balance' => $customer->current_balance,
@@ -154,6 +218,7 @@ class CustomerEloquentRepository implements CustomerRepository
             $customer->auto_calculate_iva = $dto->autoCalculateIva;
             $customer->user_id = $dto->userId;
             $customer->branch_id = $dto->branchId;
+            $customer->internal_user_id = $dto->internalUserId;
             $customer->save();
 
             // Si el email cambió, actualizar también el usuario asociado
@@ -185,9 +250,25 @@ class CustomerEloquentRepository implements CustomerRepository
 
     public function search(string $query): array
     {
+<<<<<<< HEAD
         return Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'user_id', 'created_at')
             ->with(['user:id,name'])
             ->where(function ($q) use ($query) {
+=======
+        $searchQuery = Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id', 'observations', 'created_at')
+            ->with(['user:id,name']);
+
+        // Filtrar por sucursal según el rol del usuario
+        $user = Auth::user();
+        if ($user && $user->branch_id) {
+            // Cadetes, mostradores y administradores con sucursal solo ven clientes de su sucursal
+            if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
+                $searchQuery->where('branch_id', $user->branch_id);
+            }
+        }
+
+        return $searchQuery->where(function ($q) use ($query) {
+>>>>>>> dev
                 $q->where('name', 'like', "%{$query}%")
                     ->orWhere('last_name', 'like', "%{$query}%")
                     ->orWhere('email', 'like', "%{$query}%")
@@ -205,7 +286,11 @@ class CustomerEloquentRepository implements CustomerRepository
                     'city' => $customer->city,
                     'phone' => $customer->phone,
                     'is_premium' => $customer->is_premium,
+<<<<<<< HEAD
                     'auto_calculate_iva' => $customer->auto_calculate_iva,
+=======
+                    'observations' => $customer->observations,
+>>>>>>> dev
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),
                     'balance' => $customer->current_balance,
