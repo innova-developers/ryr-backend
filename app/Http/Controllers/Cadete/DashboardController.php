@@ -41,8 +41,9 @@ class DashboardController extends Controller
      */
     private function buildDashboardData($commissions): array
     {
+        $user = Auth::user();
         $summary = $this->calculateSummary($commissions);
-        $earnings = $this->calculateEarnings($commissions);
+        $earnings = $this->calculateEarnings($commissions, $user);
         $performance = $this->calculatePerformance($summary);
         
         return [
@@ -61,17 +62,22 @@ class DashboardController extends Controller
     private function calculateSummary($commissions): array
     {
         $total = $commissions->count();
-        $completed = $commissions->where('status', CommissionStatus::ENTREGADO)->count();
-        $pending = $commissions->whereIn('status', [
-            CommissionStatus::CADETE_ASIGNADO,
-            CommissionStatus::CADETE_EN_CAMINO_ORIGEN,
-            CommissionStatus::EN_PUNTO_RETIRO,
-            CommissionStatus::ENCOMIENDA_RETIRADA,
-            CommissionStatus::EN_CAMINO_PLANTA,
-            CommissionStatus::EN_TRANSITO_DESTINO,
-            CommissionStatus::EN_PROCESO_ENTREGA
-        ])->count();
-        $cancelled = $commissions->where('status', CommissionStatus::CANCELADO)->count();
+        $completed = $commissions->filter(function ($commission) {
+            return $commission->status === CommissionStatus::ENTREGADO 
+                || $commission->status === CommissionStatus::RETIRADO_SUCURSAL;
+        })->count();
+        $pending = $commissions->filter(function ($commission) {
+            return $commission->status === CommissionStatus::CADETE_ASIGNADO
+                || $commission->status === CommissionStatus::CADETE_EN_CAMINO_ORIGEN
+                || $commission->status === CommissionStatus::EN_PUNTO_RETIRO
+                || $commission->status === CommissionStatus::ENCOMIENDA_RETIRADA
+                || $commission->status === CommissionStatus::EN_CAMINO_PLANTA
+                || $commission->status === CommissionStatus::EN_TRANSITO_DESTINO
+                || $commission->status === CommissionStatus::EN_PROCESO_ENTREGA;
+        })->count();
+        $cancelled = $commissions->filter(function ($commission) {
+            return $commission->status === CommissionStatus::CANCELADO;
+        })->count();
         
         return [
             'total_deliveries' => $total,
@@ -84,17 +90,42 @@ class DashboardController extends Controller
     /**
      * Calcular ganancias
      */
-    private function calculateEarnings($commissions): array
+    private function calculateEarnings($commissions, $user): array
     {
-        $total = $commissions->sum('total');
-        $cash = $commissions->where('status', CommissionStatus::ENTREGADO)->sum('total');
+        // Obtener porcentaje de comisión del cadete
+        $commissionPercentage = $user->commission_percentage ?? 0;
+        
+        // Calcular total de todas las comisiones del día
+        $totalCommissionAmount = $commissions->reduce(function ($carry, $commission) {
+            return $carry + (float) $commission->total;
+        }, 0);
+        
+        // Calcular ganancias totales aplicando el porcentaje
+        $totalEarnings = $totalCommissionAmount * ($commissionPercentage / 100);
+        
+        // Calcular ganancias de comisiones entregadas (cash)
+        // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
+        $deliveredCommissions = $commissions->filter(function ($commission) {
+            return $commission->status === CommissionStatus::ENTREGADO 
+                || $commission->status === CommissionStatus::RETIRADO_SUCURSAL
+                || $commission->status === CommissionStatus::PENDIENTE_PAGO
+                || $commission->status === CommissionStatus::PAGO_VALIDACION
+                || $commission->status === CommissionStatus::PAGO_CONFIRMADO;
+        });
+        
+        $cashCommissionAmount = $deliveredCommissions->reduce(function ($carry, $commission) {
+            return $carry + (float) $commission->total;
+        }, 0);
+        
+        // Calcular ganancias de cash aplicando el porcentaje
+        $cashEarnings = $cashCommissionAmount * ($commissionPercentage / 100);
         
         return [
-            'today_total' => $total,
-            'today_cash' => $cash,
+            'today_total' => round($totalEarnings, 2),
+            'today_cash' => round($cashEarnings, 2),
             'today_card' => 0, // TODO: Implementar lógica de método de pago
             'currency' => 'ARS',
-            'formatted_total' => '$' . number_format($total, 0, ',', '.')
+            'formatted_total' => '$' . number_format($totalEarnings, 0, ',', '.')
         ];
     }
     

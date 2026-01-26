@@ -14,6 +14,8 @@ use App\Contexts\Customers\Application\UpdateCustomerUseCase;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Customers\Infrastructure\Http\Requests\CreateCustomerRequest;
 use App\Contexts\Customers\Infrastructure\Http\Requests\UpdateCustomerRequest;
+use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
+use App\Contexts\Locations\Domain\Repositories\LocationsRepository;
 use App\Contexts\Users\Application\CreateUserUseCase;
 use App\Contexts\Users\Application\DTO\CreateUserDTO;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
@@ -27,11 +29,15 @@ class CustomerController extends Controller
 {
     private UserRepository $userRepository;
     private CustomerRepository $repository;
+    private LocationsRepository $locationsRepository;
+    private DestinationRepository $destinationRepository;
 
     public function __construct()
     {
         $this->userRepository = app(UserRepository::class);
         $this->repository = app(CustomerRepository::class);
+        $this->locationsRepository = app(LocationsRepository::class);
+        $this->destinationRepository = app(DestinationRepository::class);
     }
 
     public function index(Request $request): JsonResponse
@@ -52,17 +58,20 @@ class CustomerController extends Controller
                 return response()->json(['message' => 'Usuario no autenticado'], 401);
             }
 
+            // Si el usuario no tiene branch_id (super admin), establecer en 1
+            $branchId = $user->branch_id ?? 1;
+            
             $useCaseCreateUser = new CreateUserUseCase($this->userRepository);
             $dtoCreateUser = new CreateUserDTO(
                 $request->input('name'),
                 $request->input('email'),
                 $request->input('dni'),
                 'cliente',
-                $user->branch_id
+                $branchId
             );
             $userCreated = $useCaseCreateUser($dtoCreateUser);
 
-            $useCase = new CreateCustomerUseCase($this->repository);
+            $useCase = new CreateCustomerUseCase($this->repository, $this->locationsRepository, $this->destinationRepository);
             $dto = new CreateCustomerDTO(
                 $request->input('dni'),
                 $request->input('name'),
@@ -77,7 +86,7 @@ class CustomerController extends Controller
                 $request->input('observations'),
                 $request->boolean('is_premium', false),
                 $userCreated->id,
-                $user->branch_id
+                $branchId
             );
             $customer = $useCase($dto);
 
@@ -114,7 +123,10 @@ class CustomerController extends Controller
                 return response()->json(['message' => 'Customer not found'], 404);
             }
 
-            $useCase = new UpdateCustomerUseCase($this->repository);
+            $useCase = new UpdateCustomerUseCase($this->repository, $this->locationsRepository, $this->destinationRepository);
+            // Si el usuario no tiene branch_id (super admin), establecer en 1
+            $branchId = $user->branch_id ?? 1;
+            
             $dto = new UpdateCustomerDTO(
                 $id,
                 $request->input('dni'),
@@ -130,7 +142,8 @@ class CustomerController extends Controller
                 $request->input('observations'),
                 $request->boolean('is_premium', false),
                 $request->input('user_id', $currentCustomer->user_id), // Preservar user_id existente si no se proporciona
-                $user->branch_id
+                $branchId,
+                $request->input('internal_user_id', $currentCustomer->internal_user_id) // Preservar internal_user_id existente si no se proporciona
             );
             $customer = $useCase($dto);
 

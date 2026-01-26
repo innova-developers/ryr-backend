@@ -12,6 +12,8 @@ class CommissionMapper
             'destination_id' => $commission->destination_id,
             'date' => $commission->date,
             'status' => $commission->status,
+            'type' => $commission->type?->value ?? null,
+            'type_label' => $commission->type?->label() ?? null,
             'user_id' => $commission->user_id,
             'branch_id' => $commission->branch_id,
             'total' => $commission->total,
@@ -58,7 +60,7 @@ class CommissionMapper
                     'updated_at' => $item->updated_at,
                 ];
             })->toArray() : [],
-            'logs' => $commission->logs ? $commission->logs->map(function ($log) {
+            'logs' => $commission->logs ? $commission->logs->sortByDesc('created_at')->map(function ($log) {
                 return [
                     'id' => $log->id,
                     'previous_status' => $log->previous_status ?: "",
@@ -68,7 +70,7 @@ class CommissionMapper
                     'updated_at' => $log->updated_at,
                     'user' => $log->user ? $log->user->name : null,
         ];
-            })->toArray() : [],
+            })->values()->toArray() : [],
             'created_at' => $commission->created_at,
             'updated_at' => $commission->updated_at,
         ];

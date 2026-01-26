@@ -10,4 +10,6 @@ enum UserRole: string
     case CLIENTE = 'cliente';
     case CADETE_EXTERNO = 'cadete_externo';
 
+    case COBRADOR = 'cobrador';
+
 }

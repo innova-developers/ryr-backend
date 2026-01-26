@@ -19,6 +19,7 @@ class UpdateCustomerDTO
     public bool $isPremium;
     public ?int $userId;
     public int $branchId;
+    public ?int $internalUserId;
     public function __construct(
         int $id,
         int $dni,
@@ -34,7 +35,8 @@ class UpdateCustomerDTO
         ?string $observations = null,
         bool $isPremium = false,
         ?int $userId = null,
-        int $branchId
+        int $branchId,
+        ?int $internalUserId = null
     ) {
         $this->id = $id;
         $this->dni = $dni;
@@ -51,6 +53,7 @@ class UpdateCustomerDTO
         $this->isPremium = $isPremium;
         $this->userId = $userId;
         $this->branchId = $branchId;
+        $this->internalUserId = $internalUserId;
     }
 
 }

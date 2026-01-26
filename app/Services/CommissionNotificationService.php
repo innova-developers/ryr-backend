@@ -20,11 +20,10 @@ class CommissionNotificationService
      * Estados importantes que requieren notificación
      */
     private const IMPORTANT_STATUSES = [
-        CommissionStatus::CADETE_ASIGNADO,
+        CommissionStatus::SOLICITUD_RECIBIDA,
         CommissionStatus::ENCOMIENDA_RETIRADA,
-        CommissionStatus::ENTREGADO,
-        CommissionStatus::CANCELADO,
-        CommissionStatus::PAGO_CONFIRMADO,
+        CommissionStatus::RETIRADO_SUCURSAL,
+        CommissionStatus::ENTREGADO
     ];
 
     /**

@@ -5,6 +5,7 @@ namespace App\Contexts\Commissions\Infrastructure\Http\Requests;
 use App\Shared\Enums\CommissionItemSize;
 use App\Shared\Enums\CommissionItemType;
 use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\CommissionType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 
@@ -35,6 +36,7 @@ class UpdateCommissionRequest extends FormRequest
             'total' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'a_cuenta' => ['nullable', 'boolean'],
+            'type' => ['nullable', new Enum(CommissionType::class)],
         ];
     }
 

@@ -261,8 +261,9 @@ class ClientDashboardController
                 ], 404);
             }
 
-            // Obtener el saldo actual de cuenta corriente (última transacción)
+            // Obtener el saldo actual de cuenta corriente (última transacción con estado OK)
             $lastTransaction = CurrentAccount::where('customer_id', $customer->id)
+                ->where('status', \App\Shared\Enums\CurrentAccountStatus::OK->value)
                 ->orderBy('transaction_date', 'desc')
                 ->orderBy('id', 'desc')
                 ->first();
@@ -382,8 +383,9 @@ class ClientDashboardController
                 ], 404);
             }
 
-            // Obtener el saldo actual de cuenta corriente
+            // Obtener el saldo actual de cuenta corriente (solo transacciones con estado OK)
             $lastTransaction = CurrentAccount::where('customer_id', $customer->id)
+                ->where('status', \App\Shared\Enums\CurrentAccountStatus::OK->value)
                 ->orderBy('transaction_date', 'desc')
                 ->orderBy('id', 'desc')
                 ->first();
