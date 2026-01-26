@@ -592,4 +592,172 @@ class CommissionTest extends TestCase
             $this->assertArrayHasKey('payment_method_label', $commission);
         }
     }
+
+    /**
+     * Test que simula el payload completo desde el administrador (con precios)
+     */
+    public function test_can_update_commission_with_full_payload_from_admin(): void
+    {
+        $this->actingAs($this->user);
+
+        // Crear destination con precios específicos
+        $destination = Destination::factory()->create([
+            'origin' => 'Buenos Aires',
+            'destination' => 'Rosario',
+            'fixed_price' => 10000,
+            'small_bulk_price' => 4000,
+            'large_bulk_price' => 6000,
+        ]);
+
+        // Crear una comisión inicial
+        $commission = Commission::factory()->create([
+            'client_id' => $this->customer->id,
+            'destination_id' => $destination->id,
+            'origin_location_id' => $this->originLocation->id,
+            'destination_location_id' => $this->destinationLocation->id,
+            'total' => 1000,
+        ]);
+
+        // Payload completo desde administrador (con precios)
+        $updateData = [
+            'client_id' => $this->customer->id,
+            'date' => '2024-03-22',
+            'origin' => $destination->origin,
+            'destination' => $destination->destination,
+            'status' => CommissionStatus::EN_PROCESO_ENTREGA->value,
+            'origin_location_id' => $this->originLocation->id,
+            'destination_location_id' => $this->destinationLocation->id,
+            'items' => [
+                [
+                    'type' => CommissionItemType::ORDINARIA->value,
+                    'size' => CommissionItemSize::SMALL->value,
+                    'quantity' => 1,
+                    'unit_price' => 4000,
+                    'subtotal' => 4000,
+                    'detail' => '',
+                ],
+            ],
+            'total' => 14000,
+            'notes' => '',
+        ];
+
+        $response = $this->putJson("/api/commissions/{$commission->id}", $updateData);
+
+        $response->assertStatus(200);
+
+        // Verificar que el total se calculó correctamente: fixed_price (10000) + subtotal (4000) = 14000
+        $this->assertDatabaseHas('commissions', [
+            'id' => $commission->id,
+            'total' => 14000,
+        ]);
+
+        // Verificar que el item se guardó con los precios correctos
+        $this->assertDatabaseHas('commission_items', [
+            'commission_id' => $commission->id,
+            'type' => CommissionItemType::ORDINARIA->value,
+            'size' => CommissionItemSize::SMALL->value,
+            'quantity' => 1,
+            'unit_price' => 4000,
+            'subtotal' => 4000,
+        ]);
+    }
+
+    /**
+     * Test que simula el payload desde la app de cadetes (sin precios, solo cantidades y tipos)
+     */
+    public function test_can_update_commission_with_partial_payload_from_cadete_app(): void
+    {
+        $this->actingAs($this->user);
+
+        // Crear destination con precios específicos
+        $destination = Destination::factory()->create([
+            'origin' => 'Buenos Aires',
+            'destination' => 'Rosario',
+            'fixed_price' => 10000,
+            'small_bulk_price' => 4000,
+            'large_bulk_price' => 6000,
+        ]);
+
+        // Crear una comisión inicial
+        $commission = Commission::factory()->create([
+            'client_id' => $this->customer->id,
+            'destination_id' => $destination->id,
+            'origin_location_id' => $this->originLocation->id,
+            'destination_location_id' => $this->destinationLocation->id,
+            'total' => 1000,
+        ]);
+
+        // Crear items iniciales con IDs
+        $item1 = \App\Shared\Models\CommissionItem::factory()->create([
+            'commission_id' => $commission->id,
+            'type' => CommissionItemType::ORDINARIA,
+            'size' => CommissionItemSize::SMALL,
+            'quantity' => 1,
+            'unit_price' => 500,
+            'subtotal' => 500,
+        ]);
+
+        $item2 = \App\Shared\Models\CommissionItem::factory()->create([
+            'commission_id' => $commission->id,
+            'type' => CommissionItemType::ORDINARIA,
+            'size' => CommissionItemSize::LARGE,
+            'quantity' => 1,
+            'unit_price' => 800,
+            'subtotal' => 800,
+        ]);
+
+        // Payload desde app de cadetes (sin precios, solo cantidades y tipos)
+        $updateData = [
+            'items' => [
+                [
+                    'id' => $item1->id,
+                    'type' => CommissionItemType::ORDINARIA->value,
+                    'size' => CommissionItemSize::SMALL->value,
+                    'quantity' => 1,
+                    'unit_price' => 0,
+                    'subtotal' => 0,
+                ],
+                [
+                    'id' => $item2->id,
+                    'type' => CommissionItemType::ORDINARIA->value,
+                    'size' => CommissionItemSize::LARGE->value,
+                    'quantity' => 1,
+                    'unit_price' => 0,
+                    'subtotal' => 0,
+                ],
+            ],
+            'total' => 0,
+        ];
+
+        $response = $this->putJson("/api/commissions/{$commission->id}", $updateData);
+
+        $response->assertStatus(200);
+
+        // Verificar que el total se calculó correctamente:
+        // fixed_price (10000) + small_bulk_price (4000) + large_bulk_price (6000) = 20000
+        $expectedTotal = $destination->fixed_price + ($destination->small_bulk_price * 1) + ($destination->large_bulk_price * 1);
+        $this->assertDatabaseHas('commissions', [
+            'id' => $commission->id,
+            'total' => $expectedTotal,
+        ]);
+
+        // Verificar que los items se guardaron con los precios recalculados desde el destination
+        $this->assertDatabaseHas('commission_items', [
+            'commission_id' => $commission->id,
+            'type' => CommissionItemType::ORDINARIA->value,
+            'size' => CommissionItemSize::SMALL->value,
+            'quantity' => 1,
+            'unit_price' => $destination->small_bulk_price,
+            'subtotal' => $destination->small_bulk_price,
+        ]);
+
+        $this->assertDatabaseHas('commission_items', [
+            'commission_id' => $commission->id,
+            'type' => CommissionItemType::ORDINARIA->value,
+            'size' => CommissionItemSize::LARGE->value,
+            'quantity' => 1,
+            'unit_price' => $destination->large_bulk_price,
+            'subtotal' => $destination->large_bulk_price,
+        ]);
+    }
 }

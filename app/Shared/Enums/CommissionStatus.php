@@ -12,6 +12,8 @@ enum CommissionStatus: string
     case EN_PUNTO_RETIRO = 'EN_PUNTO_RETIRO';
     case ENCOMIENDA_RETIRADA = 'ENCOMIENDA_RETIRADA';
     case EN_CAMINO_PLANTA = 'EN_CAMINO_PLANTA';
+
+    case EN_PLANTA = 'EN_PLANTA';
     case EN_TRANSITO_DESTINO = 'EN_TRANSITO_DESTINO';
     case EN_SUCURSAL_DESTINO = 'EN_SUCURSAL_DESTINO';
     case EN_PROCESO_ENTREGA = 'EN_PROCESO_ENTREGA';
@@ -32,6 +34,8 @@ enum CommissionStatus: string
     case PENDIENTE_PAGO = 'PENDIENTE_PAGO';
     case PAGO_VALIDACION = 'PAGO_VALIDACION';
     case PAGO_CONFIRMADO = 'PAGO_CONFIRMADO';
+
+    case EN_SUCURSAL = 'EN_SUCURSAL';
 
     /**
      * Obtiene el estado para mostrar al cadete
@@ -62,6 +66,8 @@ enum CommissionStatus: string
             self::SOLICITUD_RECIBIDA, self::BUSCANDO_CADETE, 
             self::PENDIENTE_PAGO, self::PAGO_VALIDACION, self::PAGO_CONFIRMADO,
             self::EN_SUCURSAL_DESTINO, self::CANCELADO, self::EN_ANALISIS => 'En proceso',
+            self::EN_SUCURSAL => 'En sucursal',
+            self::EN_PLANTA => 'En planta',
         };
     }
 
@@ -97,6 +103,8 @@ enum CommissionStatus: string
             self::DEVUELTO_REMITENTE => 'Devuelto al remitente',
             self::CANCELADO => 'Cancelado',
             self::EN_ANALISIS => 'En análisis',
+            self::EN_SUCURSAL => 'En sucursal',
+            self::EN_PLANTA => 'En planta',
         };
     }
 
@@ -132,6 +140,8 @@ enum CommissionStatus: string
             self::DEVUELTO_REMITENTE => 'Devuelto al remitente',
             self::CANCELADO => 'Cancelado',
             self::EN_ANALISIS => 'En análisis',
+            self::EN_SUCURSAL => 'En sucursal',
+            self::EN_PLANTA => 'En planta',
         };
     }
 
@@ -168,8 +178,9 @@ enum CommissionStatus: string
             'Disponible para retiro en sucursal' => self::DISPONIBLE_RETIRO,
             'En devolución al remitente' => self::EN_DEVOLUCION,
             'Devuelto al remitente' => self::DEVUELTO_REMITENTE,
+            'En sucursal' => self::EN_SUCURSAL,
+            'En planta' => self::EN_PLANTA,
             
-            default => throw new \InvalidArgumentException("Estado del cadete no válido: {$cadeteStatus}")
         };
     }
 
@@ -195,6 +206,7 @@ enum CommissionStatus: string
             self::DISPONIBLE_RETIRO->value,
             self::EN_DEVOLUCION->value,
             self::DEVUELTO_REMITENTE->value,
+            self::EN_PLANTA->value,
         ];
 
         $labels = [
@@ -212,7 +224,9 @@ enum CommissionStatus: string
             'Reprogramando entrega',
             'Disponible para retiro en sucursal',
             'En devolución al remitente',
-            'Devuelto al remitente'
+            'Devuelto al remitente',
+            'En sucursal',
+            'En planta',
         ];
 
         return array_merge($enumValues, $labels);

@@ -17,4 +17,5 @@ interface CurrentAccountRepository
     public function findByCustomerId(int $customerId, CurrentAccountFilterDTO $filter): LengthAwarePaginator;
     public function getCustomerBalance(int $customerId): float;
     public function getCustomerTransactions(int $customerId, CurrentAccountFilterDTO $filter): LengthAwarePaginator;
+    public function confirmTransaction(int $id): CurrentAccount;
 }

@@ -17,24 +17,9 @@ class UpdateCustomerRequest extends FormRequest
      */
     public function rules(): array
     {
-        $customerId = $this->route('customer');
-
-        return [
-            'dni' => 'required|int|max:99999999|min:1000000|unique:customers,dni,' . $customerId,
-            'name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'mobile' => 'nullable|string|max:20',
-            'email' => 'required|email|unique:customers,email,' . $customerId,
-            'address' => 'nullable|string|max:255',
-            'city' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:20',
-            'maps_url' => 'nullable|url|max:255',
-            'business_hours' => 'nullable|string|max:255',
-            'observations' => 'nullable|string',
-            'is_premium' => 'boolean',
-            'auto_calculate_iva' => 'boolean',
-            'user_id' => 'nullable|exists:users,id',
-        ];
+        // Sin validaciones - todas las validaciones han sido removidas (v1)
+        // Mantenemos el campo auto_calculate_iva disponible para v2
+        return [];
     }
 
     protected function failedValidation(Validator $validator)

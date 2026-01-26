@@ -9,12 +9,15 @@ use App\Contexts\Commissions\Application\DTOs\UpdateCommissionDTO;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Services\IvaCalculationService;
 use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\CommissionType;
+use App\Shared\Enums\UserRole;
 use App\Shared\Models\Commission;
 use App\Shared\Models\CommissionItem;
 use App\Shared\Models\CommissionLog;
 use App\Shared\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class CommissionsEloquentRepository implements CommissionsRepository
 {
@@ -33,8 +36,15 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission = new Commission();
             $commission->client_id = $dto->clientId;
             $commission->destination_id = $destinationId;
-            $commission->date = $dto->date;
+            // Asegurar que la fecha no sea posterior a hoy
+            $commissionDate = $dto->date;
+            $today = new \DateTime();
+            if ($commissionDate > $today) {
+                $commissionDate = $today;
+            }
+            $commission->date = $commissionDate;
             $commission->status = $dto->status;
+            $commission->type = $dto->type ?? CommissionType::ORDINARIA;
             $commission->user_id = $userId;
             $commission->branch_id = $user?->branch_id ?? 1; // Usar branch_id 1 como fallback
             $commission->total = $dto->total;
@@ -42,7 +52,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission->origin_location_id = $dto->originLocationId;
             $commission->destination_location_id = $dto->destinationLocationId;
             
-            // Aplicar lógica de IVA si hay método de pago
+            // Aplicar lógica de IVA si hay método de pago (v2)
             if (isset($dto->paymentMethod)) {
                 $customer = \App\Shared\Models\Customer::find($dto->clientId);
                 $ivaCalculation = $this->ivaCalculationService->calculateIva($customer, $dto->paymentMethod, $dto->total);
@@ -57,6 +67,11 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     $ivaNote = $this->ivaCalculationService->generateIvaNote($ivaCalculation['iva_amount'], true);
                     $commission->notes = $commission->notes ? $commission->notes . "\n" . $ivaNote : $ivaNote;
                 }
+            }
+            
+            // Si el usuario que crea la comisión es un cadete, asignar automáticamente su ID (v1)
+            if ($user && in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO])) {
+                $commission->cadete_id = $userId;
             }
             
             $commission->save();
@@ -78,14 +93,20 @@ class CommissionsEloquentRepository implements CommissionsRepository
             
             $commission->client_id = $dto->clientId;
             $commission->destination_id = $destinationId;
-            $commission->date = $dto->date;
+            // Asegurar que la fecha no sea posterior a hoy
+            $commissionDate = $dto->date;
+            $today = new \DateTime();
+            if ($commissionDate > $today) {
+                $commissionDate = $today;
+            }
+            $commission->date = $commissionDate;
             $commission->status = $dto->status;
             $commission->total = $dto->total;
             $commission->notes = $dto->notes;
             $commission->origin_location_id = $dto->originLocationId;
             $commission->destination_location_id = $dto->destinationLocationId;
             
-            // Aplicar lógica de IVA si hay método de pago
+            // Aplicar lógica de IVA si hay método de pago (v2)
             if (isset($dto->paymentMethod)) {
                 $customer = \App\Shared\Models\Customer::find($dto->clientId);
                 
@@ -106,6 +127,11 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     $ivaNote = $this->ivaCalculationService->generateIvaNote($commission->iva_amount, true);
                     $commission->notes = $commission->notes ? $commission->notes . "\n" . $ivaNote : $ivaNote;
                 }
+            }
+            
+            // Actualizar el tipo de comisión si se proporciona (v1)
+            if ($dto->type !== null) {
+                $commission->type = $dto->type;
             }
             
             $commission->save();
@@ -194,6 +220,15 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 'deliverySignature',
             ]);
 
+            // Filtrar por sucursal según el rol del usuario
+            $user = Auth::user();
+            if ($user && $user->branch_id) {
+                // Cadetes, mostradores y administradores con sucursal solo ven comisiones de su sucursal
+                if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
+                    $query->where('commissions.branch_id', $user->branch_id);
+                }
+            }
+
             // Si se proporciona commissionId, ignorar todos los demás filtros
             if ($filters->commissionId) {
                 $query->where('commissions.id', $filters->commissionId);
@@ -210,12 +245,19 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     });
                 }
 
+                if ($filters->customerCity) {
+                    $query->whereHas('client', function ($q) use ($filters) {
+                        $q->where('city', 'LIKE', "%{$filters->customerCity}%");
+                    });
+                }
+
                 if ($filters->destinationId) {
                     $query->where('destination_id', $filters->destinationId);
                 }
 
-                if ($filters->branchId) {
-                    $query->where('branch_id', $filters->branchId);
+                // Solo aplicar branchId si el usuario es administrador sin sucursal (para otros roles ya está filtrado arriba)
+                if ($filters->branchId && $user && $user->role === UserRole::ADMINISTRADOR && !$user->branch_id) {
+                    $query->where('commissions.branch_id', $filters->branchId);
                 }
 
                 if ($filters->userId) {
@@ -231,11 +273,29 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 }
 
                 if ($filters->status) {
+                    // Si hay filtro de status, aplicar el filtro normalmente
                     $query->where('status', $filters->status->value);
+                } else {
+                    // Si NO hay filtro de status, excluir estados específicos
+                    $query->whereNotIn('status', [
+                        CommissionStatus::PENDIENTE_PAGO->value,
+                        CommissionStatus::PAGO_VALIDACION->value,
+                        CommissionStatus::PAGO_CONFIRMADO->value,
+                        CommissionStatus::ENTREGADO->value,
+                    ]);
                 }
 
                 if ($filters->method) {
                     $query->where('payment_method', $filters->method->value);
+                }
+
+                // Filtrar por tipo solo si la columna existe y se proporciona el filtro
+                if ($filters->type && Schema::hasColumn('commissions', 'type')) {
+                    $query->where('type', $filters->type->value);
+                }
+
+                if ($filters->total !== null) {
+                    $query->where('total', $filters->total);
                 }
 
                 // Aplicar ordenamiento solo si no se proporciona commissionId
@@ -331,6 +391,15 @@ class CommissionsEloquentRepository implements CommissionsRepository
         try {
             $query = Commission::query();
 
+            // Filtrar por sucursal según el rol del usuario
+            $user = Auth::user();
+            if ($user && $user->branch_id) {
+                // Cadetes, mostradores y administradores con sucursal solo ven comisiones de su sucursal
+                if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
+                    $query->where('commissions.branch_id', $user->branch_id);
+                }
+            }
+
             // Si se proporciona commissionId, ignorar todos los demás filtros
             if ($filters->commissionId) {
                 $query->where('commissions.id', $filters->commissionId);
@@ -347,12 +416,19 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     });
                 }
 
+                if ($filters->customerCity) {
+                    $query->whereHas('client', function ($q) use ($filters) {
+                        $q->where('city', 'LIKE', "%{$filters->customerCity}%");
+                    });
+                }
+
                 if ($filters->destinationId) {
                     $query->where('destination_id', $filters->destinationId);
                 }
 
-                if ($filters->branchId) {
-                    $query->where('branch_id', $filters->branchId);
+                // Solo aplicar branchId si el usuario es administrador sin sucursal (para otros roles ya está filtrado arriba)
+                if ($filters->branchId && $user && $user->role === UserRole::ADMINISTRADOR && !$user->branch_id) {
+                    $query->where('commissions.branch_id', $filters->branchId);
                 }
 
                 if ($filters->userId) {
@@ -368,7 +444,16 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 }
 
                 if ($filters->status) {
+                    // Si hay filtro de status, aplicar el filtro normalmente
                     $query->where('status', $filters->status->value);
+                } else {
+                    // Si NO hay filtro de status, excluir estados específicos
+                    $query->whereNotIn('status', [
+                        CommissionStatus::PENDIENTE_PAGO->value,
+                        CommissionStatus::PAGO_VALIDACION->value,
+                        CommissionStatus::PAGO_CONFIRMADO->value,
+                        CommissionStatus::ENTREGADO->value,
+                    ]);
                 }
 
                 if ($filters->method) {

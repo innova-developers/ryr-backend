@@ -4,6 +4,7 @@ namespace App\Contexts\Commissions\Application\DTOs;
 
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\PaymentMethod;
+use App\Shared\Enums\CommissionType;
 use DateTime;
 
 class CreateCommissionDTO
@@ -20,7 +21,8 @@ class CreateCommissionDTO
         public readonly int $destinationLocationId,
         public readonly ?string $notes = null,
         public readonly bool $aCuenta = false,
-        public readonly ?PaymentMethod $paymentMethod = null
+        public readonly ?PaymentMethod $paymentMethod = null,
+        public readonly ?CommissionType $type = null
     ) {
     }
 
@@ -41,7 +43,8 @@ class CreateCommissionDTO
             destinationLocationId: $data['destination_location_id'],
             notes: $data['notes'] ?? null,
             aCuenta: $data['a_cuenta'] ?? false,
-            paymentMethod: isset($data['payment_method']) ? PaymentMethod::from($data['payment_method']) : null
+            paymentMethod: isset($data['payment_method']) ? PaymentMethod::from($data['payment_method']) : null,
+            type: isset($data['type']) ? CommissionType::from($data['type']) : null
         );
     }
 
@@ -60,6 +63,7 @@ class CreateCommissionDTO
             'notes' => $this->notes,
             'a_cuenta' => $this->aCuenta,
             'payment_method' => $this->paymentMethod?->value,
+            'type' => $this->type?->value,
         ];
     }
 }

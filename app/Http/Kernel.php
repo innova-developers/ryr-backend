@@ -40,6 +40,7 @@ class Kernel extends HttpKernel
         'can' => \Illuminate\Auth\Middleware\Authorize::class,
         'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
         'isAdmin' => \App\Shared\Middleware\UserAdminMiddleware::class,
+        'adminOrCadete' => \App\Http\Middleware\AdminOrCadeteMiddleware::class,
         'client.auth' => \App\Http\Middleware\ClientAuthMiddleware::class,
         'cadete' => \App\Http\Middleware\CadeteMiddleware::class,
         'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
