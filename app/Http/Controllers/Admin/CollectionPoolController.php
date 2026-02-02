@@ -18,6 +18,23 @@ use Illuminate\Support\Facades\Schema;
 class CollectionPoolController
 {
     /**
+     * Aplica la regla de visibilidad de comisiones
+     * Las comisiones aparecen a partir de las 20:00 del día anterior
+     * Si fecha_comision = 2026-02-02, aparece visible desde las 20:00 del 2026-02-01
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    private function applyCommissionVisibilityRule($query)
+    {
+        $now = now();
+        // Agregar 4 horas para que a las 20:00 ya aparezcan las comisiones del día siguiente
+        // Ejemplo: Si son las 20:00 del 2026-02-01, aparecen comisiones con date <= 2026-02-02
+        $cutoffDate = $now->copy()->addHours(4)->startOfDay();
+        
+        return $query->where('date', '<=', $cutoffDate->format('Y-m-d'));
+    }
+    /**
      * Obtiene el listado de clientes con deuda (saldo cuenta corriente < 0)
      * Incluye las comisiones históricas del cliente
      */
@@ -218,7 +235,11 @@ class CollectionPoolController
                     $pendingAmount = (float) $pendingTransactions;
                 }
                 
-                // Obtener solo comisiones ORDINARIAS o EXTRAORDINARIAS con total > 0 y estado PAGO_VALIDACION
+                // REGLA: Pool de Cobranza muestra solo comisiones en estado PAGO_VALIDACION
+                // Estas son las comisiones que generan deuda en cuenta corriente y están pendientes de pago
+                // REGLA: Usar fecha_comision (campo date) como fecha oficial
+                // REGLA: Aplicar visibilidad - las comisiones aparecen a partir de las 20:00 del día anterior
+                // Si fecha_comision = 2026-02-02, aparece visible desde las 20:00 del 2026-02-01
                 $commissionsQuery = Commission::with([
                     'items:id,commission_id,type,size,quantity,detail,unit_price,subtotal',
                     'destination:id,origin,destination,fixed_price',
@@ -235,9 +256,13 @@ class CollectionPoolController
                     $commissionsQuery->whereIn('type', [CommissionType::ORDINARIA->value, CommissionType::EXTRAORDINARIA->value]);
                 }
                 
+                // REGLA: Aplicar visibilidad - las comisiones aparecen a partir de las 20:00 del día anterior
+                // Solo aplicar si no hay filtros de fecha explícitos (para no interferir con búsquedas por fecha)
+                $commissionsQuery = $this->applyCommissionVisibilityRule($commissionsQuery);
+                
                 $commissions = $commissionsQuery
                 ->orderBy('date', 'desc')
-                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc') // Usar ID en lugar de created_at para consistencia
                 ->get()
                 ->map(function ($commission) {
                     return [
@@ -443,9 +468,12 @@ class CollectionPoolController
                 $commissionsQuery->whereIn('type', [CommissionType::ORDINARIA->value, CommissionType::EXTRAORDINARIA->value]);
             }
             
+            // REGLA: Aplicar visibilidad - las comisiones aparecen a partir de las 20:00 del día anterior
+            $commissionsQuery = $this->applyCommissionVisibilityRule($commissionsQuery);
+            
             $commissions = $commissionsQuery
                 ->orderBy('date', 'desc')
-                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc') // Usar ID en lugar de created_at para consistencia
                 ->get()
                 ->map(function ($commission) {
                     return [

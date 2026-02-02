@@ -227,12 +227,14 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     // Si hay filtro de status, aplicar el filtro normalmente
                     $query->where('status', $filters->status->value);
                 } else {
-                    // Si NO hay filtro de status, excluir estados específicos
-                    $query->whereNotIn('status', [
-                        CommissionStatus::PENDIENTE_PAGO->value,
+                    // REGLA: Balance General muestra comisiones que impactan en cuenta corriente
+                    // - PAGO_VALIDACION: Deuda pendiente (genera movimiento en cuenta corriente)
+                    // - PAGO_CONFIRMADO: Ya pagadas (histórico de comisiones que impactaron en cuenta corriente)
+                    // NOTA: El Pool de Cobranza muestra solo PAGO_VALIDACION (deudas pendientes)
+                    //       El Balance General incluye también PAGO_CONFIRMADO para mostrar historial completo
+                    $query->whereIn('status', [
                         CommissionStatus::PAGO_VALIDACION->value,
                         CommissionStatus::PAGO_CONFIRMADO->value,
-                        CommissionStatus::ENTREGADO->value,
                     ]);
                 }
 
@@ -279,6 +281,12 @@ class CommissionsEloquentRepository implements CommissionsRepository
                         $query->orderBy('status', $filters->sortDirection);
                         break;
                 }
+            }
+
+            // Si no hay ordenamiento específico, usar fecha_comision (date) como fecha oficial
+            if (!$filters->sort || $filters->sort === 'date') {
+                $query->orderBy('date', $filters->sortDirection ?? 'desc')
+                      ->orderBy('id', 'desc'); // Orden secundario por ID para mantener consistencia
             }
 
             return $query->paginate($filters->perPage, ['*'], 'page', $filters->page);
@@ -398,12 +406,14 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     // Si hay filtro de status, aplicar el filtro normalmente
                     $query->where('status', $filters->status->value);
                 } else {
-                    // Si NO hay filtro de status, excluir estados específicos
-                    $query->whereNotIn('status', [
-                        CommissionStatus::PENDIENTE_PAGO->value,
+                    // REGLA: Balance General muestra comisiones que impactan en cuenta corriente
+                    // - PAGO_VALIDACION: Deuda pendiente (genera movimiento en cuenta corriente)
+                    // - PAGO_CONFIRMADO: Ya pagadas (histórico de comisiones que impactaron en cuenta corriente)
+                    // NOTA: El Pool de Cobranza muestra solo PAGO_VALIDACION (deudas pendientes)
+                    //       El Balance General incluye también PAGO_CONFIRMADO para mostrar historial completo
+                    $query->whereIn('status', [
                         CommissionStatus::PAGO_VALIDACION->value,
                         CommissionStatus::PAGO_CONFIRMADO->value,
-                        CommissionStatus::ENTREGADO->value,
                     ]);
                 }
 
