@@ -77,8 +77,18 @@ Route::post('/commissions/public', [App\Http\Controllers\Public\PublicCommission
 // Rutas públicas para clientes
 Route::post('/customers/public', [App\Http\Controllers\Public\PublicCustomerController::class, 'store']);
 
+// Rutas públicas para encuestas de satisfacción
+Route::get('/survey/{token}', [App\Http\Controllers\Public\SatisfactionSurveyController::class, 'show']);
+Route::post('/survey/{token}', [App\Http\Controllers\Public\SatisfactionSurveyController::class, 'submit']);
+
 // Rutas compartidas para administradores, mostradores, cadetes y cobradores
-Route::middleware(['auth:sanctum', 'adminOrCadete'])->group(function () {
+// IMPORTANTE: El orden de los middlewares es crítico
+// 'franchise' debe ejecutarse ANTES de 'auth:sanctum' para configurar la conexión de DB
+// antes de que Sanctum intente autenticar (el usuario puede estar en la DB de la franquicia)
+Route::middleware(['franchise', 'auth:sanctum', 'adminOrCadete'])->group(function () {
+    // Información de franquicia actual
+    Route::get('/franchise/current', [App\Http\Controllers\Admin\FranchiseController::class, 'getCurrentFranchise']);
+    
     // Nueva comisión
     Route::post('/commissions', [CommissionController::class, 'store']);
     
@@ -130,10 +140,20 @@ Route::middleware(['auth:sanctum', 'adminOrCadete'])->group(function () {
         Route::get('/pending-transactions', [App\Http\Controllers\Admin\CollectionPoolController::class, 'getPendingTransactions']);
         Route::get('/{id}', [App\Http\Controllers\Admin\CollectionPoolController::class, 'show']);
     });
+
+    // Dashboard de feedback (encuestas de satisfacción)
+    Route::prefix('admin/feedback')->group(function () {
+        Route::get('/stats', [App\Http\Controllers\Admin\FeedbackController::class, 'stats']);
+        Route::get('/', [App\Http\Controllers\Admin\FeedbackController::class, 'index']);
+    });
 });
 
 // Rutas protegidas solo para administradores y mostradores
-Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
+// IMPORTANTE: 'franchise' debe ejecutarse ANTES de 'auth:sanctum'
+Route::middleware(['franchise', 'auth:sanctum', 'isAdmin'])->group(function () {
+    // Notificaciones a cadetes (solo admin)
+    Route::get('/notifications/cadetes', [App\Http\Controllers\Admin\NotificationController::class, 'getCadetes']);
+    Route::post('/notifications/cadetes/send', [App\Http\Controllers\Admin\NotificationController::class, 'sendNotificationToAllCadetes']);
     // Usuarios - Operaciones administrativas (crear, editar, eliminar)
     Route::post('/users', [UserController::class, 'store']);
     Route::put('/users/{id}', [UserController::class, 'update']);
@@ -278,11 +298,13 @@ Route::prefix('super-admin')->group(function () {
     Route::get('/profile', [SuperAdminAuthController::class, 'profile']);
     Route::get('/franchises/available', [SuperAdminAuthController::class, 'getAvailableFranchises']);
     Route::post('/franchises/{franchise}/select', [SuperAdminAuthController::class, 'selectFranchise']);
+    Route::post('/franchises/{franchise}/enter', [SuperAdminAuthController::class, 'enterFranchise']);
     Route::get('/franchises/current', [SuperAdminAuthController::class, 'getCurrentFranchise']);
     
     // Dashboard del super admin
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/dashboard/consolidated-report', [DashboardController::class, 'consolidatedReport']);
+    Route::get('/dashboard/accounts-receivable', [DashboardController::class, 'accountsReceivableReport']);
     
     // Gestión de franquicias - Rutas específicas ANTES del apiResource
     Route::get('/franchises/selector', [FranchiseController::class, 'getFranchisesForSelector']);
@@ -304,4 +326,3 @@ Route::prefix('super-admin')->group(function () {
     Route::post('/users/{user}/toggle-status', [SuperAdminUserController::class, 'toggleStatus']);
     });
 });
-

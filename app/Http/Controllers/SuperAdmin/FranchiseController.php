@@ -8,6 +8,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class FranchiseController
 {
@@ -23,7 +26,8 @@ class FranchiseController
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Franchise::query();
+        // Asegurar que siempre usamos la conexión principal
+        $query = Franchise::on('mysql');
 
         // Filtros
         if ($request->has('is_active')) {
@@ -40,6 +44,18 @@ class FranchiseController
         }
 
         $franchises = $query->orderBy('created_at', 'desc')->paginate(15);
+
+        // Agregar logo_url a cada franquicia
+        $franchises->getCollection()->transform(function ($franchise) {
+            if ($franchise->logo_path) {
+                // Construir la URL completa del logo
+                $baseUrl = config('app.url', 'http://localhost:8000');
+                $franchise->logo_url = rtrim($baseUrl, '/') . '/storage/' . ltrim($franchise->logo_path, '/');
+            } else {
+                $franchise->logo_url = null;
+            }
+            return $franchise;
+        });
 
         return response()->json([
             'success' => true,
@@ -60,6 +76,8 @@ class FranchiseController
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
             'contact_person' => 'nullable|string|max:255',
+            'primary_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'commission_percentage' => 'nullable|numeric|min:0|max:100',
             'settings' => 'nullable|array',
         ]);
 
@@ -91,6 +109,14 @@ class FranchiseController
 
             // Activar la franquicia
             $franchise->activate();
+            
+            // Agregar logo_url a la respuesta
+            if ($franchise->logo_path) {
+                $baseUrl = config('app.url', 'http://localhost:8000');
+                $franchise->logo_url = rtrim($baseUrl, '/') . '/storage/' . ltrim($franchise->logo_path, '/');
+            } else {
+                $franchise->logo_url = null;
+            }
 
             return response()->json([
                 'success' => true,
@@ -116,6 +142,12 @@ class FranchiseController
     public function show(Franchise $franchise): JsonResponse
     {
         $stats = $this->franchiseDatabaseService->getFranchiseDatabaseStats($franchise);
+        
+        // Asegurar que usamos la conexión principal
+        $franchise = Franchise::on('mysql')->findOrFail($franchise->id);
+        
+        // Agregar logo_url a la respuesta
+        $franchise->logo_url = $franchise->logo_path ? asset('storage/' . $franchise->logo_path) : null;
 
         return response()->json([
             'success' => true,
@@ -141,6 +173,8 @@ class FranchiseController
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
             'contact_person' => 'nullable|string|max:255',
+            'primary_color' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
+            'commission_percentage' => 'nullable|numeric|min:0|max:100',
             'settings' => 'nullable|array',
         ]);
 
@@ -153,7 +187,21 @@ class FranchiseController
         }
 
         try {
+            // Asegurar que usamos la conexión principal
+            $franchise = Franchise::on('mysql')->findOrFail($franchise->id);
+            
             $franchise->update($request->all());
+            
+            // Refrescar para obtener los datos actualizados
+            $franchise->refresh();
+            
+            // Agregar logo_url a la respuesta
+            if ($franchise->logo_path) {
+                $baseUrl = config('app.url', 'http://localhost:8000');
+                $franchise->logo_url = rtrim($baseUrl, '/') . '/storage/' . ltrim($franchise->logo_path, '/');
+            } else {
+                $franchise->logo_url = null;
+            }
 
             return response()->json([
                 'success' => true,
@@ -292,37 +340,118 @@ class FranchiseController
      */
     public function uploadLogo(Request $request, Franchise $franchise): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         try {
-            $logoPath = $request->file('logo')->store('franchises/logos', 'public');
+            // Asegurar que usamos la conexión principal para actualizar la franquicia
+            $franchise = Franchise::on('mysql')->findOrFail($franchise->id);
             
+            Log::info('Upload logo request received', [
+                'franchise_id' => $franchise->id,
+                'has_file' => $request->hasFile('logo'),
+                'all_files' => $request->allFiles(),
+            ]);
+            
+            $validator = Validator::make($request->all(), [
+                'logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            ]);
+
+            if ($validator->fails()) {
+                Log::warning('Logo validation failed', [
+                    'franchise_id' => $franchise->id,
+                    'errors' => $validator->errors()->toArray(),
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            // Verificar que el archivo existe
+            if (!$request->hasFile('logo')) {
+                Log::warning('No file received in uploadLogo', ['franchise_id' => $franchise->id]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No se recibió ningún archivo',
+                ], 422);
+            }
+
+            $file = $request->file('logo');
+            
+            Log::info('File received', [
+                'franchise_id' => $franchise->id,
+                'file_size' => $file->getSize(),
+                'file_mime' => $file->getMimeType(),
+                'file_name' => $file->getClientOriginalName(),
+            ]);
+            
+            // Validar tamaño del archivo (2MB = 2048KB)
+            if ($file->getSize() > 2048 * 1024) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El archivo es demasiado grande. El tamaño máximo es 2MB',
+                ], 422);
+            }
+
+            // Verificar que el directorio existe, si no crearlo
+            $directory = storage_path('app/public/franchises/logos');
+            if (!File::exists($directory)) {
+                File::makeDirectory($directory, 0755, true);
+                Log::info('Created directory', ['directory' => $directory]);
+            }
+
+            // Guardar el archivo usando Storage
+            $logoPath = Storage::disk('public')->putFile('franchises/logos', $file);
+            
+            if (!$logoPath) {
+                throw new \Exception('No se pudo guardar el archivo en el almacenamiento');
+            }
+            
+            Log::info('File stored', [
+                'franchise_id' => $franchise->id,
+                'logo_path' => $logoPath,
+            ]);
+            
+            // Actualizar la franquicia usando la conexión principal
             $franchise->update([
                 'logo_path' => $logoPath,
             ]);
 
+            Log::info('Logo uploaded successfully', [
+                'franchise_id' => $franchise->id,
+                'logo_path' => $logoPath,
+            ]);
+
+            // Construir la URL completa del logo
+            $baseUrl = config('app.url', 'http://localhost:8000');
+            $logoUrl = rtrim($baseUrl, '/') . '/storage/' . ltrim($logoPath, '/');
+            
             return response()->json([
                 'success' => true,
                 'message' => 'Logo uploaded successfully',
                 'data' => [
-                    'logo_url' => asset('storage/' . $logoPath),
+                    'logo_url' => $logoUrl,
+                    'logo_path' => $logoPath,
                 ],
             ]);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation error uploading logo', [
+                'franchise_id' => $franchise->id ?? null,
+                'error' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ]);
+            throw $e;
         } catch (\Exception $e) {
+            Log::error('Error uploading logo', [
+                'franchise_id' => $franchise->id ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Error uploading logo: ' . $e->getMessage(),
+                'error_details' => config('app.debug') ? $e->getTraceAsString() : null,
             ], 500);
         }
     }
@@ -382,9 +511,10 @@ class FranchiseController
      */
     public function getFranchisesForSelector(): JsonResponse
     {
-        $franchises = Franchise::where('is_active', true)
+        // Asegurar que siempre usamos la conexión principal
+        $franchises = Franchise::on('mysql')->where('is_active', true)
             ->whereNotNull('activated_at')
-            ->select('id', 'name', 'code', 'logo_path')
+            ->select('id', 'name', 'code', 'logo_path', 'subdomain')
             ->orderBy('name')
             ->get()
             ->map(function ($franchise) {
@@ -392,7 +522,10 @@ class FranchiseController
                     'id' => $franchise->id,
                     'name' => $franchise->name,
                     'code' => $franchise->code,
-                    'logo_url' => $franchise->logo_path ? asset('storage/' . $franchise->logo_path) : null,
+                    'subdomain' => $franchise->subdomain,
+                    'logo_url' => $franchise->logo_path 
+                        ? rtrim(config('app.url', 'http://localhost:8000'), '/') . '/storage/' . ltrim($franchise->logo_path, '/')
+                        : null,
                 ];
             });
 

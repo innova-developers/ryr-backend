@@ -18,12 +18,35 @@ class User extends Authenticatable
     use HasFactory;
     use Notifiable;
     use SoftDeletes;
+    
+    /**
+     * Obtener el nombre de la conexión de base de datos para el modelo.
+     * Esto permite que el modelo use la conexión configurada dinámicamente por el middleware.
+     * 
+     * IMPORTANTE: Este método se llama cuando Eloquent necesita determinar qué conexión usar.
+     * Sanctum también usará esta conexión para buscar tokens en personal_access_tokens.
+     */
+    public function getConnectionName()
+    {
+        // Si hay una conexión configurada dinámicamente (por el FranchiseMiddleware),
+        // usar esa conexión. De lo contrario, usar null para usar la conexión por defecto.
+        $defaultConnection = config('database.default');
+        
+        // Si la conexión por defecto no es 'mysql', significa que el middleware
+        // configuró una conexión de franquicia, así que usarla
+        if ($defaultConnection !== 'mysql' && strpos($defaultConnection, 'franchise_') === 0) {
+            return $defaultConnection;
+        }
+        
+        return null; // Usar conexión por defecto
+    }
     protected $fillable = [
         'name',
         'email',
         'password',
         'role',
         'branch_id',
+        'franchise_id',
         'base_salary',
         'income_percentage',
         'commission_percentage',
@@ -88,5 +111,19 @@ class User extends Authenticatable
         return $this->role === UserRole::ADMINISTRADOR;
     }
 
+    public function isFranchiseAdmin(): bool
+    {
+        return $this->role === UserRole::ADMINISTRADOR_FRANQUICIA;
+    }
 
+    /**
+     * @return BelongsTo<\App\Franchise, \App\Shared\Models\User>
+     */
+    public function franchise(): BelongsTo
+    {
+        /** @var BelongsTo<\App\Franchise, \App\Shared\Models\User> $relation */
+        $relation = $this->belongsTo(\App\Franchise::class);
+
+        return $relation;
+    }
 }

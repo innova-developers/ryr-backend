@@ -29,6 +29,11 @@ class LoginUseCase
         // Validar scope según el rol del usuario
         $this->validateUserScope($user->role, $loginDTO->scope);
         
+        // Si el usuario es ADMINISTRADOR_FRANQUICIA, guardar su franquicia en la sesión
+        if ($user->isFranchiseAdmin() && $user->franchise_id) {
+            session(['current_franchise_id' => $user->franchise_id]);
+        }
+        
         $token = $user->createToken('Personal Access Token')->plainTextToken;
 
         return LoginMapper::map($user, $token);
@@ -41,13 +46,14 @@ class LoginUseCase
     {
         switch ($scope) {
             case 'web':
-                // Permitir acceso a administradores, mostradores y cadetes
+                // Permitir acceso a administradores, mostradores, cadetes y administradores de franquicia
                 if (!in_array($userRole, [
                     UserRole::ADMINISTRADOR, 
                     UserRole::MOSTRADOR, 
                     UserRole::CADETE,
                     UserRole::CADETE_EXTERNO,
-                    UserRole::COBRADOR
+                    UserRole::COBRADOR,
+                    UserRole::ADMINISTRADOR_FRANQUICIA
                 ])) {
                     throw new InvalidScopeException($userRole->value, $scope);
                 }

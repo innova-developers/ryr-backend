@@ -20,6 +20,7 @@ class LoginMapper
                 'email' => $user->email,
                 'role' => $user->role,
                 'branch' => $user->branch->id ?? null,
+                'franchise_id' => $user->franchise_id ?? null,
             ],
         ];
     }

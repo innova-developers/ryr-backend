@@ -20,6 +20,8 @@ class Franchise extends Model
         'email',
         'contact_person',
         'logo_path',
+        'primary_color',
+        'commission_percentage',
         'is_active',
         'settings',
         'activated_at',
@@ -29,6 +31,7 @@ class Franchise extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'settings' => 'array',
+        'commission_percentage' => 'decimal:2',
         'activated_at' => 'datetime',
         'deactivated_at' => 'datetime',
     ];
@@ -105,5 +108,18 @@ class Franchise extends Model
     {
         $subdomain = $this->subdomain ?: $this->generateSubdomain();
         return "https://{$subdomain}.ryrcomisiones.com";
+    }
+
+    /**
+     * Obtener la URL completa del logo
+     */
+    public function getLogoUrlAttribute(): ?string
+    {
+        if (!$this->logo_path) {
+            return null;
+        }
+        
+        $baseUrl = config('app.url', 'http://localhost:8000');
+        return rtrim($baseUrl, '/') . '/storage/' . ltrim($this->logo_path, '/');
     }
 }

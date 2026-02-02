@@ -19,6 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'adminOrCadete' => \App\Http\Middleware\AdminOrCadeteMiddleware::class,
             'cadete' => \App\Http\Middleware\CadeteMiddleware::class,
             'client.auth' => \App\Http\Middleware\ClientAuthMiddleware::class,
+            'franchise' => \App\Http\Middleware\FranchiseMiddleware::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule) {

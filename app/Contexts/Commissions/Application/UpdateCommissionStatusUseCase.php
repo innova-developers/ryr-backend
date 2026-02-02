@@ -9,7 +9,9 @@ use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Services\CommissionNotificationService;
 use App\Services\FcmNotificationService;
+use App\Services\MatrixCommissionService;
 use App\Services\NotificationService;
+use App\Services\SatisfactionSurveyService;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\CommissionType;
 use App\Shared\Models\CurrentAccount;
@@ -24,7 +26,9 @@ class UpdateCommissionStatusUseCase
         private readonly CurrentAccountRepository $currentAccountRepository,
         private readonly CommissionNotificationService $notificationService,
         private readonly NotificationService $pushNotificationService,
-        private readonly FcmNotificationService $fcmNotificationService
+        private readonly FcmNotificationService $fcmNotificationService,
+        private readonly MatrixCommissionService $matrixCommissionService,
+        private readonly SatisfactionSurveyService $satisfactionSurveyService
     ) {
     }
 
@@ -105,6 +109,39 @@ class UpdateCommissionStatusUseCase
                 // Refrescar la comisión para asegurar que tenemos el estado final correcto
                 $commission->refresh();
                 $finalStatus = $commission->status;
+
+                // Si el estado cambió a PAGO_CONFIRMADO, calcular la comisión de la matriz
+                if ($finalStatus === CommissionStatus::PAGO_CONFIRMADO && $previousStatus !== CommissionStatus::PAGO_CONFIRMADO) {
+                    try {
+                        $franchiseId = session('current_franchise_id');
+                        if ($franchiseId) {
+                            $this->matrixCommissionService->calculateAndStoreMatrixCommission($commission->id, $franchiseId);
+                        } else {
+                            Log::warning('No se pudo obtener el franchise_id para calcular la comisión de la matriz', [
+                                'commission_id' => $commission->id,
+                            ]);
+                        }
+                    } catch (\Exception $e) {
+                        // No fallar la transacción principal si hay un error al calcular la comisión de la matriz
+                        Log::error('Error al calcular la comisión de la matriz', [
+                            'commission_id' => $commission->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                // Si el estado cambió a ENTREGADO, enviar encuesta de satisfacción
+                if ($finalStatus === CommissionStatus::ENTREGADO && $previousStatus !== CommissionStatus::ENTREGADO) {
+                    try {
+                        $this->satisfactionSurveyService->sendSurveyForCommission($commission);
+                    } catch (\Exception $e) {
+                        // No fallar la transacción principal si hay un error al enviar la encuesta
+                        Log::error('Error al enviar encuesta de satisfacción', [
+                            'commission_id' => $commission->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
 
                 // Si el estado es INTENTO_ENTREGA_FALLIDO, crear nueva comisión con precio base
                 if ($finalStatus === CommissionStatus::INTENTO_ENTREGA_FALLIDO) {

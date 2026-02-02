@@ -9,7 +9,6 @@ enum UserRole: string
     case MOSTRADOR = 'mostrador';
     case CLIENTE = 'cliente';
     case CADETE_EXTERNO = 'cadete_externo';
-
     case COBRADOR = 'cobrador';
-
+    case ADMINISTRADOR_FRANQUICIA = 'administrador_franquicia';
 }

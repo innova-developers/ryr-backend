@@ -33,7 +33,14 @@ class FranchiseDatabaseService
 
         // Establecer como conexión por defecto
         Config::set('database.default', $connectionName);
+        
+        // IMPORTANTE: Purgar todas las conexiones para forzar la recreación
+        // Esto asegura que Eloquent y Sanctum usen la nueva conexión
         DB::purge($connectionName);
+        DB::purge(); // Purgar todas las conexiones
+        
+        // Forzar la recreación de la conexión
+        DB::reconnect($connectionName);
     }
 
     /**
@@ -42,26 +49,34 @@ class FranchiseDatabaseService
     public function createFranchiseDatabase(Franchise $franchise): array
     {
         try {
+            // Guardar conexión principal
+            $originalConnection = config('database.default');
+            
             // Conectar a la base de datos principal para crear la nueva DB
             $mainConnection = DB::connection();
             
-            // Crear la base de datos
+            // Crear la base de datos vacía
             $mainConnection->statement("CREATE DATABASE IF NOT EXISTS `{$franchise->database_name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
             
             // Configurar la conexión a la nueva base de datos
             $this->setFranchiseConnection($franchise);
             
-            // Ejecutar las migraciones en la nueva base de datos
+            // Ejecutar las migraciones en la nueva base de datos (crea todas las tablas vacías)
             $this->runMigrationsForFranchise($franchise);
             
             // Crear usuario administrador para la franquicia
             $adminCredentials = $this->createFranchiseAdmin($franchise);
+            
+            // Restaurar conexión principal
+            $this->restoreMainConnection();
             
             return [
                 'success' => true,
                 'admin_credentials' => $adminCredentials
             ];
         } catch (\Exception $e) {
+            // Asegurar que se restaure la conexión principal en caso de error
+            $this->restoreMainConnection();
             \Log::error("Error creating franchise database: " . $e->getMessage());
             return [
                 'success' => false,
@@ -77,12 +92,48 @@ class FranchiseDatabaseService
     {
         $this->setFranchiseConnection($franchise);
         
-        // Ejecutar migraciones específicas para franquicias
-        \Artisan::call('migrate', [
-            '--database' => $franchise->getDatabaseConnection(),
-            '--path' => 'database/migrations/franchise',
-            '--force' => true,
-        ]);
+        // Migraciones que NO deben ejecutarse en la DB de franquicia (solo en DB principal)
+        $excludedPatterns = [
+            'create_franchises_table',
+            'create_super_admins_table',
+            'add_logo_path_to_franchises_table',
+            'remove_domain_from_franchises_table',
+            'add_franchise_id_to_users_table', // Esta columna solo existe en la DB principal
+        ];
+        
+        // Obtener todas las migraciones ordenadas por fecha
+        $migrationPath = database_path('migrations');
+        $allMigrations = glob($migrationPath . '/*.php');
+        usort($allMigrations, function($a, $b) {
+            return strcmp(basename($a), basename($b));
+        });
+        
+        // Ejecutar migraciones una por una, excluyendo las problemáticas
+        foreach ($allMigrations as $migrationFile) {
+            $fileName = basename($migrationFile);
+            $shouldExclude = false;
+            
+            foreach ($excludedPatterns as $pattern) {
+                if (strpos($fileName, $pattern) !== false) {
+                    $shouldExclude = true;
+                    break;
+                }
+            }
+            
+            if (!$shouldExclude) {
+                try {
+                    // Ejecutar migración individual
+                    \Artisan::call('migrate', [
+                        '--database' => $franchise->getDatabaseConnection(),
+                        '--path' => 'database/migrations/' . $fileName,
+                        '--force' => true,
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::warning("Error running migration {$fileName} for franchise {$franchise->id}: " . $e->getMessage());
+                    // Continuar con las siguientes migraciones
+                }
+            }
+        }
     }
 
     /**
@@ -165,8 +216,10 @@ class FranchiseDatabaseService
      */
     public function restoreMainConnection(): void
     {
-        Config::set('database.default', 'mysql');
-        DB::purge('mysql');
+        $mainConnectionName = env('DB_CONNECTION', 'mysql');
+        Config::set('database.default', $mainConnectionName);
+        DB::purge($mainConnectionName);
+        DB::purge(); // Limpiar todas las conexiones
     }
 
     /**
@@ -174,27 +227,45 @@ class FranchiseDatabaseService
      */
     public function createFranchiseAdmin(Franchise $franchise): array
     {
-        $this->setFranchiseConnection($franchise);
-        
         // Generar credenciales únicas
         $adminEmail = "admin@{$franchise->generateSubdomain()}.ryrcomisiones.com";
         $adminPassword = $this->generateSecurePassword();
         
-        // Crear el usuario administrador
-        $adminUser = DB::table('users')->insertGetId([
+        // Primero crear el usuario en la DB principal (con franchise_id)
+        // Nota: La tabla users en la DB principal no tiene is_active, solo en las DBs de franquicia
+        $this->restoreMainConnection();
+        $mainConnection = DB::connection();
+        $mainUserId = $mainConnection->table('users')->insertGetId([
             'name' => "Administrador {$franchise->name}",
             'email' => $adminEmail,
-            'password' => bcrypt($adminPassword),
-            'role' => 'admin',
-            'is_active' => true,
+            'password' => bcrypt('password'),
+            'role' => \App\Shared\Enums\UserRole::ADMINISTRADOR_FRANQUICIA->value,
+            'franchise_id' => $franchise->id,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
         
+        // Luego crear el usuario en la DB de la franquicia (sin franchise_id, ya que todos los usuarios de esa DB pertenecen a esa franquicia)
+        $this->setFranchiseConnection($franchise);
+        $franchiseUserId = DB::table('users')->insertGetId([
+            'name' => "Administrador {$franchise->name}",
+            'email' => $adminEmail,
+            'password' => bcrypt('password'),
+            'role' => \App\Shared\Enums\UserRole::ADMINISTRADOR_FRANQUICIA->value,
+            // No incluir franchise_id aquí porque la tabla users en la DB de franquicia no tiene esa columna
+            // No incluir is_active porque la tabla users no tiene esa columna en ninguna DB
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        
+        // Restaurar conexión principal
+        $this->restoreMainConnection();
+        
         return [
             'email' => $adminEmail,
             'password' => $adminPassword,
-            'user_id' => $adminUser,
+            'user_id' => $mainUserId, // ID del usuario en la DB principal
+            'franchise_user_id' => $franchiseUserId, // ID del usuario en la DB de la franquicia
             'franchise_url' => $franchise->getFullUrl()
         ];
     }

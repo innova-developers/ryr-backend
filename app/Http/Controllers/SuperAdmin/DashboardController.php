@@ -4,6 +4,7 @@ namespace App\Http\Controllers\SuperAdmin;
 
 use App\Franchise;
 use App\Services\FranchiseDatabaseService;
+use App\Services\MatrixCommissionService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -11,10 +12,14 @@ use Illuminate\Support\Facades\DB;
 class DashboardController
 {
     protected $franchiseDatabaseService;
+    protected $matrixCommissionService;
 
-    public function __construct(FranchiseDatabaseService $franchiseDatabaseService)
-    {
+    public function __construct(
+        FranchiseDatabaseService $franchiseDatabaseService,
+        MatrixCommissionService $matrixCommissionService
+    ) {
         $this->franchiseDatabaseService = $franchiseDatabaseService;
+        $this->matrixCommissionService = $matrixCommissionService;
     }
 
     /**
@@ -49,8 +54,9 @@ class DashboardController
      */
     private function getGlobalStats(): array
     {
-        $totalFranchises = Franchise::count();
-        $activeFranchises = Franchise::where('is_active', true)->count();
+        // Asegurar que siempre usamos la conexión principal para consultar franchises
+        $totalFranchises = Franchise::on('mysql')->count();
+        $activeFranchises = Franchise::on('mysql')->where('is_active', true)->count();
         $inactiveFranchises = $totalFranchises - $activeFranchises;
 
         // Calcular estadísticas agregadas de todas las franquicias
@@ -59,7 +65,7 @@ class DashboardController
         $totalUsers = 0;
         $totalRevenue = 0;
 
-        $franchises = Franchise::where('is_active', true)->get();
+        $franchises = Franchise::on('mysql')->where('is_active', true)->get();
         
         foreach ($franchises as $franchise) {
             $stats = $this->franchiseDatabaseService->getFranchiseDatabaseStats($franchise);
@@ -85,7 +91,8 @@ class DashboardController
      */
     private function getFranchisesOverview(): array
     {
-        $franchises = Franchise::orderBy('created_at', 'desc')->take(10)->get();
+        // Asegurar que siempre usamos la conexión principal
+        $franchises = Franchise::on('mysql')->orderBy('created_at', 'desc')->take(10)->get();
         
         $overview = [];
         
@@ -111,8 +118,8 @@ class DashboardController
      */
     private function getRecentActivity(): array
     {
-        // Obtener franquicias creadas recientemente
-        $recentFranchises = Franchise::orderBy('created_at', 'desc')
+        // Obtener franquicias creadas recientemente - siempre usar conexión principal
+        $recentFranchises = Franchise::on('mysql')->orderBy('created_at', 'desc')
             ->take(5)
             ->get()
             ->map(function ($franchise) {
@@ -208,7 +215,8 @@ class DashboardController
     public function consolidatedReport(): JsonResponse
     {
         try {
-            $franchises = Franchise::where('is_active', true)->get();
+            // Asegurar que siempre usamos la conexión principal
+            $franchises = Franchise::on('mysql')->where('is_active', true)->get();
             $report = [];
 
             foreach ($franchises as $franchise) {
@@ -237,6 +245,45 @@ class DashboardController
             return response()->json([
                 'success' => false,
                 'message' => 'Error generating consolidated report: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Reporte de cuentas por cobrar (comisiones adeudadas por franquicias a la matriz)
+     */
+    public function accountsReceivableReport(Request $request): JsonResponse
+    {
+        try {
+            $franchiseId = $request->get('franchise_id');
+            
+            // Obtener resumen por franquicia
+            $summaryByFranchise = $this->matrixCommissionService->getPendingCommissionsByFranchise();
+            
+            // Obtener detalles de comisiones pendientes
+            $pendingCommissions = $this->matrixCommissionService->getPendingCommissions($franchiseId);
+            
+            // Calcular totales
+            $totalAmount = array_sum(array_column($summaryByFranchise, 'total_amount'));
+            $totalCommissions = array_sum(array_column($summaryByFranchise, 'total_commissions'));
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'summary_by_franchise' => $summaryByFranchise,
+                    'pending_commissions' => $pendingCommissions,
+                    'totals' => [
+                        'total_amount' => $totalAmount,
+                        'total_commissions' => $totalCommissions,
+                    ],
+                    'generated_at' => now(),
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error generating accounts receivable report: ' . $e->getMessage(),
             ], 500);
         }
     }

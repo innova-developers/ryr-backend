@@ -16,8 +16,18 @@ class SuperAdminAuth
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Usar auth:sanctum pero verificar que sea SuperAdmin
-        $user = $request->user('sanctum');
+        // Intentar autenticar con el guard superadmin primero
+        $user = $request->user('superadmin');
+        
+        // Si no funciona con superadmin, intentar con sanctum y verificar que sea SuperAdmin
+        if (!$user) {
+            $user = $request->user('sanctum');
+            
+            if ($user && !($user instanceof SuperAdmin)) {
+                // Si es un usuario normal, no es Super Admin
+                $user = null;
+            }
+        }
         
         if (!$user) {
             return response()->json([
