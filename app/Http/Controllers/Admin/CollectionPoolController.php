@@ -18,23 +18,6 @@ use Illuminate\Support\Facades\Schema;
 class CollectionPoolController
 {
     /**
-     * Aplica la regla de visibilidad de comisiones
-     * Las comisiones aparecen a partir de las 20:00 del día anterior
-     * Si fecha_comision = 2026-02-02, aparece visible desde las 20:00 del 2026-02-01
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    private function applyCommissionVisibilityRule($query)
-    {
-        $now = now();
-        // Agregar 4 horas para que a las 20:00 ya aparezcan las comisiones del día siguiente
-        // Ejemplo: Si son las 20:00 del 2026-02-01, aparecen comisiones con date <= 2026-02-02
-        $cutoffDate = $now->copy()->addHours(4)->startOfDay();
-        
-        return $query->where('date', '<=', $cutoffDate->format('Y-m-d'));
-    }
-    /**
      * Obtiene el listado de clientes con deuda (saldo cuenta corriente < 0)
      * Incluye las comisiones históricas del cliente
      */
@@ -235,11 +218,7 @@ class CollectionPoolController
                     $pendingAmount = (float) $pendingTransactions;
                 }
                 
-                // REGLA: Pool de Cobranza muestra solo comisiones en estado PAGO_VALIDACION
-                // Estas son las comisiones que generan deuda en cuenta corriente y están pendientes de pago
-                // REGLA: Usar fecha_comision (campo date) como fecha oficial
-                // REGLA: Aplicar visibilidad - las comisiones aparecen a partir de las 20:00 del día anterior
-                // Si fecha_comision = 2026-02-02, aparece visible desde las 20:00 del 2026-02-01
+                // Obtener solo comisiones ORDINARIAS o EXTRAORDINARIAS con total > 0 y estado PAGO_VALIDACION
                 $commissionsQuery = Commission::with([
                     'items:id,commission_id,type,size,quantity,detail,unit_price,subtotal',
                     'destination:id,origin,destination,fixed_price',
@@ -256,13 +235,9 @@ class CollectionPoolController
                     $commissionsQuery->whereIn('type', [CommissionType::ORDINARIA->value, CommissionType::EXTRAORDINARIA->value]);
                 }
                 
-                // REGLA: Aplicar visibilidad - las comisiones aparecen a partir de las 20:00 del día anterior
-                // Solo aplicar si no hay filtros de fecha explícitos (para no interferir con búsquedas por fecha)
-                $commissionsQuery = $this->applyCommissionVisibilityRule($commissionsQuery);
-                
                 $commissions = $commissionsQuery
                 ->orderBy('date', 'desc')
-                ->orderBy('id', 'desc') // Usar ID en lugar de created_at para consistencia
+                ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($commission) {
                     return [
@@ -468,12 +443,9 @@ class CollectionPoolController
                 $commissionsQuery->whereIn('type', [CommissionType::ORDINARIA->value, CommissionType::EXTRAORDINARIA->value]);
             }
             
-            // REGLA: Aplicar visibilidad - las comisiones aparecen a partir de las 20:00 del día anterior
-            $commissionsQuery = $this->applyCommissionVisibilityRule($commissionsQuery);
-            
             $commissions = $commissionsQuery
                 ->orderBy('date', 'desc')
-                ->orderBy('id', 'desc') // Usar ID en lugar de created_at para consistencia
+                ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($commission) {
                     return [
@@ -567,120 +539,6 @@ class CollectionPoolController
                 'success' => false,
                 'message' => 'Error al obtener el cliente',
                 'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Obtiene todas las transacciones pendientes de todos los clientes asignados
-     * en una sola llamada, optimizando el número de requests
-     */
-    public function getPendingTransactions(Request $request): JsonResponse
-    {
-        try {
-            $user = Auth::user();
-            
-            // Verificar que el usuario tenga uno de los roles permitidos
-            $allowedRoles = [UserRole::ADMINISTRADOR, UserRole::COBRADOR, UserRole::MOSTRADOR];
-            if (!in_array($user->role, $allowedRoles)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No tienes permisos para acceder a este recurso',
-                ], 403);
-            }
-
-            // Obtener parámetros de filtrado
-            $internalUserId = $request->input('internal_user_id');
-            
-            // Filtrar por sucursal según el rol del usuario
-            $branchId = $user->branch_id && in_array($user->role, [UserRole::MOSTRADOR, UserRole::COBRADOR]) 
-                ? $user->branch_id 
-                : $request->input('branch_id');
-
-            // Obtener IDs de clientes asignados con deuda
-            // Primero obtener clientes con deuda
-            $hasStatusColumn = \Schema::hasColumn('current_accounts', 'status');
-            
-            $customersWithBalance = Customer::select('customers.*')
-                ->selectSub(function ($query) use ($hasStatusColumn) {
-                    $subquery = $query->select('balance')
-                        ->from('current_accounts')
-                        ->whereColumn('current_accounts.customer_id', 'customers.id');
-                    
-                    if ($hasStatusColumn) {
-                        $subquery->where('status', CurrentAccountStatus::OK->value);
-                    }
-                    
-                    $subquery->orderBy('transaction_date', 'desc')
-                        ->orderBy('id', 'desc')
-                        ->limit(1);
-                }, 'current_balance')
-                ->havingRaw('COALESCE(current_balance, 0) < 0')
-                ->whereNotNull('internal_user_id');
-
-            // Filtrar por usuario interno específico
-            if ($internalUserId) {
-                $customersWithBalance->where('internal_user_id', $internalUserId);
-            } else if (!in_array($user->role, [UserRole::ADMINISTRADOR])) {
-                // Si no es admin, solo ver sus propios clientes asignados
-                $customersWithBalance->where('internal_user_id', $user->id);
-            }
-
-            // Filtrar por sucursal si aplica
-            if ($branchId) {
-                $customersWithBalance->where('branch_id', $branchId);
-            }
-
-            $customerIds = $customersWithBalance->pluck('id')->toArray();
-
-            if (empty($customerIds)) {
-                return response()->json([
-                    'success' => true,
-                    'data' => [],
-                ], 200);
-            }
-
-            // Obtener todas las transacciones pendientes de estos clientes en una sola query
-            $pendingTransactions = CurrentAccount::with(['customer:id,name,last_name,dni', 'verifiedBy:id,name,email'])
-                ->whereIn('customer_id', $customerIds)
-                ->where('status', CurrentAccountStatus::PENDIENTE->value)
-                ->where('type', 'credit') // Solo créditos pueden estar pendientes
-                ->orderBy('transaction_date', 'desc')
-                ->orderBy('id', 'desc')
-                ->get()
-                ->map(function ($transaction) {
-                    return [
-                        'id' => $transaction->id,
-                        'customer_id' => $transaction->customer_id,
-                        'customer_name' => $transaction->customer ? ($transaction->customer->name . ' ' . $transaction->customer->last_name) : 'Cliente desconocido',
-                        'customer_dni' => $transaction->customer->dni ?? null,
-                        'type' => $transaction->type,
-                        'amount' => (float) $transaction->amount,
-                        'description' => $transaction->description,
-                        'reference' => $transaction->reference,
-                        'transaction_date' => $transaction->transaction_date->format('Y-m-d'),
-                        'payment_method' => $transaction->payment_method,
-                        'status' => $transaction->status,
-                        'created_at' => $transaction->created_at->toISOString(),
-                        'verified_by' => $transaction->verifiedBy ? [
-                            'name' => $transaction->verifiedBy->name,
-                            'email' => $transaction->verifiedBy->email,
-                        ] : null,
-                        'verified_at' => $transaction->verified_at ? $transaction->verified_at->toISOString() : null,
-                    ];
-                });
-
-            return response()->json([
-                'success' => true,
-                'data' => $pendingTransactions,
-            ], 200);
-        } catch (\Exception $e) {
-            \Log::error('Error en CollectionPoolController::getPendingTransactions: ' . $e->getMessage());
-            \Log::error('Stack trace: ' . $e->getTraceAsString());
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Error al obtener las transacciones pendientes: ' . $e->getMessage(),
             ], 500);
         }
     }

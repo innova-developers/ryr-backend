@@ -31,13 +31,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission = new Commission();
             $commission->client_id = $dto->clientId;
             $commission->destination_id = $destinationId;
-            // Asegurar que la fecha no sea posterior a hoy
-            $commissionDate = $dto->date;
-            $today = new \DateTime();
-            if ($commissionDate > $today) {
-                $commissionDate = $today;
-            }
-            $commission->date = $commissionDate;
+            $commission->date = $dto->date;
             $commission->status = $dto->status;
             $commission->type = $dto->type ?? CommissionType::ORDINARIA;
             $commission->user_id = $userId;
@@ -69,13 +63,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission = Commission::findOrFail($dto->id);
             $commission->client_id = $dto->clientId;
             $commission->destination_id = $destinationId;
-            // Asegurar que la fecha no sea posterior a hoy
-            $commissionDate = $dto->date;
-            $today = new \DateTime();
-            if ($commissionDate > $today) {
-                $commissionDate = $today;
-            }
-            $commission->date = $commissionDate;
+            $commission->date = $dto->date;
             $commission->status = $dto->status;
             $commission->total = $dto->total;
             $commission->notes = $dto->notes;
@@ -216,25 +204,35 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 }
 
                 if ($filters->dateFrom) {
-                    $query->where('date', '>=', $filters->dateFrom);
+                    $query->whereDate('date', '>=', $filters->dateFrom);
                 }
 
                 if ($filters->dateTo) {
-                    $query->where('date', '<=', $filters->dateTo);
+                    // REGLA DE VISIBILIDAD: Si son más de las 20:00, incluir también las comisiones del día siguiente
+                    // Ejemplo: Si son las 20:30 del 2026-02-02 y busco hasta 2026-02-03, 
+                    // debo incluir también las comisiones del 2026-02-04
+                    $now = now();
+                    $requestedDateTo = \Carbon\Carbon::parse($filters->dateTo)->startOfDay();
+                    $effectiveDateTo = $requestedDateTo;
+                    
+                    // Si son más de las 20:00, agregar un día adicional al dateTo
+                    if ($now->hour >= 20) {
+                        $effectiveDateTo = $requestedDateTo->copy()->addDay();
+                    }
+                    
+                    $query->whereDate('date', '<=', $effectiveDateTo->format('Y-m-d'));
                 }
 
                 if ($filters->status) {
                     // Si hay filtro de status, aplicar el filtro normalmente
                     $query->where('status', $filters->status->value);
                 } else {
-                    // REGLA: Balance General muestra comisiones que impactan en cuenta corriente
-                    // - PAGO_VALIDACION: Deuda pendiente (genera movimiento en cuenta corriente)
-                    // - PAGO_CONFIRMADO: Ya pagadas (histórico de comisiones que impactaron en cuenta corriente)
-                    // NOTA: El Pool de Cobranza muestra solo PAGO_VALIDACION (deudas pendientes)
-                    //       El Balance General incluye también PAGO_CONFIRMADO para mostrar historial completo
-                    $query->whereIn('status', [
+                    // Si NO hay filtro de status, excluir estados específicos
+                    $query->whereNotIn('status', [
+                        CommissionStatus::PENDIENTE_PAGO->value,
                         CommissionStatus::PAGO_VALIDACION->value,
                         CommissionStatus::PAGO_CONFIRMADO->value,
+                        CommissionStatus::ENTREGADO->value,
                     ]);
                 }
 
@@ -281,12 +279,6 @@ class CommissionsEloquentRepository implements CommissionsRepository
                         $query->orderBy('status', $filters->sortDirection);
                         break;
                 }
-            }
-
-            // Si no hay ordenamiento específico, usar fecha_comision (date) como fecha oficial
-            if (!$filters->sort || $filters->sort === 'date') {
-                $query->orderBy('date', $filters->sortDirection ?? 'desc')
-                      ->orderBy('id', 'desc'); // Orden secundario por ID para mantener consistencia
             }
 
             return $query->paginate($filters->perPage, ['*'], 'page', $filters->page);
@@ -395,25 +387,35 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 }
 
                 if ($filters->dateFrom) {
-                    $query->where('date', '>=', $filters->dateFrom);
+                    $query->whereDate('date', '>=', $filters->dateFrom);
                 }
 
                 if ($filters->dateTo) {
-                    $query->where('date', '<=', $filters->dateTo);
+                    // REGLA DE VISIBILIDAD: Si son más de las 20:00, incluir también las comisiones del día siguiente
+                    // Ejemplo: Si son las 20:30 del 2026-02-02 y busco hasta 2026-02-03, 
+                    // debo incluir también las comisiones del 2026-02-04
+                    $now = now();
+                    $requestedDateTo = \Carbon\Carbon::parse($filters->dateTo)->startOfDay();
+                    $effectiveDateTo = $requestedDateTo;
+                    
+                    // Si son más de las 20:00, agregar un día adicional al dateTo
+                    if ($now->hour >= 20) {
+                        $effectiveDateTo = $requestedDateTo->copy()->addDay();
+                    }
+                    
+                    $query->whereDate('date', '<=', $effectiveDateTo->format('Y-m-d'));
                 }
 
                 if ($filters->status) {
                     // Si hay filtro de status, aplicar el filtro normalmente
                     $query->where('status', $filters->status->value);
                 } else {
-                    // REGLA: Balance General muestra comisiones que impactan en cuenta corriente
-                    // - PAGO_VALIDACION: Deuda pendiente (genera movimiento en cuenta corriente)
-                    // - PAGO_CONFIRMADO: Ya pagadas (histórico de comisiones que impactaron en cuenta corriente)
-                    // NOTA: El Pool de Cobranza muestra solo PAGO_VALIDACION (deudas pendientes)
-                    //       El Balance General incluye también PAGO_CONFIRMADO para mostrar historial completo
-                    $query->whereIn('status', [
+                    // Si NO hay filtro de status, excluir estados específicos
+                    $query->whereNotIn('status', [
+                        CommissionStatus::PENDIENTE_PAGO->value,
                         CommissionStatus::PAGO_VALIDACION->value,
                         CommissionStatus::PAGO_CONFIRMADO->value,
+                        CommissionStatus::ENTREGADO->value,
                     ]);
                 }
 

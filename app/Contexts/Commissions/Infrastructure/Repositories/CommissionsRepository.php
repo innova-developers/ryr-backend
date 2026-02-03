@@ -33,9 +33,7 @@ class CommissionsRepository
         if ($sortBy) {
             $query->orderBy($sortBy, $sortDirection ?? 'asc');
         } else {
-            // REGLA: Usar fecha_comision (campo date) como fecha oficial para ordenamiento
-            $query->orderBy('date', 'desc')
-                  ->orderBy('id', 'desc'); // Orden secundario por ID para mantener consistencia
+            $query->orderBy('created_at', 'desc');
         }
 
         return $query->paginate($filters['per_page'] ?? 15);
@@ -62,9 +60,7 @@ class CommissionsRepository
             ->when($filters->dateTo, function ($query, $dateTo) {
                 return $query->where('date', '<=', $dateTo);
             })
-            // REGLA: Usar fecha_comision (campo date) como fecha oficial para ordenamiento
-            ->orderBy('date', 'desc')
-            ->orderBy('id', 'desc'); // Orden secundario por ID para mantener consistencia
+            ->orderBy('created_at', 'desc');
 
         return $query->paginate($filters->perPage ?? 15);
     }
