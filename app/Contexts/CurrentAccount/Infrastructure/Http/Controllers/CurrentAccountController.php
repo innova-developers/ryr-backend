@@ -15,6 +15,7 @@ use App\Contexts\CurrentAccount\Application\UseCases\UpdateCurrentAccountUseCase
 use App\Contexts\CurrentAccount\Infrastructure\Http\Requests\CreateCurrentAccountRequest;
 use App\Contexts\CurrentAccount\Infrastructure\Http\Requests\UpdateCurrentAccountRequest;
 use App\Contexts\CurrentAccount\Infrastructure\Http\Resources\CurrentAccountResource;
+use App\Shared\Models\Commission;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -120,6 +121,40 @@ class CurrentAccountController extends Controller
         try {
             $filter = CurrentAccountFilterDTO::fromArray($request->all());
             $transactions = ($this->getTransactionsUseCase)($customerId, $filter);
+
+            // Para transacciones tipo "debit" con referencia "COM-XXX", usar la fecha de la comisión
+            $debitTransactionsWithCommission = $transactions->getCollection()->filter(function ($transaction) {
+                return $transaction->type === 'debit' 
+                    && $transaction->reference 
+                    && preg_match('/^COM-(\d+)$/', $transaction->reference);
+            });
+
+            if ($debitTransactionsWithCommission->isNotEmpty()) {
+                // Extraer IDs de comisiones
+                $commissionIds = $debitTransactionsWithCommission->map(function ($transaction) {
+                    if (preg_match('/^COM-(\d+)$/', $transaction->reference, $matches)) {
+                        return (int) $matches[1];
+                    }
+                    return null;
+                })->filter()->unique()->values()->toArray();
+
+                // Obtener las comisiones y crear un mapa de ID -> fecha
+                $commissions = Commission::whereIn('id', $commissionIds)
+                    ->pluck('date', 'id');
+
+                // Actualizar transaction_date en las transacciones tipo debit
+                $transactions->getCollection()->transform(function ($transaction) use ($commissions) {
+                    if ($transaction->type === 'debit' 
+                        && $transaction->reference 
+                        && preg_match('/^COM-(\d+)$/', $transaction->reference, $matches)) {
+                        $commissionId = (int) $matches[1];
+                        if ($commissions->has($commissionId)) {
+                            $transaction->transaction_date = $commissions->get($commissionId);
+                        }
+                    }
+                    return $transaction;
+                });
+            }
 
             // Usar Resource para asegurar que verified_by y verified_at se incluyan
             $transactions->getCollection()->transform(function ($transaction) {

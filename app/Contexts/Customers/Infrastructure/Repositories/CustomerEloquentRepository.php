@@ -47,11 +47,11 @@ class CustomerEloquentRepository implements CustomerRepository
             $bindings = [CurrentAccountStatus::OK->value];
             
             if ($filters->dateFrom) {
-                $dateConditions .= 'AND ca2.transaction_date >= ?';
+                $dateConditions .= ' AND ca2.transaction_date >= ?';
                 $bindings[] = $filters->dateFrom;
             }
             if ($filters->dateTo) {
-                $dateConditions .= 'AND ca2.transaction_date <= ?';
+                $dateConditions .= ' AND ca2.transaction_date <= ?';
                 $bindings[] = $filters->dateTo;
             }
             
@@ -95,7 +95,7 @@ class CustomerEloquentRepository implements CustomerRepository
 
         // Aplicar paginación
         if ($filters) {
-            $perPage = min($filters->perPage, 100); // Limitar a máximo 100 por página
+            $perPage = $filters->perPage;
             $customers = $query->paginate($perPage, ['*'], 'page', $filters->page);
 
             return [

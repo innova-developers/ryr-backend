@@ -20,7 +20,7 @@ class CreateCommissionRequest extends FormRequest
     {
         return [
             'client_id' => ['required', 'integer', 'exists:customers,id'],
-            'date' => ['required', 'date', 'before_or_equal:today'],
+            'date' => ['required', 'date'],
             'origin' => ['required', 'string', 'max:255'],
             'destination' => ['required', 'string', 'max:255'],
             'status' => ['required', new Enum(CommissionStatus::class)],

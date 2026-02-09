@@ -8,7 +8,7 @@ use App\Contexts\Expenses\Application\DTOs\UpdateExpenseDTO;
 use App\Contexts\Expenses\Domain\Repositories\ExpensesRepository;
 use App\Shared\Enums\UserRole;
 use App\Shared\Models\Expense;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 
 class ExpensesEloquentRepository implements ExpensesRepository
@@ -44,7 +44,7 @@ class ExpensesEloquentRepository implements ExpensesRepository
         return $expense;
     }
 
-    public function findAll(ExpenseFilterDTO $filterDTO): Collection
+    public function findAll(ExpenseFilterDTO $filterDTO): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         $query = Expense::with(['transport', 'category', 'user'])
             ->orderBy('date', 'desc')
@@ -65,7 +65,7 @@ class ExpensesEloquentRepository implements ExpensesRepository
             }
         }
 
-        return $query->get();
+        return $query->paginate($filterDTO->perPage, ['*'], 'page', $filterDTO->page);
     }
 
     public function create(CreateExpenseDTO $dto): Expense

@@ -228,12 +228,16 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     $query->where('status', $filters->status->value);
                 } else {
                     // Si NO hay filtro de status, excluir estados específicos
-                    $query->whereNotIn('status', [
-                        CommissionStatus::PENDIENTE_PAGO->value,
-                        CommissionStatus::PAGO_VALIDACION->value,
-                        CommissionStatus::PAGO_CONFIRMADO->value,
-                        CommissionStatus::ENTREGADO->value,
-                    ]);
+                    // PERO solo si NO hay otros filtros activos (como método de pago)
+                    // que puedan necesitar ver esos estados
+                    if (!$filters->method) {
+                        $query->whereNotIn('status', [
+                            CommissionStatus::PENDIENTE_PAGO->value,
+                            CommissionStatus::PAGO_VALIDACION->value,
+                            CommissionStatus::PAGO_CONFIRMADO->value,
+                            CommissionStatus::ENTREGADO->value,
+                        ]);
+                    }
                 }
 
                 if ($filters->method) {
@@ -411,12 +415,16 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     $query->where('status', $filters->status->value);
                 } else {
                     // Si NO hay filtro de status, excluir estados específicos
-                    $query->whereNotIn('status', [
-                        CommissionStatus::PENDIENTE_PAGO->value,
-                        CommissionStatus::PAGO_VALIDACION->value,
-                        CommissionStatus::PAGO_CONFIRMADO->value,
-                        CommissionStatus::ENTREGADO->value,
-                    ]);
+                    // PERO solo si NO hay otros filtros activos (como método de pago)
+                    // que puedan necesitar ver esos estados
+                    if (!$filters->method) {
+                        $query->whereNotIn('status', [
+                            CommissionStatus::PENDIENTE_PAGO->value,
+                            CommissionStatus::PAGO_VALIDACION->value,
+                            CommissionStatus::PAGO_CONFIRMADO->value,
+                            CommissionStatus::ENTREGADO->value,
+                        ]);
+                    }
                 }
 
                 if ($filters->method) {
