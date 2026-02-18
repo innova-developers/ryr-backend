@@ -189,9 +189,17 @@ class CurrentAccountEloquentRepository implements CurrentAccountRepository
         }
 
         // Cambiar el estado a OK y guardar quién verificó
+        // Intentar obtener el usuario autenticado, si no existe, usar internal_user_id del customer
         $userId = Auth::id();
+        
         if (!$userId) {
-            throw new \Exception('Usuario no autenticado');
+            // Si no hay usuario autenticado, usar el internal_user_id del customer asociado
+            $customer = Customer::find($transaction->customer_id);
+            if ($customer && $customer->internal_user_id) {
+                $userId = $customer->internal_user_id;
+            } else {
+                throw new \Exception('Usuario no autenticado y el cliente no tiene internal_user_id asignado');
+            }
         }
         
         $transaction->update([
