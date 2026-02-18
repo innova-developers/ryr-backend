@@ -54,8 +54,8 @@ Route::get('users/{userId}/expenses', [ExpensesController::class, 'index']);
 // Rutas de categorías de ingresos
 Route::apiResource('income-categories', IncomeCategoryController::class);
 
-// Rutas de cuenta corriente
-Route::prefix('current-accounts')->group(function () {
+// Rutas de cuenta corriente (protegidas con autenticación)
+Route::middleware(['auth:sanctum'])->prefix('current-accounts')->group(function () {
     Route::post('/', [CurrentAccountController::class, 'store']);
     Route::post('/{id}/confirm', [CurrentAccountController::class, 'confirmTransaction']); // Debe ir antes de las rutas con {id}
     Route::get('/{id}', [CurrentAccountController::class, 'show']);
