@@ -12,6 +12,7 @@ use App\Shared\Models\CurrentAccount;
 use App\Shared\Models\Customer;
 use App\Shared\Models\Commission;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Auth;
 
 class CurrentAccountEloquentRepository implements CurrentAccountRepository
 {
@@ -188,10 +189,16 @@ class CurrentAccountEloquentRepository implements CurrentAccountRepository
         }
 
         // Cambiar el estado a OK y guardar quién verificó
-        $transaction->status = CurrentAccountStatus::OK;
-        $transaction->verified_by_user_id = auth()->id();
-        $transaction->verified_at = now();
-        $transaction->save();
+        $userId = Auth::id();
+        if (!$userId) {
+            throw new \Exception('Usuario no autenticado');
+        }
+        
+        $transaction->update([
+            'status' => CurrentAccountStatus::OK,
+            'verified_by_user_id' => $userId,
+            'verified_at' => now(),
+        ]);
 
         // Recalcular todos los balances del cliente porque ahora este crédito afecta el saldo
         $this->recalculateBalances($transaction->customer_id);
