@@ -217,11 +217,9 @@ class CurrentAccountEloquentRepository implements CurrentAccountRepository
         if ($customerBalance == 0) {
             Customer::where('id', $transaction->customer_id)->update(['internal_user_id' => null]);
             
-            // Marcar todas las comisiones del cliente como PAGO_CONFIRMADO
-            // Excluir las que ya están confirmadas o canceladas
+            // Marcar solo las comisiones en estado PAGO_VALIDACION como PAGO_CONFIRMADO
             Commission::where('client_id', $transaction->customer_id)
-                ->where('status', '!=', CommissionStatus::PAGO_CONFIRMADO->value)
-                ->where('status', '!=', CommissionStatus::CANCELADO->value)
+                ->where('status', CommissionStatus::PAGO_VALIDACION->value)
                 ->update(['status' => CommissionStatus::PAGO_CONFIRMADO->value]);
         }
 
