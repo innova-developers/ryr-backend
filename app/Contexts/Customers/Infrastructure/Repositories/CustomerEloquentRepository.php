@@ -10,6 +10,7 @@ use App\Shared\Enums\CurrentAccountStatus;
 use App\Shared\Enums\UserRole;
 use App\Shared\Models\Customer;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -223,6 +224,17 @@ class CustomerEloquentRepository implements CustomerRepository
             return $customer;
         } catch (ModelNotFoundException $exception) {
             throw $exception;
+        } catch (QueryException $exception) {
+            if ($exception->errorInfo[1] === 1062) {
+                if (str_contains($exception->getMessage(), 'customers_dni_unique')) {
+                    throw new \RuntimeException('El DNI ingresado ya está registrado en otro cliente.');
+                }
+                if (str_contains($exception->getMessage(), 'customers_email_unique')) {
+                    throw new \RuntimeException('El email ingresado ya está registrado en otro cliente.');
+                }
+                throw new \RuntimeException('Ya existe un cliente con esos datos.');
+            }
+            throw new \RuntimeException('Error al actualizar Cliente: ' . $exception->getMessage());
         } catch (\Exception $exception) {
             throw new \RuntimeException('Error al actualizar Cliente: ' . $exception->getMessage());
         }
