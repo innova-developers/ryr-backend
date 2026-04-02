@@ -235,7 +235,6 @@ class CommissionsEloquentRepository implements CommissionsRepository
                             CommissionStatus::PENDIENTE_PAGO->value,
                             CommissionStatus::PAGO_VALIDACION->value,
                             CommissionStatus::PAGO_CONFIRMADO->value,
-                            CommissionStatus::ENTREGADO->value,
                         ]);
                     }
                 }
@@ -422,7 +421,6 @@ class CommissionsEloquentRepository implements CommissionsRepository
                             CommissionStatus::PENDIENTE_PAGO->value,
                             CommissionStatus::PAGO_VALIDACION->value,
                             CommissionStatus::PAGO_CONFIRMADO->value,
-                            CommissionStatus::ENTREGADO->value,
                         ]);
                     }
                 }

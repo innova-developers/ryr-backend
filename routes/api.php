@@ -123,6 +123,12 @@ Route::middleware(['auth:sanctum', 'adminOrCadete'])->group(function () {
         Route::get('/pending-transactions', [App\Http\Controllers\Admin\CollectionPoolController::class, 'getPendingTransactions']);
         Route::get('/{id}', [App\Http\Controllers\Admin\CollectionPoolController::class, 'show']);
     });
+
+    // Cuenta corriente de clientes (accesible para admin y cobradores)
+    Route::prefix('customers/{customerId}/current-account')->group(function () {
+        Route::get('/transactions', [CurrentAccountController::class, 'getCustomerTransactions']);
+        Route::get('/balance', [CurrentAccountController::class, 'getCustomerBalance']);
+    });
 });
 
 // Rutas protegidas solo para administradores y mostradores
@@ -145,12 +151,6 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
     // Clientes (excluyendo update que está en adminOrCadete para permitir cobradores)
     Route::apiResource('customers', CustomerController::class)->except(['update']);
 
-    // Cuenta corriente de clientes
-    Route::prefix('customers/{customerId}/current-account')->group(function () {
-        Route::get('/transactions', [CurrentAccountController::class, 'getCustomerTransactions']);
-        Route::get('/balance', [CurrentAccountController::class, 'getCustomerBalance']);
-    });
-    
     // Panel de cobradores - Operaciones administrativas (crear, editar, eliminar)
     Route::prefix('admin/cadete-payments')->group(function () {
         Route::post('/', [App\Http\Controllers\Admin\CadetePaymentController::class, 'store']);
