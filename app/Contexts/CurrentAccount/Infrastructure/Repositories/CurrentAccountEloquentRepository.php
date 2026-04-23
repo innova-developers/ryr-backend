@@ -18,8 +18,20 @@ class CurrentAccountEloquentRepository implements CurrentAccountRepository
 {
     public function create(CreateCurrentAccountDTO $dto): CurrentAccount
     {
-        // Obtener el saldo actual del cliente (solo transacciones con estado OK)
-        $currentBalance = $this->getCustomerBalance($dto->customerId);
+        // Para créditos: la transaction_date debe ser la fecha de la comisión más reciente
+        // en PAGO_VALIDACION del cliente, ya que el crédito cancela deudas acumuladas hasta ese día.
+        // Esto garantiza que el crédito quede posicionado correctamente en el ledger,
+        // después de todos los débitos que está cancelando.
+        $transactionDate = $dto->transactionDate;
+        if ($dto->type === 'credit') {
+            $latestCommissionDate = Commission::where('client_id', $dto->customerId)
+                ->where('status', CommissionStatus::PAGO_VALIDACION->value)
+                ->max('date');
+
+            if ($latestCommissionDate) {
+                $transactionDate = $latestCommissionDate;
+            }
+        }
 
         // Asignar estado según el tipo: debit = OK, credit = PENDIENTE
         $status = match ($dto->type) {
@@ -28,30 +40,39 @@ class CurrentAccountEloquentRepository implements CurrentAccountRepository
             default => CurrentAccountStatus::PENDIENTE,
         };
 
-        // Calcular el nuevo saldo
-        // Solo los débitos (OK) afectan el saldo inmediatamente
-        // Los créditos pendientes mantienen el mismo saldo hasta confirmarse
+        // Calcular saldo provisional (solo para la inserción inicial)
+        $currentBalance = $this->getCustomerBalance($dto->customerId);
         $newBalance = match ($status) {
             CurrentAccountStatus::OK => match ($dto->type) {
                 'debit' => $currentBalance - $dto->amount,
                 default => $currentBalance,
             },
-            CurrentAccountStatus::PENDIENTE => $currentBalance, // Los créditos pendientes no afectan el saldo
+            CurrentAccountStatus::PENDIENTE => $currentBalance,
         };
 
-        return CurrentAccount::create([
+        $currentAccount = CurrentAccount::create([
             'customer_id' => $dto->customerId,
             'type' => $dto->type,
             'status' => $status,
             'amount' => $dto->amount,
             'description' => $dto->description,
             'reference' => $dto->reference,
-            'transaction_date' => $dto->transactionDate,
+            'transaction_date' => $transactionDate,
             'balance' => $newBalance,
             'payment_method' => $dto->paymentMethod,
             'observations' => $dto->observations,
             'user_id' => $dto->userId,
         ]);
+
+        // Los débitos impactan inmediatamente (status OK) y pueden tener transaction_date
+        // en el pasado (backdated). Recalcular todos los saldos del cliente para garantizar
+        // que el orden lógico por transaction_date sea el que determina el balance acumulado.
+        if ($dto->type === 'debit') {
+            $this->recalculateBalances($dto->customerId);
+            return $currentAccount->fresh();
+        }
+
+        return $currentAccount;
     }
 
     public function update(UpdateCurrentAccountDTO $dto): CurrentAccount
