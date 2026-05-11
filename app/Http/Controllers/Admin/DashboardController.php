@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
+use Illuminate\Routing\Controller;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Commission;
 use App\Shared\Models\Customer;
