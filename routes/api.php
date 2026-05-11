@@ -133,6 +133,8 @@ Route::middleware(['auth:sanctum', 'adminOrCadete'])->group(function () {
 
 // Rutas protegidas solo para administradores y mostradores
 Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
+    Route::get('/dashboard/stats', [App\Http\Controllers\Admin\DashboardController::class, 'stats']);
+
     // Usuarios - Operaciones administrativas (crear, editar, eliminar)
     Route::post('/users', [UserController::class, 'store']);
     Route::put('/users/{id}', [UserController::class, 'update']);
