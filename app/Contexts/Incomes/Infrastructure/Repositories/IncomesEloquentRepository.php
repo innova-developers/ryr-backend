@@ -8,7 +8,7 @@ use App\Contexts\Incomes\Application\DTOs\UpdateIncomeDTO;
 use App\Contexts\Incomes\Domain\Repositories\IncomesRepository;
 use App\Shared\Enums\UserRole;
 use App\Shared\Models\Income;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 
 class IncomesEloquentRepository implements IncomesRepository
@@ -24,7 +24,7 @@ class IncomesEloquentRepository implements IncomesRepository
         return $income;
     }
 
-    public function findAll(IncomeFilterDTO $filterDTO): Collection
+    public function findAll(IncomeFilterDTO $filterDTO): LengthAwarePaginator
     {
         $query = Income::with(['category', 'user'])
             ->orderBy('date', 'desc')
@@ -46,10 +46,8 @@ class IncomesEloquentRepository implements IncomesRepository
                 });
             });
 
-        // Filtrar por sucursal según el rol del usuario
         $user = Auth::user();
         if ($user && $user->branch_id) {
-            // Cadetes, mostradores y administradores con sucursal solo ven ingresos de usuarios de su sucursal
             if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
                 $query->whereHas('user', function ($q) use ($user) {
                     $q->where('branch_id', $user->branch_id);
@@ -57,7 +55,7 @@ class IncomesEloquentRepository implements IncomesRepository
             }
         }
 
-        return $query->get();
+        return $query->paginate($filterDTO->perPage, ['*'], 'page', $filterDTO->page);
     }
 
     public function create(CreateIncomeDTO $dto): Income
