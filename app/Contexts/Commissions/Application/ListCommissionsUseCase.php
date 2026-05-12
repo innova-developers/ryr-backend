@@ -25,6 +25,8 @@ class ListCommissionsUseCase
                 'last_page' => $result->lastPage(),
                 'per_page' => $result->perPage(),
                 'total' => $result->total(),
+                'from' => $result->firstItem(),
+                'to' => $result->lastItem(),
                 'totals' => $totals,
             ],
         ];
