@@ -22,10 +22,12 @@ class ExpensesEloquentRepository implements ExpensesRepository
         // Filtrar por sucursal según el rol del usuario
         $user = Auth::user();
         if ($user && $user->branch_id) {
-            // Cadetes, mostradores y administradores con sucursal solo ven gastos de usuarios de su sucursal
             if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
-                $query->whereHas('user', function ($q) use ($user) {
-                    $q->where('branch_id', $user->branch_id);
+                $query->where(function ($q) use ($user) {
+                    $q->whereNull('user_id')
+                       ->orWhereHas('user', function ($q2) use ($user) {
+                           $q2->where('branch_id', $user->branch_id);
+                       });
                 });
             }
         }
@@ -57,10 +59,12 @@ class ExpensesEloquentRepository implements ExpensesRepository
         // Filtrar por sucursal según el rol del usuario
         $user = Auth::user();
         if ($user && $user->branch_id) {
-            // Cadetes, mostradores y administradores con sucursal solo ven gastos de usuarios de su sucursal
             if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
-                $query->whereHas('user', function ($q) use ($user) {
-                    $q->where('branch_id', $user->branch_id);
+                $query->where(function ($q) use ($user) {
+                    $q->whereNull('user_id')
+                       ->orWhereHas('user', function ($q2) use ($user) {
+                           $q2->where('branch_id', $user->branch_id);
+                       });
                 });
             }
         }
