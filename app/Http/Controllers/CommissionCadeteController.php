@@ -322,7 +322,7 @@ class CommissionCadeteController extends Controller
                 $query->whereDate('date', '<=', $validated['date_to']);
             }
 
-            // Cargar relaciones necesarias
+            $perPage = $request->get('per_page', 20);
             $commissions = $query->with([
                 'client',
                 'destination',
@@ -333,10 +333,9 @@ class CommissionCadeteController extends Controller
                 'user'
             ])
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate($perPage);
 
-            // Formatear respuesta
-            $formattedCommissions = $commissions->map(function ($commission) {
+            $formattedCommissions = $commissions->getCollection()->map(function ($commission) {
                 return [
                     'id' => $commission->id,
                     'tracking_number' => $commission->id,
@@ -390,7 +389,15 @@ class CommissionCadeteController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $formattedCommissions,
-                'total' => $formattedCommissions->count(),
+                'total' => $commissions->total(),
+                'pagination' => [
+                    'current_page' => $commissions->currentPage(),
+                    'per_page' => $commissions->perPage(),
+                    'total' => $commissions->total(),
+                    'last_page' => $commissions->lastPage(),
+                    'from' => $commissions->firstItem(),
+                    'to' => $commissions->lastItem(),
+                ],
                 'filters' => $validated,
             ], 200);
 

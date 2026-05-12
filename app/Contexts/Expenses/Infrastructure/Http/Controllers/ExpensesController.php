@@ -29,19 +29,31 @@ class ExpensesController extends Controller
             if ($request->has('transport_id')) {
                 $useCase = new GetExpensesByTransportUseCase($this->repository);
                 $expenses = $useCase($request->integer('transport_id'));
+                return response()->json($expenses);
             } else {
-                // Construir el DTO de filtros
+                // Construir el DTO de filtros con paginación
                 $filterDTO = new \App\Contexts\Expenses\Application\DTOs\ExpenseFilterDTO(
                     $request->get('dateFrom'),
                     $request->get('dateTo'),
                     $request->get('category'),
                     $request->get('transport'),
-                    $request->get('user_id')
+                    $request->get('user_id'),
+                    $request->get('page', 1),
+                    $request->get('per_page', 15)
                 );
-                $expenses = $this->repository->findAll($filterDTO)->toArray();
+                $expenses = $this->repository->findAll($filterDTO);
+                
+                // Retornar en formato paginado estándar de Laravel
+                return response()->json([
+                    'data' => $expenses->items(),
+                    'current_page' => $expenses->currentPage(),
+                    'last_page' => $expenses->lastPage(),
+                    'per_page' => $expenses->perPage(),
+                    'total' => $expenses->total(),
+                    'from' => $expenses->firstItem(),
+                    'to' => $expenses->lastItem(),
+                ]);
             }
-
-            return response()->json($expenses);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

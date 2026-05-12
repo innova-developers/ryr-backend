@@ -61,8 +61,8 @@ Route::get('users/{userId}/expenses', [ExpensesController::class, 'index']);
 // Rutas de categorías de ingresos
 Route::apiResource('income-categories', IncomeCategoryController::class);
 
-// Rutas de cuenta corriente
-Route::prefix('current-accounts')->group(function () {
+// Rutas de cuenta corriente (protegidas con autenticación)
+Route::middleware(['auth:sanctum'])->prefix('current-accounts')->group(function () {
     Route::post('/', [CurrentAccountController::class, 'store']);
     Route::post('/{id}/confirm', [CurrentAccountController::class, 'confirmTransaction']); // Debe ir antes de las rutas con {id}
     Route::get('/{id}', [CurrentAccountController::class, 'show']);
@@ -141,19 +141,17 @@ Route::middleware(['franchise', 'auth:sanctum', 'adminOrCadete'])->group(functio
         Route::get('/{id}', [App\Http\Controllers\Admin\CollectionPoolController::class, 'show']);
     });
 
-    // Dashboard de feedback (encuestas de satisfacción)
-    Route::prefix('admin/feedback')->group(function () {
-        Route::get('/stats', [App\Http\Controllers\Admin\FeedbackController::class, 'stats']);
-        Route::get('/', [App\Http\Controllers\Admin\FeedbackController::class, 'index']);
+    // Cuenta corriente de clientes (accesible para admin y cobradores)
+    Route::prefix('customers/{customerId}/current-account')->group(function () {
+        Route::get('/transactions', [CurrentAccountController::class, 'getCustomerTransactions']);
+        Route::get('/balance', [CurrentAccountController::class, 'getCustomerBalance']);
     });
 });
 
 // Rutas protegidas solo para administradores y mostradores
-// IMPORTANTE: 'franchise' debe ejecutarse ANTES de 'auth:sanctum'
-Route::middleware(['franchise', 'auth:sanctum', 'isAdmin'])->group(function () {
-    // Notificaciones a cadetes (solo admin)
-    Route::get('/notifications/cadetes', [App\Http\Controllers\Admin\NotificationController::class, 'getCadetes']);
-    Route::post('/notifications/cadetes/send', [App\Http\Controllers\Admin\NotificationController::class, 'sendNotificationToAllCadetes']);
+Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
+    Route::get('/dashboard/stats', [App\Http\Controllers\Admin\DashboardController::class, 'stats']);
+
     // Usuarios - Operaciones administrativas (crear, editar, eliminar)
     Route::post('/users', [UserController::class, 'store']);
     Route::put('/users/{id}', [UserController::class, 'update']);
@@ -174,12 +172,6 @@ Route::middleware(['franchise', 'auth:sanctum', 'isAdmin'])->group(function () {
     Route::patch('customers/{customer}/auto-calculate-iva', [CustomerController::class, 'updateAutoCalculateIva']);
     Route::apiResource('customers', CustomerController::class)->except(['update']);
 
-    // Cuenta corriente de clientes
-    Route::prefix('customers/{customerId}/current-account')->group(function () {
-        Route::get('/transactions', [CurrentAccountController::class, 'getCustomerTransactions']);
-        Route::get('/balance', [CurrentAccountController::class, 'getCustomerBalance']);
-    });
-    
     // Panel de cobradores - Operaciones administrativas (crear, editar, eliminar)
     Route::prefix('admin/cadete-payments')->group(function () {
         Route::post('/', [App\Http\Controllers\Admin\CadetePaymentController::class, 'store']);

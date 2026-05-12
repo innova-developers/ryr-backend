@@ -51,6 +51,7 @@ class User extends Authenticatable
         'income_percentage',
         'commission_percentage',
         'contract_type',
+        'payment_per_pickup',
     ];
 
     protected $hidden = [
@@ -64,6 +65,7 @@ class User extends Authenticatable
         'base_salary' => 'decimal:2',
         'income_percentage' => 'decimal:2',
         'commission_percentage' => 'decimal:2',
+        'payment_per_pickup' => 'decimal:2',
         'role' => UserRole::class,
     ];
 

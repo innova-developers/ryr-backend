@@ -36,13 +36,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission = new Commission();
             $commission->client_id = $dto->clientId;
             $commission->destination_id = $destinationId;
-            // Asegurar que la fecha no sea posterior a hoy
-            $commissionDate = $dto->date;
-            $today = new \DateTime();
-            if ($commissionDate > $today) {
-                $commissionDate = $today;
-            }
-            $commission->date = $commissionDate;
+            $commission->date = $dto->date;
             $commission->status = $dto->status;
             $commission->type = $dto->type ?? CommissionType::ORDINARIA;
             $commission->user_id = $userId;
@@ -93,13 +87,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
             
             $commission->client_id = $dto->clientId;
             $commission->destination_id = $destinationId;
-            // Asegurar que la fecha no sea posterior a hoy
-            $commissionDate = $dto->date;
-            $today = new \DateTime();
-            if ($commissionDate > $today) {
-                $commissionDate = $today;
-            }
-            $commission->date = $commissionDate;
+            $commission->date = $dto->date;
             $commission->status = $dto->status;
             $commission->total = $dto->total;
             $commission->notes = $dto->notes;
@@ -265,11 +253,23 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 }
 
                 if ($filters->dateFrom) {
-                    $query->where('date', '>=', $filters->dateFrom);
+                    $query->whereDate('date', '>=', $filters->dateFrom);
                 }
 
                 if ($filters->dateTo) {
-                    $query->where('date', '<=', $filters->dateTo);
+                    // REGLA DE VISIBILIDAD: Si son más de las 20:00, incluir también las comisiones del día siguiente
+                    // Ejemplo: Si son las 20:30 del 2026-02-02 y busco hasta 2026-02-03, 
+                    // debo incluir también las comisiones del 2026-02-04
+                    $now = now();
+                    $requestedDateTo = \Carbon\Carbon::parse($filters->dateTo)->startOfDay();
+                    $effectiveDateTo = $requestedDateTo;
+                    
+                    // Si son más de las 20:00, agregar un día adicional al dateTo
+                    if ($now->hour >= 20) {
+                        $effectiveDateTo = $requestedDateTo->copy()->addDay();
+                    }
+                    
+                    $query->whereDate('date', '<=', $effectiveDateTo->format('Y-m-d'));
                 }
 
                 if ($filters->status) {
@@ -277,12 +277,15 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     $query->where('status', $filters->status->value);
                 } else {
                     // Si NO hay filtro de status, excluir estados específicos
-                    $query->whereNotIn('status', [
-                        CommissionStatus::PENDIENTE_PAGO->value,
-                        CommissionStatus::PAGO_VALIDACION->value,
-                        CommissionStatus::PAGO_CONFIRMADO->value,
-                        CommissionStatus::ENTREGADO->value,
-                    ]);
+                    // PERO solo si NO hay otros filtros activos (como método de pago)
+                    // que puedan necesitar ver esos estados
+                    if (!$filters->method) {
+                        $query->whereNotIn('status', [
+                            CommissionStatus::PENDIENTE_PAGO->value,
+                            CommissionStatus::PAGO_VALIDACION->value,
+                            CommissionStatus::PAGO_CONFIRMADO->value,
+                        ]);
+                    }
                 }
 
                 if ($filters->method) {
@@ -436,11 +439,23 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 }
 
                 if ($filters->dateFrom) {
-                    $query->where('date', '>=', $filters->dateFrom);
+                    $query->whereDate('date', '>=', $filters->dateFrom);
                 }
 
                 if ($filters->dateTo) {
-                    $query->where('date', '<=', $filters->dateTo);
+                    // REGLA DE VISIBILIDAD: Si son más de las 20:00, incluir también las comisiones del día siguiente
+                    // Ejemplo: Si son las 20:30 del 2026-02-02 y busco hasta 2026-02-03, 
+                    // debo incluir también las comisiones del 2026-02-04
+                    $now = now();
+                    $requestedDateTo = \Carbon\Carbon::parse($filters->dateTo)->startOfDay();
+                    $effectiveDateTo = $requestedDateTo;
+                    
+                    // Si son más de las 20:00, agregar un día adicional al dateTo
+                    if ($now->hour >= 20) {
+                        $effectiveDateTo = $requestedDateTo->copy()->addDay();
+                    }
+                    
+                    $query->whereDate('date', '<=', $effectiveDateTo->format('Y-m-d'));
                 }
 
                 if ($filters->status) {
@@ -448,12 +463,15 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     $query->where('status', $filters->status->value);
                 } else {
                     // Si NO hay filtro de status, excluir estados específicos
-                    $query->whereNotIn('status', [
-                        CommissionStatus::PENDIENTE_PAGO->value,
-                        CommissionStatus::PAGO_VALIDACION->value,
-                        CommissionStatus::PAGO_CONFIRMADO->value,
-                        CommissionStatus::ENTREGADO->value,
-                    ]);
+                    // PERO solo si NO hay otros filtros activos (como método de pago)
+                    // que puedan necesitar ver esos estados
+                    if (!$filters->method) {
+                        $query->whereNotIn('status', [
+                            CommissionStatus::PENDIENTE_PAGO->value,
+                            CommissionStatus::PAGO_VALIDACION->value,
+                            CommissionStatus::PAGO_CONFIRMADO->value,
+                        ]);
+                    }
                 }
 
                 if ($filters->method) {
