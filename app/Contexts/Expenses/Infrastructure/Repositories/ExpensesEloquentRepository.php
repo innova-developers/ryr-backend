@@ -8,7 +8,7 @@ use App\Contexts\Expenses\Application\DTOs\UpdateExpenseDTO;
 use App\Contexts\Expenses\Domain\Repositories\ExpensesRepository;
 use App\Shared\Enums\UserRole;
 use App\Shared\Models\Expense;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 
 class ExpensesEloquentRepository implements ExpensesRepository
@@ -22,10 +22,12 @@ class ExpensesEloquentRepository implements ExpensesRepository
         // Filtrar por sucursal según el rol del usuario
         $user = Auth::user();
         if ($user && $user->branch_id) {
-            // Cadetes, mostradores y administradores con sucursal solo ven gastos de usuarios de su sucursal
             if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
-                $query->whereHas('user', function ($q) use ($user) {
-                    $q->where('branch_id', $user->branch_id);
+                $query->where(function ($q) use ($user) {
+                    $q->whereNull('user_id')
+                       ->orWhereHas('user', function ($q2) use ($user) {
+                           $q2->where('branch_id', $user->branch_id);
+                       });
                 });
             }
         }
@@ -44,7 +46,7 @@ class ExpensesEloquentRepository implements ExpensesRepository
         return $expense;
     }
 
-    public function findAll(ExpenseFilterDTO $filterDTO): Collection
+    public function findAll(ExpenseFilterDTO $filterDTO): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         $query = Expense::with(['transport', 'category', 'user'])
             ->orderBy('date', 'desc')
@@ -57,15 +59,17 @@ class ExpensesEloquentRepository implements ExpensesRepository
         // Filtrar por sucursal según el rol del usuario
         $user = Auth::user();
         if ($user && $user->branch_id) {
-            // Cadetes, mostradores y administradores con sucursal solo ven gastos de usuarios de su sucursal
             if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
-                $query->whereHas('user', function ($q) use ($user) {
-                    $q->where('branch_id', $user->branch_id);
+                $query->where(function ($q) use ($user) {
+                    $q->whereNull('user_id')
+                       ->orWhereHas('user', function ($q2) use ($user) {
+                           $q2->where('branch_id', $user->branch_id);
+                       });
                 });
             }
         }
 
-        return $query->get();
+        return $query->paginate($filterDTO->perPage, ['*'], 'page', $filterDTO->page);
     }
 
     public function create(CreateExpenseDTO $dto): Expense

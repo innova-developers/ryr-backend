@@ -54,8 +54,8 @@ Route::get('users/{userId}/expenses', [ExpensesController::class, 'index']);
 // Rutas de categorías de ingresos
 Route::apiResource('income-categories', IncomeCategoryController::class);
 
-// Rutas de cuenta corriente
-Route::prefix('current-accounts')->group(function () {
+// Rutas de cuenta corriente (protegidas con autenticación)
+Route::middleware(['auth:sanctum'])->prefix('current-accounts')->group(function () {
     Route::post('/', [CurrentAccountController::class, 'store']);
     Route::post('/{id}/confirm', [CurrentAccountController::class, 'confirmTransaction']); // Debe ir antes de las rutas con {id}
     Route::get('/{id}', [CurrentAccountController::class, 'show']);
@@ -123,10 +123,18 @@ Route::middleware(['auth:sanctum', 'adminOrCadete'])->group(function () {
         Route::get('/pending-transactions', [App\Http\Controllers\Admin\CollectionPoolController::class, 'getPendingTransactions']);
         Route::get('/{id}', [App\Http\Controllers\Admin\CollectionPoolController::class, 'show']);
     });
+
+    // Cuenta corriente de clientes (accesible para admin y cobradores)
+    Route::prefix('customers/{customerId}/current-account')->group(function () {
+        Route::get('/transactions', [CurrentAccountController::class, 'getCustomerTransactions']);
+        Route::get('/balance', [CurrentAccountController::class, 'getCustomerBalance']);
+    });
 });
 
 // Rutas protegidas solo para administradores y mostradores
 Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
+    Route::get('/dashboard/stats', [App\Http\Controllers\Admin\DashboardController::class, 'stats']);
+
     // Usuarios - Operaciones administrativas (crear, editar, eliminar)
     Route::post('/users', [UserController::class, 'store']);
     Route::put('/users/{id}', [UserController::class, 'update']);
@@ -147,12 +155,6 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->group(function () {
     Route::patch('customers/{customer}/auto-calculate-iva', [CustomerController::class, 'updateAutoCalculateIva']);
     Route::apiResource('customers', CustomerController::class)->except(['update']);
 
-    // Cuenta corriente de clientes
-    Route::prefix('customers/{customerId}/current-account')->group(function () {
-        Route::get('/transactions', [CurrentAccountController::class, 'getCustomerTransactions']);
-        Route::get('/balance', [CurrentAccountController::class, 'getCustomerBalance']);
-    });
-    
     // Panel de cobradores - Operaciones administrativas (crear, editar, eliminar)
     Route::prefix('admin/cadete-payments')->group(function () {
         Route::post('/', [App\Http\Controllers\Admin\CadetePaymentController::class, 'store']);

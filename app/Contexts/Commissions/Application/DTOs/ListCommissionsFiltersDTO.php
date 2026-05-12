@@ -31,6 +31,25 @@ class ListCommissionsFiltersDTO
 
     public static function fromArray(array $data): self
     {
+        // Normalizar método de pago a mayúsculas para asegurar compatibilidad con el enum
+        $method = null;
+        if (isset($data['method']) && !empty($data['method'])) {
+            try {
+                $methodValue = strtoupper(trim($data['method']));
+                $method = PaymentMethod::from($methodValue);
+            } catch (\ValueError $e) {
+                // Si el valor no es válido, intentar buscar por coincidencia parcial
+                $methodValue = strtoupper(trim($data['method']));
+                foreach (PaymentMethod::cases() as $case) {
+                    if ($case->value === $methodValue) {
+                        $method = $case;
+                        break;
+                    }
+                }
+                // Si aún no se encuentra, dejar como null
+            }
+        }
+        
         return new self(
             commissionId: $data['commissionId'] ?? null,
             clientId: $data['client_id'] ?? null,
@@ -42,7 +61,7 @@ class ListCommissionsFiltersDTO
             dateFrom: $data['date_from'] ?? $data['dateFrom'] ?? null,
             dateTo: $data['date_to'] ?? $data['dateTo'] ?? null,
             status: isset($data['status']) ? CommissionStatus::from($data['status']) : null,
-            method: isset($data['method']) ? PaymentMethod::from($data['method']) : null,
+            method: $method,
             type: isset($data['type']) ? CommissionType::from($data['type']) : null,
             total: isset($data['total']) ? (float) $data['total'] : null,
             page: $data['page'] ?? 1,
