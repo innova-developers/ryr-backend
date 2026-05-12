@@ -29,13 +29,23 @@ class IncomesController extends Controller
                 $request->get('dateFrom'),
                 $request->get('dateTo'),
                 $request->get('income_category_id'),
-                $request->get('user'),
-                $request->get('search')
+                $request->get('user_id'),
+                $request->get('search'),
+                $request->get('page', 1),
+                $request->get('per_page', 15)
             );
 
-            $incomes = $this->repository->findAll($filterDTO)->toArray();
+            $incomes = $this->repository->findAll($filterDTO);
 
-            return response()->json($incomes);
+            return response()->json([
+                'data' => $incomes->items(),
+                'current_page' => $incomes->currentPage(),
+                'last_page' => $incomes->lastPage(),
+                'per_page' => $incomes->perPage(),
+                'total' => $incomes->total(),
+                'from' => $incomes->firstItem(),
+                'to' => $incomes->lastItem(),
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -137,12 +147,22 @@ class IncomesController extends Controller
                 null,
                 null,
                 $userId,
-                null
+                null,
+                1,
+                9999
             );
 
-            $incomes = $this->repository->findAll($filterDTO)->toArray();
+            $incomes = $this->repository->findAll($filterDTO);
 
-            return response()->json($incomes);
+            return response()->json([
+                'data' => $incomes->items(),
+                'current_page' => $incomes->currentPage(),
+                'last_page' => $incomes->lastPage(),
+                'per_page' => $incomes->perPage(),
+                'total' => $incomes->total(),
+                'from' => $incomes->firstItem(),
+                'to' => $incomes->lastItem(),
+            ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
