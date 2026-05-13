@@ -18,6 +18,8 @@ use App\Contexts\ExtraordinaryCommissions\Domain\Repositories\ExtraordinaryCommi
 use App\Contexts\ExtraordinaryCommissions\Infrastructure\Repositories\ExtraordinaryCommissionEloquentRepository;
 use App\Contexts\IncomeCategories\Domain\Repositories\IncomeCategoriesRepository;
 use App\Contexts\IncomeCategories\Infrastructure\Repositories\IncomeCategoriesEloquentRepository;
+use App\Contexts\Franchises\Domain\Repositories\FranchiseRepository;
+use App\Contexts\Franchises\Infrastructure\Repositories\FranchiseEloquentRepository;
 use App\Contexts\Incomes\Domain\Repositories\IncomesRepository;
 use App\Contexts\Incomes\Infrastructure\Repositories\IncomesEloquentRepository;
 use App\Contexts\Locations\Domain\Repositories\LocationsRepository;
@@ -83,7 +85,10 @@ class AppServiceProvider extends ServiceProvider
             IncomeCategoriesRepository::class,
             IncomeCategoriesEloquentRepository::class
         );
-
+        $this->app->bind(
+            FranchiseRepository::class,
+            FranchiseEloquentRepository::class
+        );
     }
 
     /**

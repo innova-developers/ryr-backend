@@ -36,6 +36,7 @@ class Commission extends Model
         'destination_location_id',
         'transport_id',
         'cadete_id',
+        'franchise_id',
     ];
 
     protected $casts = [
@@ -66,6 +67,11 @@ class Commission extends Model
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function franchise(): BelongsTo
+    {
+        return $this->belongsTo(Franchise::class);
     }
 
     public function originLocation(): BelongsTo
@@ -101,6 +107,11 @@ class Commission extends Model
     public function deliverySignature(): HasOne
     {
         return $this->hasOne(DeliverySignature::class);
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
     }
 
     public function getPaymentMethodLabelAttribute(): ?string

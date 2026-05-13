@@ -5,6 +5,7 @@ namespace App\Contexts\Customers\Application\DTO;
 class CreateCustomerDTO
 {
     public int $dni;
+    public ?string $cuit;
     public string $name;
     public string $lastName;
     public ?string $mobile;
@@ -21,6 +22,7 @@ class CreateCustomerDTO
     public int $branchId;
     public function __construct(
         int $dni,
+        ?string $cuit,
         string $name,
         string $lastName,
         ?string $mobile,
@@ -37,6 +39,7 @@ class CreateCustomerDTO
         int $branchId
     ) {
         $this->dni = $dni;
+        $this->cuit = $cuit;
         $this->name = $name;
         $this->lastName = $lastName;
         $this->mobile = $mobile;

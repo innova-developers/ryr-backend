@@ -15,7 +15,7 @@ class UserAdminMiddleware
         }
 
         // Permitir acceso a administradores y mostradores
-        $allowedRoles = [UserRole::ADMINISTRADOR, UserRole::MOSTRADOR];
+        $allowedRoles = [UserRole::ADMINISTRADOR, UserRole::MOSTRADOR, UserRole::ADMIN_FRANQUICIA];
         
         if (! in_array($user->role, $allowedRoles)) {
             return response()->json(['message' => 'No autorizado'], 403);

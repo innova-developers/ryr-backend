@@ -14,6 +14,7 @@ class CustomerFactory extends Factory
     {
         return [
             'dni' => $this->faker->unique()->numerify('########'),
+            'cuit' => $this->faker->numerify('20########0'),
             'name' => $this->faker->firstName(),
             'last_name' => $this->faker->lastName(),
             'mobile' => $this->faker->phoneNumber(),
@@ -25,6 +26,8 @@ class CustomerFactory extends Factory
             'business_hours' => '9-18',
             'observations' => $this->faker->sentence(),
             'is_premium' => $this->faker->boolean(),
+            'auto_calculate_iva' => true,
+            'iva_status' => 'auto',
             'user_id' => User::factory()->create(['role' => 'cliente'])->id
         ];
     }

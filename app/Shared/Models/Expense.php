@@ -20,6 +20,7 @@ class Expense extends Model
         'date',
         'detail',
         'amount',
+        'franchise_id',
     ];
 
     protected $casts = [
@@ -43,6 +44,11 @@ class Expense extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(ExpenseCategory::class, 'expense_category_id');
+    }
+
+    public function franchise(): BelongsTo
+    {
+        return $this->belongsTo(Franchise::class);
     }
 
     public function toArray(): array

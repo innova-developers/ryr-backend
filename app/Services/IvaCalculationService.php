@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Shared\Enums\IvaStatus;
 use App\Shared\Enums\PaymentMethod;
 use App\Shared\Models\Commission;
 use App\Shared\Models\Customer;
+use App\Shared\Models\SystemSetting;
 
 class IvaCalculationService
 {
@@ -54,10 +56,18 @@ class IvaCalculationService
      */
     public function shouldApplyIva(Customer $customer, PaymentMethod $paymentMethod): bool
     {
-        // Solo aplicar IVA si:
-        // 1. El cliente tiene habilitado el cálculo automático de IVA
-        // 2. El método de pago es TRANSFERENCIA
-        return $customer->auto_calculate_iva && $paymentMethod === PaymentMethod::TRANSFERENCIA;
+        $ivaStatus = $customer->iva_status ?? IvaStatus::AUTO;
+
+        if ($ivaStatus === IvaStatus::ALWAYS) {
+            return true;
+        }
+
+        if ($ivaStatus === IvaStatus::EXEMPT) {
+            return false;
+        }
+
+        $enabledMethods = SystemSetting::get('iva_payment_methods', ['TRANSFERENCIA']);
+        return $customer->auto_calculate_iva && in_array($paymentMethod->value, $enabledMethods);
     }
 
     /**

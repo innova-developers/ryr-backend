@@ -22,20 +22,20 @@ class TestFcmNotificationController
             $title = $request->query('title', 'Notificación de prueba');
             $body = $request->query('body');
 
-            if (!$userId) {
+            if (! $userId) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Debes proporcionar un user_id como parámetro de consulta o estar autenticado',
-                    'usage' => 'GET /api/cadete/test-fcm-notification?user_id=1&title=Título&body=Cuerpo del mensaje'
+                    'usage' => 'GET /api/cadete/test-fcm-notification?user_id=1&title=Título&body=Cuerpo del mensaje',
                 ], 400);
             }
 
             $user = User::find($userId);
 
-            if (!$user) {
+            if (! $user) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Usuario no encontrado'
+                    'message' => 'Usuario no encontrado',
                 ], 404);
             }
 
@@ -48,7 +48,7 @@ class TestFcmNotificationController
                     'message' => 'El usuario no tiene tokens FCM activos registrados',
                     'user_id' => $userId,
                     'user_name' => $user->name,
-                    'hint' => 'Primero registra un token FCM usando POST /api/cadete/fcm-token'
+                    'hint' => 'Primero registra un token FCM usando POST /api/cadete/fcm-token',
                 ], 400);
             }
 
@@ -102,7 +102,7 @@ class TestFcmNotificationController
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error al enviar notificación de prueba: ' . $e->getMessage()
+                'message' => 'Error al enviar notificación de prueba: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -123,19 +123,19 @@ class TestFcmNotificationController
             // Obtener usuario (del request o autenticado)
             $userId = $validated['user_id'] ?? Auth::id();
 
-            if (!$userId) {
+            if (! $userId) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Debes proporcionar un user_id o estar autenticado'
+                    'message' => 'Debes proporcionar un user_id o estar autenticado',
                 ], 400);
             }
 
             $user = User::find($userId);
 
-            if (!$user) {
+            if (! $user) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Usuario no encontrado'
+                    'message' => 'Usuario no encontrado',
                 ], 404);
             }
 
@@ -148,7 +148,7 @@ class TestFcmNotificationController
                     'message' => 'El usuario no tiene tokens FCM activos registrados',
                     'user_id' => $userId,
                     'user_name' => $user->name,
-                    'hint' => 'Primero registra un token FCM usando POST /api/cadete/fcm-token'
+                    'hint' => 'Primero registra un token FCM usando POST /api/cadete/fcm-token',
                 ], 400);
             }
 
@@ -201,7 +201,7 @@ class TestFcmNotificationController
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error al enviar notificación de prueba: ' . $e->getMessage()
+                'message' => 'Error al enviar notificación de prueba: ' . $e->getMessage(),
             ], 500);
         }
     }

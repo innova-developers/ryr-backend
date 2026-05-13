@@ -85,6 +85,7 @@ class PublicCustomerController
             // Crear el cliente
             $customer = Customer::create([
                 'dni' => $request->input('dni'),
+                'cuit' => $request->input('cuit'),
                 'name' => $request->input('name'),
                 'last_name' => $request->input('last_name'),
                 'mobile' => $request->input('mobile') ?: $request->input('phone'), // Usar phone como mobile si no se proporciona mobile

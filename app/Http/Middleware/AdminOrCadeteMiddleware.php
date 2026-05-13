@@ -15,20 +15,21 @@ class AdminOrCadeteMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
-        
+
         if (! $user) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
 
         // Permitir acceso a administradores, mostradores, cadetes y cobradores
         $allowedRoles = [
-            UserRole::ADMINISTRADOR, 
-            UserRole::MOSTRADOR, 
+            UserRole::ADMINISTRADOR,
+            UserRole::MOSTRADOR,
             UserRole::CADETE,
             UserRole::CADETE_EXTERNO,
-            UserRole::COBRADOR
+            UserRole::COBRADOR,
+            UserRole::ADMIN_FRANQUICIA,
         ];
-        
+
         if (! in_array($user->role, $allowedRoles, true)) {
             return response()->json(['message' => 'No autorizado'], 403);
         }
@@ -36,5 +37,3 @@ class AdminOrCadeteMiddleware
         return $next($request);
     }
 }
-
-

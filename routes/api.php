@@ -14,6 +14,7 @@ use App\Contexts\Expenses\Infrastructure\Http\Controllers\ExpensesController;
 use App\Contexts\Incomes\Infrastructure\Http\Controllers\IncomesController;
 use App\Contexts\IncomeCategories\Infrastructure\Http\Controllers\IncomeCategoryController;
 use App\Contexts\CurrentAccount\Infrastructure\Http\Controllers\CurrentAccountController;
+use App\Contexts\Franchises\Infrastructure\Http\Controllers\FranchiseController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Middleware\CadeteMiddleware;
 use Illuminate\Support\Facades\Route;
@@ -254,6 +255,79 @@ Route::prefix('cadete')->middleware(['auth:sanctum', CadeteMiddleware::class])->
 });
 
 
+
+// Reporte de IVA
+Route::middleware(['auth:sanctum', 'isAdmin', 'franchiseScope'])->group(function () {
+    Route::get('/admin/reports/iva', [App\Http\Controllers\Admin\IvaReportController::class, 'index']);
+    Route::get('/admin/reports/iva/detail', [App\Http\Controllers\Admin\IvaReportController::class, 'detail']);
+});
+
+// Configuración del sistema (solo admin matriz)
+Route::middleware(['auth:sanctum', 'isAdmin'])->prefix('admin/settings')->group(function () {
+    Route::get('/iva', [App\Http\Controllers\Admin\SystemSettingsController::class, 'getIvaConfig']);
+    Route::put('/iva', [App\Http\Controllers\Admin\SystemSettingsController::class, 'updateIvaConfig']);
+});
+
+// Rutas de cuentas por cobrar de matriz
+Route::middleware(['auth:sanctum', 'isAdmin', 'franchiseScope'])->prefix('admin/matrix-receivables')->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\MatrixReceivableController::class, 'index']);
+    Route::get('/summary', [App\Http\Controllers\Admin\MatrixReceivableController::class, 'summary']);
+    Route::patch('/bulk-mark-paid', [App\Http\Controllers\Admin\MatrixReceivableController::class, 'bulkMarkAsPaid']);
+    Route::patch('/{id}/mark-paid', [App\Http\Controllers\Admin\MatrixReceivableController::class, 'markAsPaid']);
+    Route::patch('/{id}/mark-cancelled', [App\Http\Controllers\Admin\MatrixReceivableController::class, 'markAsCancelled']);
+});
+
+// Rutas de franquicias (protegidas: admin + admin_franquicia)
+Route::middleware(['auth:sanctum', 'isAdmin', 'franchiseScope'])->prefix('franchises')->group(function () {
+    Route::get('/', [FranchiseController::class, 'index']);
+    Route::post('/', [FranchiseController::class, 'store']);
+    Route::get('/{id}', [FranchiseController::class, 'show']);
+    Route::put('/{id}', [FranchiseController::class, 'update']);
+    Route::delete('/{id}', [FranchiseController::class, 'destroy']);
+    Route::get('/{id}/dashboard', [FranchiseController::class, 'dashboard']);
+    Route::get('/{id}/settlement', [FranchiseController::class, 'settlement']);
+});
+
+// Feedback - Ruta pública para responder encuesta
+Route::get('/feedback/{token}', [App\Http\Controllers\Admin\FeedbackController::class, 'show']);
+Route::post('/feedback/respond', [App\Http\Controllers\Admin\FeedbackController::class, 'respond']);
+
+// Feedback - Dashboard y listado (admin)
+Route::middleware(['auth:sanctum', 'isAdmin', 'franchiseScope'])->prefix('admin/feedback')->group(function () {
+    Route::get('/dashboard', [App\Http\Controllers\Admin\FeedbackController::class, 'dashboard']);
+    Route::get('/', [App\Http\Controllers\Admin\FeedbackController::class, 'index']);
+});
+
+// Campañas WhatsApp
+Route::middleware(['auth:sanctum', 'isAdmin', 'franchiseScope'])->prefix('admin/whatsapp-campaigns')->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\WhatsAppCampaignController::class, 'index']);
+    Route::post('/', [App\Http\Controllers\Admin\WhatsAppCampaignController::class, 'store']);
+    Route::get('/segment-preview', [App\Http\Controllers\Admin\WhatsAppCampaignController::class, 'segmentPreview']);
+    Route::get('/cities', [App\Http\Controllers\Admin\WhatsAppCampaignController::class, 'cities']);
+    Route::get('/{id}', [App\Http\Controllers\Admin\WhatsAppCampaignController::class, 'show']);
+    Route::put('/{id}', [App\Http\Controllers\Admin\WhatsAppCampaignController::class, 'update']);
+    Route::delete('/{id}', [App\Http\Controllers\Admin\WhatsAppCampaignController::class, 'destroy']);
+    Route::post('/{id}/preview', [App\Http\Controllers\Admin\WhatsAppCampaignController::class, 'preview']);
+    Route::post('/{id}/send', [App\Http\Controllers\Admin\WhatsAppCampaignController::class, 'send']);
+    Route::patch('/{id}/cancel', [App\Http\Controllers\Admin\WhatsAppCampaignController::class, 'cancel']);
+});
+
+// Facturación ARCA - Rutas admin
+Route::middleware(['auth:sanctum', 'isAdmin', 'franchiseScope'])->prefix('admin/invoices')->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\InvoiceController::class, 'index']);
+    Route::post('/', [App\Http\Controllers\Admin\InvoiceController::class, 'store']);
+    Route::get('/tipos-comprobante', [App\Http\Controllers\Admin\InvoiceController::class, 'tiposComprobante']);
+    Route::post('/consultar-cuit', [App\Http\Controllers\Admin\InvoiceController::class, 'consultarCuit']);
+    Route::get('/customer/{customerId}', [App\Http\Controllers\Admin\InvoiceController::class, 'customerInvoices']);
+    Route::get('/{invoice}', [App\Http\Controllers\Admin\InvoiceController::class, 'show']);
+    Route::post('/commission/{commission}/facturar', [App\Http\Controllers\Admin\InvoiceController::class, 'facturarComision']);
+    Route::post('/payment/{payment}/facturar', [App\Http\Controllers\Admin\InvoiceController::class, 'facturarIngreso']);
+    Route::patch('/{invoice}/anular', [App\Http\Controllers\Admin\InvoiceController::class, 'anular']);
+    Route::get('/{invoice}/pdf', [App\Http\Controllers\Admin\InvoiceController::class, 'pdf']);
+    Route::get('/{invoice}/download-pdf', [App\Http\Controllers\Admin\InvoiceController::class, 'downloadPdf']);
+    Route::post('/{invoice}/send-email', [App\Http\Controllers\Admin\InvoiceController::class, 'sendEmail']);
+    Route::post('/{invoice}/send-whatsapp', [App\Http\Controllers\Admin\InvoiceController::class, 'sendWhatsApp']);
+});
 
 // Rutas para métodos de pago de comisiones
 Route::prefix('payment-methods')->group(function () {

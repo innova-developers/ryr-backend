@@ -18,6 +18,7 @@ class CreateCustomerUseCaseTest extends TestCase
 
         $dto = new CreateCustomerDTO(
             '12345678',
+            '20123456780',
             'John',
             'Doe',
             '1234567890',

@@ -25,10 +25,10 @@ class FcmTokenController
 
             $user = Auth::user();
 
-            if (!$user) {
+            if (! $user) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Usuario no autenticado'
+                    'message' => 'Usuario no autenticado',
                 ], 401);
             }
 
@@ -90,7 +90,7 @@ class FcmTokenController
                     'is_active' => $fcmToken->is_active,
                     'created_at' => $fcmToken->created_at->toISOString(),
                     'updated_at' => $fcmToken->updated_at->toISOString(),
-                ]
+                ],
             ], $isNew ? 201 : 200);
 
         } catch (ValidationException $e) {
@@ -102,7 +102,7 @@ class FcmTokenController
             return response()->json([
                 'status' => 'error',
                 'message' => 'Datos inválidos',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 400);
 
         } catch (\Exception $e) {
@@ -114,7 +114,7 @@ class FcmTokenController
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error interno del servidor al registrar el token'
+                'message' => 'Error interno del servidor al registrar el token',
             ], 500);
         }
     }

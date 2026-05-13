@@ -28,6 +28,7 @@ class CurrentAccount extends Model
         'user_id',
         'verified_by_user_id',
         'verified_at',
+        'franchise_id',
     ];
 
     protected $casts = [
@@ -51,6 +52,11 @@ class CurrentAccount extends Model
     public function verifiedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by_user_id');
+    }
+
+    public function franchise(): BelongsTo
+    {
+        return $this->belongsTo(Franchise::class);
     }
 
     public function getFormattedAmountAttribute(): string

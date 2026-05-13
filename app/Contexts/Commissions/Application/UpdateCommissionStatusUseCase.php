@@ -9,6 +9,8 @@ use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Services\CommissionNotificationService;
 use App\Services\FcmNotificationService;
+use App\Services\FeedbackService;
+use App\Services\MatrixCommissionService;
 use App\Services\NotificationService;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\CommissionType;
@@ -111,8 +113,31 @@ class UpdateCommissionStatusUseCase
                     $this->createFailedDeliveryCommission($commission);
                 }
 
-                // Enviar notificaciones al cliente (solo email, WhatsApp solo se envía al crear la comisión)
-                // El WhatsApp se envía únicamente cuando se crea la comisión (POST), no en cambios de estado
+                // Si PAGO_CONFIRMADO y tiene franchise, crear receivable para matriz
+                if ($finalStatus === CommissionStatus::PAGO_CONFIRMADO && $commission->franchise_id) {
+                    try {
+                        $matrixService = new MatrixCommissionService();
+                        $matrixService->createReceivableForCommission($commission);
+                    } catch (\Exception $e) {
+                        Log::error('Error creando receivable de matriz', [
+                            'commission_id' => $commission->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                // Si ENTREGADO, crear encuesta de feedback
+                if ($finalStatus === CommissionStatus::ENTREGADO) {
+                    try {
+                        $feedbackService = app(FeedbackService::class);
+                        $feedbackService->createSurveyForCommission($commission);
+                    } catch (\Exception $e) {
+                        Log::error('Error creando encuesta de feedback', [
+                            'commission_id' => $commission->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
 
                 // Crear notificación push para el cadete
                 $this->pushNotificationService->createCommissionStatusNotification(

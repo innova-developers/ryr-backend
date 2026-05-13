@@ -17,16 +17,16 @@ class CadeteMiddleware
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
-                'message' => 'Usuario no autenticado'
+                'message' => 'Usuario no autenticado',
             ], 401);
         }
 
-        if (!in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO])) {
+        if (! in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO])) {
             return response()->json([
                 'message' => 'Acceso denegado. Solo cadetes y cadetes externos pueden acceder a esta funcionalidad.',
-                'user_role' => $user->role->value
+                'user_role' => $user->role->value,
             ], 403);
         }
 

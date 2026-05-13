@@ -12,6 +12,8 @@ use App\Contexts\ExpenseCategories\Domain\Repositories\ExpenseCategoryRepository
 use App\Contexts\ExpenseCategories\Infrastructure\Repositories\ExpenseCategoryEloquentRepository;
 use App\Contexts\Expenses\Domain\Repositories\ExpensesRepository;
 use App\Contexts\Expenses\Infrastructure\Repositories\ExpensesEloquentRepository;
+use App\Contexts\Franchises\Domain\Repositories\FranchiseRepository;
+use App\Contexts\Franchises\Infrastructure\Repositories\FranchiseEloquentRepository;
 use App\Contexts\Transports\Domain\Repositories\TransportRepository;
 use App\Contexts\Transports\Infrastructure\Repositories\TransportEloquentRepository;
 use App\Services\CommissionNotificationService;
@@ -28,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(ExpenseCategoryRepository::class, ExpenseCategoryEloquentRepository::class);
         $this->app->bind(CommissionsRepository::class, CommissionsEloquentRepository::class);
         $this->app->bind(CurrentAccountRepository::class, CurrentAccountEloquentRepository::class);
+        $this->app->bind(FranchiseRepository::class, FranchiseEloquentRepository::class);
 
         // Registrar servicios de notificación
         $this->app->singleton(WhatsAppService::class);

@@ -7,6 +7,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "barryvdh/laravel-dompdf": "^3.1",
         "kreait/firebase-php": "^7.23",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.1",
@@ -41,6 +42,8 @@
             "./vendor/bin/phpstan analyse",
             "./vendor/bin/php-cs-fixer fix --diff --dry-run"
         ],
+        "cs-fix": "PHP_CS_FIXER_IGNORE_ENV=1 ./vendor/bin/php-cs-fixer fix",
+        "cs-check": "PHP_CS_FIXER_IGNORE_ENV=1 ./vendor/bin/php-cs-fixer fix --dry-run --diff",
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"

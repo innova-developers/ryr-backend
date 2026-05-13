@@ -18,7 +18,7 @@ class CustomerEloquentRepository implements CustomerRepository
 {
     public function get(?GetCustomersFiltersDTO $filters = null): array
     {
-        $query = Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'user_id', 'observations', 'created_at')
+        $query = Customer::select('id', 'dni', 'cuit', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'user_id', 'observations', 'created_at')
             ->with(['user:id,name']);
 
         // Filtrar por sucursal según el rol del usuario
@@ -104,6 +104,7 @@ class CustomerEloquentRepository implements CustomerRepository
                     return [
                         'id' => $customer->id,
                         'dni' => $customer->dni,
+                        'cuit' => $customer->cuit,
                         'name' => $customer->name,
                         'email' => $customer->email,
                         'last_name' => $customer->last_name,
@@ -111,11 +112,8 @@ class CustomerEloquentRepository implements CustomerRepository
                         'city' => $customer->city,
                         'phone' => $customer->phone,
                         'is_premium' => $customer->is_premium,
-<<<<<<< HEAD
                         'auto_calculate_iva' => $customer->auto_calculate_iva,
-=======
                         'observations' => $customer->observations,
->>>>>>> dev
                         'user' => optional($customer->user),
                         'branch' => optional($customer->branch),
                         'balance' => $customer->current_balance,
@@ -139,6 +137,7 @@ class CustomerEloquentRepository implements CustomerRepository
                 return [
                     'id' => $customer->id,
                     'dni' => $customer->dni,
+                    'cuit' => $customer->cuit,
                     'name' => $customer->name,
                     'email' => $customer->email,
                     'last_name' => $customer->last_name,
@@ -146,11 +145,8 @@ class CustomerEloquentRepository implements CustomerRepository
                     'city' => $customer->city,
                     'phone' => $customer->phone,
                     'is_premium' => $customer->is_premium,
-<<<<<<< HEAD
                     'auto_calculate_iva' => $customer->auto_calculate_iva,
-=======
                     'observations' => $customer->observations,
->>>>>>> dev
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),
                     'balance' => $customer->current_balance,
@@ -165,6 +161,7 @@ class CustomerEloquentRepository implements CustomerRepository
         try {
             $customer = new Customer();
             $customer->dni = $dto->dni;
+            $customer->cuit = $dto->cuit;
             $customer->name = $dto->name;
             $customer->last_name = $dto->lastName;
             $customer->mobile = $dto->mobile;
@@ -205,6 +202,7 @@ class CustomerEloquentRepository implements CustomerRepository
             $oldEmail = $customer->email;
             
             $customer->dni = $dto->dni;
+            $customer->cuit = $dto->cuit;
             $customer->name = $dto->name;
             $customer->last_name = $dto->lastName;
             $customer->mobile = $dto->mobile;
@@ -262,35 +260,29 @@ class CustomerEloquentRepository implements CustomerRepository
 
     public function search(string $query): array
     {
-<<<<<<< HEAD
-        return Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'user_id', 'created_at')
-            ->with(['user:id,name'])
-            ->where(function ($q) use ($query) {
-=======
-        $searchQuery = Customer::select('id', 'dni', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'user_id', 'observations', 'created_at')
+        $searchQuery = Customer::select('id', 'dni', 'cuit', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'user_id', 'observations', 'created_at')
             ->with(['user:id,name']);
 
-        // Filtrar por sucursal según el rol del usuario
         $user = Auth::user();
         if ($user && $user->branch_id) {
-            // Cadetes, mostradores y administradores con sucursal solo ven clientes de su sucursal
-            if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR])) {
+            if (in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO, UserRole::MOSTRADOR, UserRole::ADMINISTRADOR, UserRole::ADMIN_FRANQUICIA])) {
                 $searchQuery->where('branch_id', $user->branch_id);
             }
         }
 
         return $searchQuery->where(function ($q) use ($query) {
->>>>>>> dev
                 $q->where('name', 'like', "%{$query}%")
                     ->orWhere('last_name', 'like', "%{$query}%")
                     ->orWhere('email', 'like', "%{$query}%")
-                    ->orWhere('dni', 'like', "%{$query}%");
+                    ->orWhere('dni', 'like', "%{$query}%")
+                    ->orWhere('cuit', 'like', "%{$query}%");
             })
             ->get()
             ->map(function (Customer $customer) {
                 return [
                     'id' => $customer->id,
                     'dni' => $customer->dni,
+                    'cuit' => $customer->cuit,
                     'name' => $customer->name,
                     'email' => $customer->email,
                     'last_name' => $customer->last_name,
@@ -298,11 +290,8 @@ class CustomerEloquentRepository implements CustomerRepository
                     'city' => $customer->city,
                     'phone' => $customer->phone,
                     'is_premium' => $customer->is_premium,
-<<<<<<< HEAD
                     'auto_calculate_iva' => $customer->auto_calculate_iva,
-=======
                     'observations' => $customer->observations,
->>>>>>> dev
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),
                     'balance' => $customer->current_balance,

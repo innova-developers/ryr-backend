@@ -5,6 +5,7 @@ namespace App\Shared\Models;
 use Database\Factories\BranchFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -14,7 +15,7 @@ class Branch extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['id','name', 'address', 'schedule', 'phone', 'secondary_phone'];
+    protected $fillable = ['id', 'name', 'address', 'schedule', 'phone', 'secondary_phone', 'franchise_id'];
 
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Shared\Models\User, \App\Shared\Models\Branch>
@@ -25,6 +26,11 @@ class Branch extends Model
         $relation = $this->hasMany(User::class);
 
         return $relation;
+    }
+
+    public function franchise(): BelongsTo
+    {
+        return $this->belongsTo(Franchise::class);
     }
 
     public static function newFactory(): BranchFactory

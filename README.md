@@ -1,663 +1,906 @@
-# 🚚 RYR Comisiones - API Backend
+# RYR Comisiones
 
-Backend API para el sistema de gestión de comisiones y envíos de RYR Comisiones, desarrollado con Laravel 11 y arquitectura hexagonal.
+Sistema integral de gestion de comisiones, logistica y facturacion electronica para empresas de transporte y mensajeria.
 
-## 📋 Tabla de Contenidos
-
-- [Características](#-características)
-- [Tecnologías](#-tecnologías)
-- [Instalación](#-instalación)
-- [Configuración](#-configuración)
-- [Autenticación](#-autenticación)
-- [Endpoints de la API](#-endpoints-de-la-api)
-  - [Autenticación](#autenticación-1)
-  - [Clientes](#clientes)
-  - [Comisiones](#comisiones)
-  - [Usuarios](#usuarios)
-  - [Sucursales](#sucursales)
-  - [Destinos](#destinos)
-  - [Ubicaciones](#ubicaciones)
-  - [Transportes](#transportes)
-  - [Gastos](#gastos)
-  - [Ingresos](#ingresos)
-  - [Cuenta Corriente](#cuenta-corriente)
-  - [Dashboard de Clientes](#dashboard-de-clientes)
-- [Estructura del Proyecto](#-estructura-del-proyecto)
-- [Testing](#-testing)
-- [Variables de Entorno](#-variables-de-entorno)
-
-## ✨ Características
-
-- 🔐 **Autenticación múltiple**: Email/password y verificación por código
-- 📱 **Notificaciones**: WhatsApp y email automáticas
-- 🏢 **Gestión de sucursales**: Multi-sucursal con roles
-- 📊 **Dashboard de clientes**: Seguimiento de envíos y saldos
-- 💰 **Cuenta corriente**: Gestión de pagos y saldos
-- 📈 **Reportes**: Comisiones, gastos e ingresos
-- 🚛 **Tracking público**: Seguimiento sin autenticación
-- 🔄 **Webhooks**: Notificaciones automáticas de estado
-
-## 🛠 Tecnologías
-
-- **Laravel 11** - Framework PHP
-- **Laravel Sanctum** - Autenticación API
-- **MySQL/SQLite** - Base de datos
-- **Docker** - Containerización
-- **PHPUnit** - Testing
-- **Green API** - WhatsApp Business API
-- **Laravel Mail** - Envío de emails
-
-## 🚀 Instalación
-
-### Prerrequisitos
-
-- Docker y Docker Compose
-- PHP 8.2+
-- Composer
-
-### Pasos de instalación
-
-1. **Clonar el repositorio**
-```bash
-git clone <repository-url>
-cd ryr-backend
-```
-
-2. **Configurar variables de entorno**
-```bash
-cp .env.example .env
-# Editar .env con tus configuraciones
-```
-
-3. **Levantar con Docker**
-```bash
-docker-compose up -d
-```
-
-4. **Instalar dependencias**
-```bash
-docker-compose exec app composer install
-```
-
-5. **Generar clave de aplicación**
-```bash
-docker-compose exec app php artisan key:generate
-```
-
-6. **Ejecutar migraciones**
-```bash
-docker-compose exec app php artisan migrate
-```
-
-7. **Ejecutar seeders (opcional)**
-```bash
-docker-compose exec app php artisan db:seed
-```
-
-## ⚙️ Configuración
-
-### Variables de entorno importantes
-
-```env
-# Base de datos
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=ryr_backend
-DB_USERNAME=root
-DB_PASSWORD=
-
-# WhatsApp API (Green API)
-WHATSAPP_API_URL=https://api.green-api.com
-WHATSAPP_API_INSTANCE=your_instance_id
-WHATSAPP_API_TOKEN=your_token
-
-# Email
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.gmail.com
-MAIL_PORT=587
-MAIL_USERNAME=your_email@gmail.com
-MAIL_PASSWORD=your_app_password
-
-# Configuración de la aplicación
-DISABLE_WHATSAPP=false
-```
-
-## 🔐 Autenticación
-
-La API utiliza **Laravel Sanctum** para la autenticación. Existen dos tipos de autenticación:
-
-### 1. Autenticación por Email/Password (Administradores)
-
-```bash
-POST /api/login
-Content-Type: application/json
-
-{
-    "email": "admin@ryr.com",
-    "password": "password"
-}
-```
-
-**Respuesta:**
-```json
-{
-    "success": true,
-    "token": "1|abc123...",
-    "user": {
-        "id": 1,
-        "name": "Admin",
-        "email": "admin@ryr.com",
-        "role": "administrador"
-    }
-}
-```
-
-### 2. Autenticación por Código (Clientes)
-
-**Paso 1: Validar identificador**
-```bash
-POST /api/validate-identifier
-Content-Type: application/json
-
-{
-    "identifier": "cliente@email.com",
-    "type": "email"
-}
-```
-
-**Paso 2: Verificar código**
-```bash
-POST /api/verify-code
-Content-Type: application/json
-
-{
-    "identifier": "cliente@email.com",
-    "type": "email",
-    "code": "123456"
-}
-```
-
-### Uso del Token
-
-Incluir el token en el header de las peticiones:
-```bash
-Authorization: Bearer 1|abc123...
-```
-
-## 📡 Endpoints de la API
-
-### 🔐 Autenticación
-
-| Método | Endpoint | Descripción | Autenticación |
-|--------|----------|-------------|---------------|
-| `POST` | `/api/login` | Login con email/password | No |
-| `POST` | `/api/logout` | Logout | Sí |
-| `POST` | `/api/validate-identifier` | Validar email/teléfono | No |
-| `POST` | `/api/verify-code` | Verificar código | No |
-
-### 👥 Clientes
-
-| Método | Endpoint | Descripción | Autenticación |
-|--------|----------|-------------|---------------|
-| `POST` | `/api/customers/public` | Crear cliente público | No |
-| `GET` | `/api/customers` | Listar clientes | Admin |
-| `POST` | `/api/customers` | Crear cliente | Admin |
-| `GET` | `/api/customers/{id}` | Obtener cliente | Admin |
-| `PUT` | `/api/customers/{id}` | Actualizar cliente | Admin |
-| `DELETE` | `/api/customers/{id}` | Eliminar cliente | Admin |
-| `GET` | `/api/customers/search` | Buscar clientes | Admin |
-
-**Ejemplo - Crear cliente público:**
-```bash
-POST /api/customers/public
-Content-Type: application/json
-
-{
-    "name": "Juan",
-    "last_name": "Pérez",
-    "email": "juan@email.com",
-    "phone": "2914716316",
-    "address": "Calle 123",
-    "city": "Buenos Aires",
-    "dni": "12345678"
-}
-```
-
-### 📦 Comisiones
-
-| Método | Endpoint | Descripción | Autenticación |
-|--------|----------|-------------|---------------|
-| `GET` | `/api/commissions/{id}/tracking` | Tracking público | No |
-| `POST` | `/api/commissions/public` | Crear comisión pública | No |
-| `GET` | `/api/commissions` | Listar comisiones | Admin |
-| `POST` | `/api/commissions` | Crear comisión | Admin |
-| `GET` | `/api/commissions/{id}` | Obtener comisión | Admin |
-| `PATCH` | `/api/commissions/{id}/status` | Actualizar estado | Admin |
-| `DELETE` | `/api/commissions/{id}` | Eliminar comisión | Admin |
-| `GET` | `/api/commissions/statuses` | Estados disponibles | Admin |
-
-**Ejemplo - Tracking público:**
-```bash
-GET /api/commissions/395699000002/tracking
-```
-
-**Respuesta:**
-```json
-{
-    "success": true,
-    "data": {
-        "tracking_id": 395699000002,
-        "tracking_number": "RYR395699000002",
-        "status": "PENDIENTE",
-        "origin": {
-            "name": "Sucursal Centro",
-            "address": "Av. San Martín 123",
-            "city": "Buenos Aires",
-            "phone": "011-1234-5678",
-            "schedule": "9:00 a 18:00"
-        },
-        "destination": {
-            "name": "Sucursal Norte",
-            "address": "Av. Libertador 456",
-            "city": "Córdoba",
-            "phone": "0351-9876-5432",
-            "schedule": "8:00 a 17:00"
-        },
-        "date": "2025-07-31 00:00:00",
-        "items_count": 2,
-        "message": "Para más información, inicia sesión en tu cuenta de cliente."
-    }
-}
-```
-
-### 👤 Usuarios
-
-| Método | Endpoint | Descripción | Autenticación |
-|--------|----------|-------------|---------------|
-| `GET` | `/api/users` | Listar usuarios | Admin |
-| `POST` | `/api/users` | Crear usuario | Admin |
-| `PUT` | `/api/users/{id}` | Actualizar usuario | Admin |
-| `DELETE` | `/api/users/{id}` | Eliminar usuario | Admin |
-| `GET` | `/api/users/{userId}/salary` | Calcular salario | Admin |
-
-**Ejemplo - Crear usuario:**
-```bash
-POST /api/users
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-    "name": "Nuevo Usuario",
-    "email": "usuario@ryr.com",
-    "password": "password123",
-    "role": "empleado",
-    "branch_id": 1,
-    "salary_type": "fixed_salary",
-    "base_salary": 50000
-}
-```
-
-### 🏢 Sucursales
-
-| Método | Endpoint | Descripción | Autenticación |
-|--------|----------|-------------|---------------|
-| `GET` | `/api/branches` | Listar sucursales | No |
-| `POST` | `/api/branches` | Crear sucursal | No |
-| `GET` | `/api/branches/{id}` | Obtener sucursal | No |
-| `PUT` | `/api/branches/{id}` | Actualizar sucursal | No |
-| `DELETE` | `/api/branches/{id}` | Eliminar sucursal | No |
-
-### 🗺️ Destinos
-
-| Método | Endpoint | Descripción | Autenticación |
-|--------|----------|-------------|---------------|
-| `GET` | `/api/destinations` | Listar destinos | No |
-| `POST` | `/api/destinations` | Crear destino | No |
-| `GET` | `/api/destinations/{id}` | Obtener destino | No |
-| `PUT` | `/api/destinations/{id}` | Actualizar destino | No |
-| `DELETE` | `/api/destinations/{id}` | Eliminar destino | No |
-| `GET` | `/api/destinations/rates/{origin}/{destination}` | Obtener tarifas | No |
-| `GET` | `/api/origins` | Listar orígenes | No |
-| `GET` | `/api/destinations/origin/{origin}` | Destinos por origen | No |
-
-### 📍 Ubicaciones
-
-| Método | Endpoint | Descripción | Autenticación |
-|--------|----------|-------------|---------------|
-| `GET` | `/api/locations` | Listar ubicaciones | No |
-| `POST` | `/api/locations` | Crear ubicación | No |
-| `PUT` | `/api/locations/{id}` | Actualizar ubicación | No |
-| `DELETE` | `/api/locations/{id}` | Eliminar ubicación | No |
-| `GET` | `/api/locations/origin/{origin}` | Ubicaciones por origen | No |
-
-### 🚛 Transportes
-
-| Método | Endpoint | Descripción | Autenticación |
-|--------|----------|-------------|---------------|
-| `GET` | `/api/transports` | Listar transportes | No |
-| `POST` | `/api/transports` | Crear transporte | No |
-| `PUT` | `/api/transports/{id}` | Actualizar transporte | No |
-| `DELETE` | `/api/transports/{id}` | Eliminar transporte | No |
-| `GET` | `/api/transports/{transportId}/expenses` | Gastos del transporte | No |
-| `POST` | `/api/transports/{transportId}/expenses` | Crear gasto de transporte | No |
-| `PUT` | `/api/transports/{transportId}/expenses/{expenseId}` | Actualizar gasto | No |
-| `DELETE` | `/api/transports/{transportId}/expenses/{expenseId}` | Eliminar gasto | No |
-
-### 💰 Gastos
-
-| Método | Endpoint | Descripción | Autenticación |
-|--------|----------|-------------|---------------|
-| `GET` | `/api/expenses` | Listar gastos | No |
-| `POST` | `/api/expenses` | Crear gasto | No |
-| `GET` | `/api/expenses/{id}` | Obtener gasto | No |
-| `PUT` | `/api/expenses/{id}` | Actualizar gasto | No |
-| `DELETE` | `/api/expenses/{id}` | Eliminar gasto | No |
-| `GET` | `/api/users/{userId}/expenses` | Gastos por usuario | No |
-
-### 📈 Ingresos
-
-| Método | Endpoint | Descripción | Autenticación |
-|--------|----------|-------------|---------------|
-| `GET` | `/api/incomes` | Listar ingresos | No |
-| `POST` | `/api/incomes` | Crear ingreso | No |
-| `GET` | `/api/incomes/{id}` | Obtener ingreso | No |
-| `PUT` | `/api/incomes/{id}` | Actualizar ingreso | No |
-| `DELETE` | `/api/incomes/{id}` | Eliminar ingreso | No |
-| `GET` | `/api/users/{userId}/incomes` | Ingresos por usuario | No |
-
-### 💳 Cuenta Corriente
-
-| Método | Endpoint | Descripción | Autenticación |
-|--------|----------|-------------|---------------|
-| `POST` | `/api/current-accounts` | Crear transacción | No |
-| `GET` | `/api/current-accounts/{id}` | Obtener transacción | No |
-| `PUT` | `/api/current-accounts/{id}` | Actualizar transacción | No |
-| `DELETE` | `/api/current-accounts/{id}` | Eliminar transacción | No |
-| `GET` | `/api/customers/{customerId}/current-account/transactions` | Transacciones del cliente | Admin |
-| `GET` | `/api/customers/{customerId}/current-account/balance` | Saldo del cliente | Admin |
-
-### 🏠 Dashboard de Clientes
-
-| Método | Endpoint | Descripción | Autenticación |
-|--------|----------|-------------|---------------|
-| `GET` | `/api/client/profile` | Obtener perfil | Cliente |
-| `PUT` | `/api/client/profile` | Actualizar perfil | Cliente |
-| `GET` | `/api/client/shipments` | Mis envíos | Cliente |
-| `GET` | `/api/client/account-balance` | Mi saldo | Cliente |
-| `GET` | `/api/client/current-account/transactions` | Mis transacciones | Cliente |
-| `GET` | `/api/client/current-account/balance` | Mi saldo detallado | Cliente |
-
-**Ejemplo - Obtener perfil del cliente:**
-```bash
-GET /api/client/profile
-Authorization: Bearer {token}
-```
-
-**Respuesta:**
-```json
-{
-    "success": true,
-    "customer": {
-        "id": 1,
-        "name": "Juan",
-        "last_name": "Pérez",
-        "email": "juan@email.com",
-        "phone": "2914716316",
-        "address": "Calle 123",
-        "city": "Buenos Aires",
-        "dni": "12345678"
-    },
-    "user": {
-        "id": 1,
-        "name": "Juan Pérez",
-        "email": "juan@email.com",
-        "role": "cliente"
-    }
-}
-```
-
-### 🚚 Dashboard de Cadetes
-
-| Método | Endpoint | Descripción | Autenticación |
-|--------|----------|-------------|---------------|
-| `GET` | `/api/cadete/home` | Dashboard principal | Cadete |
-| `GET` | `/api/cadete/profile` | Perfil del cadete | Cadete |
-| `PUT` | `/api/cadete/profile` | Actualizar perfil | Cadete |
-| `GET` | `/api/cadete/deliveries` | Lista de entregas | Cadete |
-| `PUT` | `/api/cadete/deliveries/{id}` | Actualizar estado de entrega | Cadete |
-| `POST` | `/api/cadete/deliveries/{id}/location` | Enviar ubicación GPS | Cadete |
-| `GET` | `/api/cadete/stats` | Estadísticas básicas | Cadete |
-| `GET` | `/api/cadete/earnings` | Ganancias detalladas | Cadete |
-
-**Ejemplo - Obtener ganancias del mes:**
-```bash
-GET /api/cadete/earnings?period=month
-Authorization: Bearer {token}
-```
-
-**Respuesta:**
-```json
-{
-  "success": true,
-  "message": "Ganancias obtenidas correctamente",
-  "data": {
-    "summary": {
-      "total_earnings": 600.00,
-      "total_deliveries": 4,
-      "commission_percentage": 15.0,
-      "total_commission_amount": 4000.00,
-      "currency": "ARS",
-      "period_label": "Este mes",
-      "formatted_total": "$600",
-      "formatted_commission_amount": "$4.000"
-    },
-    "breakdown": {
-      "cash_earnings": 600.00,
-      "card_earnings": 0.00,
-      "transfer_earnings": 0.00,
-      "bonuses": 0.00,
-      "deductions": 0.00,
-      "net_earnings": 600.00,
-      "total_commission_amount": 4000.00,
-      "commission_percentage": 15.0
-    },
-    "payment_status": {
-      "paid": {
-        "commission_amount": 4000.00,
-        "earnings": 600.00,
-        "count": 4,
-        "percentage": 100.0
-      },
-      "pending": {
-        "commission_amount": 0.00,
-        "earnings": 0.00,
-        "count": 0,
-        "percentage": 0.0
-      },
-      "cancelled": {
-        "commission_amount": 0.00,
-        "earnings": 0.00,
-        "count": 0,
-        "percentage": 0.0
-      }
-    },
-    "daily_breakdown": [
-      {
-        "date": "2025-08-22",
-        "commission_amount": 1000.00,
-        "earnings": 150.00,
-        "deliveries": 1,
-        "hours_worked": 0.5,
-        "formatted_commission_amount": "$1.000",
-        "formatted_earnings": "$150"
-      }
-    ],
-    "top_routes": [
-      {
-        "route": "CABA → Zona Norte",
-        "commission_amount": 2000.00,
-        "earnings": 300.00,
-        "deliveries": 2,
-        "average_per_delivery": 150.00,
-        "percentage": 50.0
-      }
-    ],
-    "performance_metrics": {
-      "delivery_success_rate": 100.0,
-      "customer_rating": 4.8,
-      "on_time_percentage": 87.5,
-      "earnings_growth": {
-        "percentage": 0.0,
-        "compared_to": "período_anterior",
-        "trend": "up"
-      },
-      "commission_growth": {
-        "current_period_commission": 4000.00,
-        "previous_period_commission": 0.00,
-        "current_period_earnings": 600.00,
-        "previous_period_earnings": 0.00
-      }
-    },
-    "recent_payments": [
-      {
-        "id": 123,
-        "date": "2025-08-22T15:30:00.000Z",
-        "commission_amount": 1000.00,
-        "earnings": 150.00,
-        "method": "cash",
-        "status": "paid",
-        "reference": "TXN-123",
-        "deliveries_count": 1,
-        "formatted_commission_amount": "$1.000",
-        "formatted_earnings": "$150"
-      }
-    ],
-    "pagination": {
-      "current_page": 1,
-      "per_page": 20,
-      "total": 1,
-      "last_page": 1,
-      "from": 1,
-      "to": 1
-    },
-    "commission_info": {
-      "cadete_commission_percentage": 15.0,
-      "explanation": "El cadete recibe el 15.00% del total de cada comisión entregada"
-    }
-  }
-}
-```
-
-**Parámetros disponibles:**
-- `period`: `today`, `week`, `month`, `year`, `custom`
-- `date_from`: Fecha desde (requerido si `period=custom`)
-- `date_to`: Fecha hasta (requerido si `period=custom`)
-- `status`: `all`, `paid`, `pending`, `cancelled`
-- `payment_method`: `all`, `cash`, `card`, `transfer`
-- `delivery_type`: `all`, `standard`, `express`, `urgent`
-- `page`: Número de página (default: 1)
-- `per_page`: Elementos por página (default: 20, max: 100)
-
-**💡 Sistema de Cálculo de Ganancias:**
-El cadete recibe un porcentaje específico de cada comisión entregada, definido en el campo `commission_percentage` de su perfil de usuario. Por ejemplo:
-- **Comisión total**: $1,000
-- **Porcentaje del cadete**: 15%
-- **Ganancia del cadete**: $150
-
-Todas las métricas de ganancias se calculan aplicando este porcentaje a las comisiones completadas (estados `ENTREGADO` y `RETIRADO_SUCURSAL`).
-
-## 🏗️ Estructura del Proyecto
-
-```
-ryr-backend/
-├── app/
-│   ├── Contexts/                    # Arquitectura hexagonal
-│   │   ├── Auth/                    # Autenticación
-│   │   ├── Branchs/                 # Sucursales
-│   │   ├── Commissions/             # Comisiones
-│   │   ├── Customers/               # Clientes
-│   │   ├── CurrentAccount/          # Cuenta corriente
-│   │   ├── Destinations/            # Destinos
-│   │   ├── Expenses/                # Gastos
-│   │   ├── Incomes/                 # Ingresos
-│   │   ├── Locations/               # Ubicaciones
-│   │   ├── Transports/              # Transportes
-│   │   └── Users/                   # Usuarios
-│   ├── Http/
-│   │   ├── Controllers/
-│   │   │   ├── Auth/                # Controladores de auth
-│   │   │   ├── Client/              # Dashboard cliente
-│   │   │   └── Public/              # Endpoints públicos
-│   │   └── Middleware/              # Middlewares
-│   ├── Mail/                        # Clases de email
-│   ├── Services/                    # Servicios
-│   └── Shared/                      # Modelos y enums compartidos
-├── config/                          # Configuraciones
-├── database/
-│   ├── factories/                   # Factories para testing
-│   ├── migrations/                  # Migraciones
-│   └── seeders/                     # Seeders
-├── resources/
-│   └── views/
-│       └── emails/                  # Templates de email
-├── routes/
-│   └── api.php                      # Rutas de la API
-└── tests/                           # Tests
-```
-
-## 🧪 Testing
-
-### Ejecutar tests
-
-```bash
-# Todos los tests
-docker-compose exec app php artisan test
-
-# Tests específicos
-docker-compose exec app php artisan test --filter=CommissionTest
-
-# Tests con coverage
-docker-compose exec app php artisan test --coverage
-```
-
-### Tipos de tests
-
-- **Feature Tests**: Prueban endpoints completos
-- **Unit Tests**: Prueban casos de uso individuales
-- **Integration Tests**: Prueban integración entre componentes
-
-## 🔧 Comandos útiles
-
-```bash
-# Limpiar cache
-docker-compose exec app php artisan cache:clear
-docker-compose exec app php artisan config:clear
-docker-compose exec app php artisan route:clear
-
-# Ver rutas
-docker-compose exec app php artisan route:list
-
-# Crear migración
-docker-compose exec app php artisan make:migration create_table_name
-
-# Crear seeder
-docker-compose exec app php artisan make:seeder TableNameSeeder
-
-# Ejecutar seeder específico
-docker-compose exec app php artisan db:seed --class=TableNameSeeder
-```
-
-## 📞 Soporte
-
-Para soporte técnico o consultas sobre la API, contactar a:
-- **Email**: soporte@ryr.com
-- **WhatsApp**: +54 9 11 1234-5678
-
-## 📄 Licencia
-
-Este proyecto es propiedad de RYR Comisiones. Todos los derechos reservados.
+**Stack:** Laravel 12 (PHP 8.2) + React 19 + Flutter (app cadetes) | MySQL 8 | Docker | Nginx
 
 ---
 
-**Desarrollado con ❤️ por el equipo de Innova Developers**
+## Tabla de Contenidos
+
+- [Arquitectura General](#arquitectura-general)
+- [Requisitos](#requisitos)
+- [Instalacion](#instalacion)
+- [Variables de Entorno](#variables-de-entorno)
+- [Docker](#docker)
+- [Backend (ryr-backend)](#backend-ryr-backend)
+  - [Estructura DDD](#estructura-ddd)
+  - [Contextos de Dominio](#contextos-de-dominio)
+  - [Modelos Compartidos](#modelos-compartidos)
+  - [Enums](#enums)
+  - [Servicios](#servicios)
+  - [Controllers](#controllers)
+  - [Middleware](#middleware)
+  - [Rutas API](#rutas-api)
+  - [Base de Datos](#base-de-datos)
+  - [Tests](#tests)
+- [Frontend (ryr-front)](#frontend-ryr-front)
+  - [Paginas](#paginas)
+  - [Componentes](#componentes)
+  - [Hooks](#hooks)
+  - [API Client](#api-client)
+- [App Movil (ryr_cadetes_app)](#app-movil-ryr_cadetes_app)
+- [Roles y Autenticacion](#roles-y-autenticacion)
+- [Funcionalidades Principales](#funcionalidades-principales)
+  - [Comisiones](#comisiones)
+  - [Facturacion Electronica (ARCA)](#facturacion-electronica-arca)
+  - [WhatsApp (Green API)](#whatsapp-green-api)
+  - [Notificaciones Push (FCM)](#notificaciones-push-fcm)
+  - [Sistema de Franquicias](#sistema-de-franquicias)
+  - [Geolocalizacion](#geolocalizacion)
+  - [Feedback y Encuestas](#feedback-y-encuestas)
+- [Integraciones Externas](#integraciones-externas)
+- [Comandos Utiles](#comandos-utiles)
+- [Migracion de Base de Datos Legacy](#migracion-de-base-de-datos-legacy)
+
+---
+
+## Arquitectura General
+
+```
+ryr/
+├── ryr-backend/          # Laravel 12 API — DDD con 15 contextos acotados
+├── ryr-front/            # React 19 SPA — Vite + TailwindCSS
+├── ryr_cadetes_app/      # Flutter — App movil para cadetes
+├── docker-compose.yml    # Orquestacion Docker
+└── docs/                 # Documentacion adicional
+```
+
+El backend sigue **Domain-Driven Design (DDD)** con arquitectura hexagonal. Cada contexto acotado tiene sus propias capas:
+
+```
+app/Contexts/{Contexto}/
+├── Application/          # Casos de uso, DTOs
+├── Domain/               # Entidades, repositorios (interfaces)
+└── Infrastructure/       # Controllers, implementaciones, Form Requests
+```
+
+Los modelos, enums, middleware y traits compartidos viven en `app/Shared/`.
+
+---
+
+## Requisitos
+
+| Componente | Version |
+|-----------|---------|
+| PHP | >= 8.2 |
+| Node.js | >= 18 |
+| MySQL | 8.0 |
+| Composer | >= 2.x |
+| Docker + Docker Compose | Recomendado |
+| Flutter | >= 3.x (solo para app movil) |
+
+---
+
+## Instalacion
+
+### Con Docker (recomendado)
+
+```bash
+git clone <repo-url> ryr
+cd ryr
+
+# Levantar servicios
+docker-compose up -d
+
+# Backend
+docker exec -it ryrapp composer install
+docker exec -it ryrapp cp .env.example .env
+docker exec -it ryrapp php artisan key:generate
+docker exec -it ryrapp php artisan migrate --seed
+
+# Frontend
+cd ryr-front
+npm install
+npm run dev    # Dev server en http://localhost:3000
+```
+
+### Sin Docker
+
+```bash
+# Backend
+cd ryr-backend
+composer install
+cp .env.example .env
+php artisan key:generate
+# Configurar DB en .env
+php artisan migrate --seed
+php artisan serve    # http://localhost:8000
+
+# Frontend
+cd ryr-front
+npm install
+npm run dev          # http://localhost:3000
+```
+
+---
+
+## Variables de Entorno
+
+### Backend (`ryr-backend/.env`)
+
+#### Aplicacion
+| Variable | Descripcion | Ejemplo |
+|----------|-------------|---------|
+| `APP_NAME` | Nombre de la app | `RYR` |
+| `APP_ENV` | Entorno | `local` / `production` |
+| `APP_DEBUG` | Debug mode | `true` / `false` |
+| `APP_URL` | URL base del backend | `http://localhost:8000` |
+
+#### Base de Datos
+| Variable | Descripcion | Ejemplo |
+|----------|-------------|---------|
+| `DB_CONNECTION` | Driver | `mysql` |
+| `DB_HOST` | Host | `mysql` (Docker) / `127.0.0.1` |
+| `DB_PORT` | Puerto | `3306` |
+| `DB_DATABASE` | Nombre BD | `laravel` |
+| `DB_USERNAME` | Usuario | `laravel` |
+| `DB_PASSWORD` | Password | `laravel` |
+
+#### Autenticacion (Sanctum)
+| Variable | Descripcion | Ejemplo |
+|----------|-------------|---------|
+| `SANCTUM_STATEFUL_DOMAINS` | Dominios permitidos | `localhost,127.0.0.1` |
+| `SANCTUM_TOKEN_EXPIRATION` | Expiracion token (min) | `1440` |
+
+#### ARCA / AFIP (Facturacion Electronica)
+| Variable | Descripcion | Ejemplo |
+|----------|-------------|---------|
+| `ARCA_MOCK` | Modo simulacion | `true` / `false` |
+| `ARCA_CUIT` | CUIT del emisor | `20000000001` |
+| `ARCA_PRODUCTION` | Entorno produccion ARCA | `false` |
+| `ARCA_PASSPHRASE` | Passphrase certificado | `xxxxx` |
+| `ARCA_PUNTO_VENTA` | Punto de venta habilitado | `5` |
+| `ARCA_RAZON_SOCIAL` | Razon social emisor | `RYR COMISIONES SRL` |
+| `ARCA_DOMICILIO` | Domicilio fiscal | `Av. Ejemplo 1234, CABA` |
+| `ARCA_CONDICION_IVA` | Condicion IVA | `IVA Responsable Inscripto` |
+
+#### WhatsApp (Green API)
+| Variable | Descripcion | Ejemplo |
+|----------|-------------|---------|
+| `WHATSAPP_API_URL` | URL base Green API | `https://api.green-api.com` |
+| `WHATSAPP_API_INSTANCE` | Instance ID | (provisto por Green API) |
+| `WHATSAPP_API_TOKEN` | Token de acceso | (provisto por Green API) |
+
+#### Firebase (Push Notifications)
+| Variable | Descripcion | Ejemplo |
+|----------|-------------|---------|
+| `FIREBASE_CREDENTIALS_PATH` | Ruta credenciales JSON | `storage/app/firebase-credentials.json` |
+
+#### Google Maps
+| Variable | Descripcion | Ejemplo |
+|----------|-------------|---------|
+| `GOOGLE_MAPS_API_KEY` | API Key Maps | (provisto por Google) |
+
+#### Groq (AI)
+| Variable | Descripcion | Ejemplo |
+|----------|-------------|---------|
+| `GROQ_API_KEY` | API Key Groq | (provisto por Groq) |
+
+#### Mail
+| Variable | Descripcion | Ejemplo |
+|----------|-------------|---------|
+| `MAIL_MAILER` | Driver de mail | `smtp` |
+| `MAIL_HOST` | Host SMTP | `mailhog` (dev) |
+| `MAIL_PORT` | Puerto SMTP | `1025` (dev) |
+
+---
+
+## Docker
+
+### Servicios
+
+| Servicio | Imagen | Puerto | Descripcion |
+|----------|--------|--------|-------------|
+| `app` | `php:8.2-fpm` | — | Backend PHP-FPM |
+| `nginx` | `nginx:stable-alpine` | `8000` | Reverse proxy |
+| `mysql` | `mysql:8.0` | `3306` | Base de datos principal |
+| `mysql_old` | `mysql:8.0` | `3307` | BD legacy (migracion) |
+| `phpmyadmin` | `phpmyadmin` | `8081` | Admin BD |
+
+Red: `laravel-network` (bridge)
+
+Timezone del contenedor: `America/Argentina/Buenos_Aires`
+
+### Comandos Docker
+
+```bash
+docker-compose up -d              # Iniciar servicios
+docker-compose down               # Detener servicios
+docker exec -it ryrapp bash       # Shell en el contenedor
+docker exec -it ryrapp php artisan tinker  # Tinker
+```
+
+---
+
+## Backend (ryr-backend)
+
+### Estructura DDD
+
+```
+app/
+├── Contexts/                     # 15 contextos acotados (DDD)
+│   ├── Auth/
+│   ├── Branchs/
+│   ├── Commissions/
+│   ├── CurrentAccount/
+│   ├── Customers/
+│   ├── Destinations/
+│   ├── ExpenseCategories/
+│   ├── Expenses/
+│   ├── ExtraordinaryCommissions/
+│   ├── Franchises/
+│   ├── IncomeCategories/
+│   ├── Incomes/
+│   ├── Locations/
+│   ├── Transports/
+│   └── Users/
+├── Http/
+│   ├── Controllers/
+│   │   ├── Admin/                # Controllers de administracion
+│   │   ├── Cadete/               # Controllers de cadetes
+│   │   ├── Client/               # Controllers de clientes
+│   │   └── Public/               # Controllers publicos (tracking)
+│   └── Middleware/
+├── Mail/                         # Mailables
+├── Services/                     # Servicios de negocio
+└── Shared/
+    ├── Enums/                    # Enumeraciones
+    ├── Middleware/                # Middleware compartido
+    ├── Models/                   # 24 modelos Eloquent
+    └── Traits/                   # Traits compartidos
+```
+
+### Contextos de Dominio
+
+| Contexto | Descripcion | Modelo Principal |
+|----------|-------------|-----------------|
+| **Auth** | Autenticacion, login, verificacion de codigo | User |
+| **Users** | Gestion de usuarios, salarios, contratos | User |
+| **Branchs** | Sucursales/oficinas | Branch |
+| **Customers** | Clientes, CUIT, calculo IVA automatico | Customer |
+| **Commissions** | Comisiones/envios (core del negocio) | Commission, CommissionItem, CommissionLog |
+| **Destinations** | Tarifas origen-destino | Destination |
+| **Locations** | Ubicaciones con coordenadas GPS | Location |
+| **Transports** | Gestiones de cadetes/transportistas | Transport |
+| **Expenses** | Gastos | Expense |
+| **ExpenseCategories** | Categorias de gastos | ExpenseCategory |
+| **Incomes** | Ingresos | Income |
+| **IncomeCategories** | Categorias de ingresos | IncomeCategory |
+| **ExtraordinaryCommissions** | Comisiones especiales fuera de tarifa | ExtraordinaryCommission |
+| **CurrentAccount** | Cuenta corriente de clientes | CurrentAccount |
+| **Franchises** | Sistema de franquicias multi-tenant | Franchise |
+
+### Modelos Compartidos
+
+24 modelos en `app/Shared/Models/`:
+
+| Modelo | Descripcion |
+|--------|-------------|
+| `User` | Usuarios del sistema (todos los roles) |
+| `Branch` | Sucursales |
+| `Customer` | Clientes |
+| `Commission` | Comisiones/envios |
+| `CommissionItem` | Items de una comision (paquetes, sobres) |
+| `CommissionLog` | Log de cambios de estado |
+| `CurrentAccount` | Movimientos de cuenta corriente |
+| `Destination` | Tarifas por destino |
+| `Expense` | Gastos |
+| `ExpenseCategory` | Categorias de gastos |
+| `Income` | Ingresos |
+| `IncomeCategory` | Categorias de ingresos |
+| `ExtraordinaryCommission` | Comisiones extraordinarias |
+| `Invoice` | Facturas electronicas |
+| `Franchise` | Franquicias |
+| `MatrixReceivable` | Cuentas por cobrar de franquicias |
+| `Transport` | Gestiones de transporte |
+| `Location` | Ubicaciones geograficas |
+| `ShipmentLocation` | Ubicaciones de envio |
+| `FcmToken` | Tokens Firebase para push notifications |
+| `FeedbackSurvey` | Encuestas de feedback |
+| `SystemSetting` | Configuracion del sistema (IVA, etc.) |
+| `WhatsAppCampaign` | Campanas de WhatsApp |
+| `WhatsAppCampaignMessage` | Mensajes individuales de campana |
+
+### Enums
+
+12 enums en `app/Shared/Enums/`:
+
+| Enum | Valores |
+|------|---------|
+| `UserRole` | ADMINISTRADOR, CADETE, MOSTRADOR, CLIENTE, CADETE_EXTERNO, COBRADOR, ADMIN_FRANQUICIA |
+| `CommissionStatus` | PENDIENTE, PRESUPUESTADO, ACEPTADO, CADETE_ASIGNADO, RETIRADO, RETIRADO_SUCURSAL, ENTREGADO, CANCELADO, PAGO_VALIDACION, PAGADO, PAGO_CONFIRMADO, ENCOMIENDA_RETIRADA |
+| `CommissionType` | REGULAR, EXPRESS, ENCOMIENDA |
+| `CommissionItemSize` | SMALL, MEDIUM, LARGE |
+| `CommissionItemType` | PAQUETE, SOBRE, DOCUMENTO |
+| `PaymentMethod` | EFECTIVO, TRANSFERENCIA, TARJETA, CHEQUE, CUENTA_CORRIENTE |
+| `CurrentAccountStatus` | PENDING, OK, CANCELLED |
+| `InvoiceStatus` | EMITIDA, ANULADA |
+| `InvoiceType` | FACTURA_A (1), NOTA_DEBITO_A (2), NOTA_CREDITO_A (3), FACTURA_B (6), NOTA_DEBITO_B (7), NOTA_CREDITO_B (8), FACTURA_C (11), NOTA_DEBITO_C (12), NOTA_CREDITO_C (13) |
+| `IvaStatus` | RESPONSABLE_INSCRIPTO, MONOTRIBUTISTA, EXENTO, CONSUMIDOR_FINAL |
+| `FranchiseStatus` | ACTIVE, INACTIVE, SUSPENDED |
+| `CampaignStatus` | DRAFT, SCHEDULED, SENDING, COMPLETED, FAILED |
+
+### Servicios
+
+13 servicios en `app/Services/`:
+
+| Servicio | Descripcion |
+|----------|-------------|
+| `InvoiceService` | Emision, anulacion y generacion de PDF de facturas |
+| `ArcaService` | Integracion con ARCA/AFIP para facturacion electronica |
+| `WhatsAppService` | Envio de mensajes y archivos via Green API |
+| `FcmNotificationService` | Push notifications via Firebase Cloud Messaging |
+| `CommissionNotificationService` | Notificaciones de cambio de estado de comisiones |
+| `CampaignService` | Gestion de campanas masivas de WhatsApp |
+| `IvaCalculationService` | Calculo de IVA segun condicion del cliente |
+| `MatrixCommissionService` | Logica de comisiones entre matriz y franquicias |
+| `FeedbackService` | Gestion de encuestas y feedback |
+| `GoogleMapsService` | Geocodificacion via Google Maps API |
+| `NominatimService` | Geocodificacion fallback via OpenStreetMap |
+| `VerificationCodeService` | Generacion y validacion de codigos de verificacion |
+| `ScheduleNormalizer` | Normalizacion de horarios |
+
+### Controllers
+
+#### Admin (`app/Http/Controllers/Admin/`)
+
+| Controller | Descripcion |
+|-----------|-------------|
+| `DashboardController` | Dashboard administrativo con metricas |
+| `InvoiceController` | CRUD facturas, PDF, email, WhatsApp |
+| `IvaReportController` | Reportes de IVA (libro IVA ventas) |
+| `CadetePaymentController` | Gestion de pagos a cadetes |
+| `CollectionPoolController` | Pool de cobranza |
+| `FeedbackController` | Encuestas de satisfaccion |
+| `MatrixReceivableController` | Cuentas por cobrar franquicias |
+| `PaymentMethodController` | Metodos de pago |
+| `SystemSettingsController` | Configuracion IVA y sistema |
+| `WhatsAppCampaignController` | Campanas masivas WhatsApp |
+
+#### Cadete (`app/Http/Controllers/Cadete/`)
+
+| Controller | Descripcion |
+|-----------|-------------|
+| `CadeteController` | Entregas, ganancias, perfil |
+| `CadetePaymentController` | Pagos del cadete |
+| `DashboardController` | Dashboard del cadete |
+| `FcmTokenController` | Registro de tokens FCM |
+
+#### Cliente (`app/Http/Controllers/Client/`)
+
+| Controller | Descripcion |
+|-----------|-------------|
+| `ClientDashboardController` | Panel del cliente: envios, saldo, transacciones |
+
+#### Publico (`app/Http/Controllers/Public/`)
+
+| Controller | Descripcion |
+|-----------|-------------|
+| `PublicCommissionController` | Tracking publico de envios |
+| `PublicCustomerController` | Registro de clientes |
+
+### Middleware
+
+| Middleware | Descripcion |
+|-----------|-------------|
+| `UserAdminMiddleware` | Permite solo roles ADMINISTRADOR y MOSTRADOR |
+| `CadeteMiddleware` | Permite solo roles CADETE y CADETE_EXTERNO |
+| `AdminOrCadeteMiddleware` | Permite admin + cadete |
+| `ClientAuthMiddleware` | Autenticacion de clientes |
+| `FranchiseScopeMiddleware` | Aislamiento de datos por franquicia |
+| `HandleCors` | CORS headers |
+
+### Rutas API
+
+Archivo: `routes/api.php`
+
+#### Rutas Publicas (sin auth)
+
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| POST | `/login` | Login |
+| POST | `/logout` | Logout |
+| POST | `/validate-identifier` | Validar identificador de cliente |
+| POST | `/verify-code` | Verificar codigo |
+| GET | `/destinations` | Listar destinos |
+| GET | `/tracking/{commission}` | Tracking publico |
+| POST | `/customers/register` | Registro de cliente |
+
+#### Rutas Admin (auth:sanctum + isAdmin + franchiseScope)
+
+| Prefijo | Recursos |
+|---------|----------|
+| `/admin/users` | CRUD usuarios |
+| `/admin/customers` | CRUD clientes |
+| `/admin/commissions` | CRUD comisiones, asignacion cadete, estados |
+| `/admin/transports` | CRUD gestiones |
+| `/admin/branches` | CRUD sucursales |
+| `/admin/locations` | CRUD ubicaciones |
+| `/admin/expenses` | CRUD gastos |
+| `/admin/expense-categories` | CRUD categorias gastos |
+| `/admin/incomes` | CRUD ingresos |
+| `/admin/income-categories` | CRUD categorias ingresos |
+| `/admin/current-accounts` | Cuenta corriente |
+| `/admin/invoices` | Facturacion ARCA |
+| `/admin/iva-report` | Reporte IVA |
+| `/admin/dashboard` | Dashboard stats |
+| `/admin/cadete-payments` | Pagos a cadetes |
+| `/admin/collection-pool` | Pool cobranza |
+| `/admin/whatsapp-campaigns` | Campanas WhatsApp |
+| `/admin/feedback` | Feedback/encuestas |
+| `/admin/franchises` | Franquicias |
+| `/admin/matrix-receivables` | Cuentas por cobrar |
+| `/admin/system-settings` | Config sistema |
+| `/admin/payment-methods` | Metodos de pago |
+
+#### Rutas Cadete (auth:sanctum + cadete)
+
+| Prefijo | Recursos |
+|---------|----------|
+| `/cadete/dashboard` | Dashboard |
+| `/cadete/deliveries` | Entregas asignadas |
+| `/cadete/earnings` | Ganancias |
+| `/cadete/profile` | Perfil |
+| `/cadete/payments` | Pagos |
+| `/cadete/fcm-token` | Token FCM |
+
+#### Rutas Cliente (auth:sanctum)
+
+| Prefijo | Recursos |
+|---------|----------|
+| `/client/dashboard` | Envios, saldo, transacciones |
+
+### Base de Datos
+
+58 migraciones. Tablas principales:
+
+| Tabla | Descripcion |
+|-------|-------------|
+| `users` | Usuarios con roles, salario, contrato |
+| `branches` | Sucursales |
+| `customers` | Clientes con CUIT, IVA, saldo |
+| `commissions` | Comisiones/envios |
+| `commission_items` | Items de comision |
+| `commission_logs` | Historial de estados |
+| `current_accounts` | Movimientos cuenta corriente |
+| `destinations` | Tarifas por destino |
+| `transports` | Gestiones de transporte |
+| `locations` | Ubicaciones GPS |
+| `shipment_locations` | Ubicaciones de envio |
+| `expenses` / `expense_categories` | Gastos y categorias |
+| `incomes` / `income_categories` | Ingresos y categorias |
+| `extraordinary_commissions` | Comisiones especiales |
+| `invoices` | Facturas electronicas |
+| `franchises` | Franquicias |
+| `matrix_receivables` | Cuentas por cobrar franquicias |
+| `whatsapp_campaigns` / `whatsapp_campaign_messages` | Campanas WhatsApp |
+| `fcm_tokens` | Tokens Firebase |
+| `feedback_surveys` | Encuestas |
+| `system_settings` | Config (IVA, etc.) |
+| `cadete_payments` | Pagos a cadetes |
+| `delivery_signatures` | Firmas digitales |
+| `notifications` | Notificaciones |
+| `personal_access_tokens` | Tokens Sanctum |
+
+### Tests
+
+71+ tests automatizados.
+
+```bash
+# Correr todos los tests
+php artisan test
+
+# Correr un test especifico
+php artisan test --filter=CommissionTest
+
+# Con coverage
+php artisan test --coverage
+```
+
+| Categoria | Tests |
+|-----------|-------|
+| Auth | Login, Logout |
+| Commissions | CRUD, filtros, estados, asignacion cadete, eliminacion, entregas fallidas |
+| Customers | CRUD, filtros, calculo IVA, balance |
+| Current Account | Balance, transacciones, integracion |
+| Cadete | Entregas, ganancias, perfil, pagos, actualizacion estado |
+| Destinations, Expenses, Incomes | CRUD |
+| Locations, Transports, Users | CRUD |
+| Franchises | CRUD, scoping |
+| WhatsApp | Servicio, campanas |
+| Invoice | Emision, IVA |
+| Feedback | Encuestas |
+| Integracion | Flujos end-to-end |
+
+---
+
+## Frontend (ryr-front)
+
+**Stack:** React 19 + Vite 6.3 + TailwindCSS 3.4 + React Router 7.6
+
+Dev server: `http://localhost:3000`
+
+### Dependencias Principales
+
+| Paquete | Uso |
+|---------|-----|
+| `@tanstack/react-query` | Cache y estado del servidor |
+| `react-router-dom` | Ruteo SPA |
+| `react-hook-form` | Formularios |
+| `react-select` | Selects avanzados |
+| `chart.js` + `react-chartjs-2` | Graficos del dashboard |
+| `react-hot-toast` / `react-toastify` | Notificaciones |
+| `jspdf` + `jspdf-autotable` | Exportar reportes a PDF |
+| `xlsx` | Exportar a Excel |
+| `html5-qrcode` | Escaneo de QR |
+| `date-fns` | Manejo de fechas |
+
+### Paginas
+
+33 paginas en `src/pages/`:
+
+| Pagina | Ruta | Descripcion |
+|--------|------|-------------|
+| `Landing` | `/` | Landing publica |
+| `Login` | `/login` | Login |
+| `Tracking` | `/tracking/:id` | Tracking publico |
+| `Dashboard` | `/admin/dashboard` | Dashboard administrativo |
+| `FranchiseDashboard` | `/admin/franchise-dashboard` | Dashboard franquicia |
+| `ListadoComisiones` | `/admin/comisiones` | Listado de comisiones |
+| `DetalleComision` | `/admin/comisiones/:id` | Detalle de comision |
+| `NuevaComision` | `/admin/nueva-comision` | Crear comision |
+| `NuevaComisionRapida` | `/admin/nueva-comision-rapida` | Comision rapida |
+| `ComisionesExtraordinarias` | `/admin/extraordinarias` | Comisiones especiales |
+| `Usuarios` | `/admin/usuarios` | Gestion usuarios |
+| `Clientes` | `/admin/clientes` | Gestion clientes |
+| `Sucursales` | `/admin/sucursales` | Sucursales |
+| `Locaciones` | `/admin/locaciones` | Ubicaciones |
+| `Destinos` | `/admin/destinos` | Destinos/tarifas |
+| `Transportes` | `/admin/transportes` | Gestiones |
+| `Gastos` | `/admin/gastos` | Gastos |
+| `CategoriasGastos` | `/admin/categorias-gastos` | Categorias gastos |
+| `Ingresos` | `/admin/ingresos` | Ingresos |
+| `CategoriasIngresos` | `/admin/categorias-ingresos` | Categorias ingresos |
+| `Balances` | `/admin/balances` | Balances |
+| `Facturacion` | `/admin/facturacion` | Facturacion electronica |
+| `ReporteIva` | `/admin/reporte-iva` | Libro IVA ventas |
+| `MatrixReceivables` | `/admin/matrix-receivables` | Cuentas por cobrar |
+| `PoolCobranza` | `/admin/pool-cobranza` | Pool de cobranza |
+| `PanelCobradores` | `/admin/panel-cobradores` | Panel cobradores |
+| `CampanasWhatsApp` | `/admin/campanas-whatsapp` | Campanas WhatsApp |
+| `FeedbackDashboard` | `/admin/feedback` | Dashboard feedback |
+| `NuevoPresupuesto` | `/admin/nuevo-presupuesto` | Presupuestos |
+| `SinCotizar` | `/admin/sin-cotizar` | Items sin cotizar |
+| `ClientDashboard` | `/client/dashboard` | Panel del cliente |
+| `Privacy` | `/privacy` | Politica privacidad |
+| `Terms` | `/terms` | Terminos y condiciones |
+
+### Componentes
+
+33 componentes en `src/components/`:
+
+**Navegacion:**
+- `Navbar` — Barra superior
+- `Sidebar` — Menu lateral con 7 secciones colapsables (Panel, Operaciones, Finanzas, Cobranza, Marketing, Franquicias, Configuracion)
+- `Footer` — Pie de pagina
+- `ClientHeader` — Header del portal cliente
+
+**Comisiones:**
+- `CommissionModal` — Modal nueva comision
+- `EditCommissionModal` — Editar comision
+- `CadeteAssignmentModal` — Asignar cadete
+- `CadeteCommissionsList` — Comisiones del cadete
+- `CadeteInfoCard` — Info del cadete
+- `TrackingModal` — Modal de tracking
+
+**Facturacion:**
+- `InvoicePdfPreview` — Vista previa factura con acciones: Descargar PDF, Email, WhatsApp
+
+**Pagos:**
+- `PaymentForm` — Formulario de pago
+- `PaymentMethodModal` — Selector metodo pago
+- `PaymentFilters` — Filtros de pago
+- `BankAccountModal` — Datos bancarios
+- `CadetePaymentsModal` — Pagos cadete
+
+**Formularios:**
+- `GastoForm` / `GastosTable` — Gastos
+- `IngresoForm` / `IngresosTable` — Ingresos
+- `SucursalForm` — Sucursales
+- `ComisionesExtraordinarias` — Comisiones especiales
+- `LandingQuoteForm` — Cotizador publico
+
+**Firma Digital:**
+- `SignatureBadge` / `SignatureDetailsModal` / `SignatureInfo` — Firma de entrega
+
+**Otros:**
+- `QRScanner` / `QRCodeModal` — QR
+- `DateRangePicker` — Rango de fechas
+- `FloatingSearch` — Busqueda flotante
+- `ClientRegistrationModal` — Registro cliente
+- `WebLoginModal` — Login web
+- `LanguageSwitcher` — Selector idioma
+- `GlobalLoading` — Indicador de carga global
+
+### Hooks
+
+10 hooks personalizados en `src/hooks/`:
+
+| Hook | Funciones |
+|------|-----------|
+| `useInvoices` | fetchInvoices, emitirFactura, anularFactura, getInvoicePdf, sendInvoiceEmail, sendInvoiceWhatsApp, consultarCuit |
+| `useIvaReport` | Generacion libro IVA ventas |
+| `useCampaigns` | CRUD campanas WhatsApp, envio, preview |
+| `useCadeteAssignment` | Asignar/desasignar cadete a comision |
+| `useFeedback` | Encuestas, respuestas, metricas |
+| `useFranchises` | CRUD franquicias |
+| `useMatrixReceivables` | Cuentas por cobrar matriz-franquicia |
+| `usePaymentMethods` | CRUD metodos de pago |
+| `useSucursales` | CRUD sucursales |
+| `useLanguage` | Cambio de idioma |
+
+### API Client
+
+`src/api/apiClient.js` — Wrapper sobre `fetch()`:
+
+- Token management automatico (Bearer token via `localStorage`)
+- Manejo de errores con logging detallado
+- Soporte FormData para uploads
+- Tokens separados para web (landing) y app (admin)
+- Auto-redirect en 401 (token expirado)
+
+`src/api/config.js` — `API_BASE_URL` configurable
+
+---
+
+## App Movil (ryr_cadetes_app)
+
+App Flutter para cadetes y cadetes externos.
+
+### Funcionalidades
+
+- Dashboard con estadisticas y resumen de ganancias
+- Lista de entregas con filtros y busqueda
+- Calculo de distancia GPS en tiempo real
+- Captura de firma digital de entrega
+- Historial de pagos y pagos proximos
+- Historial completo de entregas
+- Estadisticas de rendimiento
+- Push notifications (FCM)
+
+### Plataformas
+
+- Android
+- iOS
+- Web (PWA)
+
+---
+
+## Roles y Autenticacion
+
+### Roles del Sistema
+
+| Rol | Acceso | Descripcion |
+|-----|--------|-------------|
+| `ADMINISTRADOR` | Admin completo | Acceso total al sistema (matriz) |
+| `ADMIN_FRANQUICIA` | Admin franquicia | Admin limitado a su franquicia |
+| `MOSTRADOR` | Admin operativo | Mismo acceso que admin (personal de mostrador) |
+| `CADETE` | App movil + panel cadete | Cadete interno, entregas y ganancias |
+| `CADETE_EXTERNO` | App movil + panel cadete | Cadete externo/freelance |
+| `COBRADOR` | Panel cobradores | Gestion de cobranzas |
+| `CLIENTE` | Portal cliente | Ver envios, saldo y transacciones |
+
+### Flujo de Autenticacion
+
+1. `POST /login` con email/password o identificador
+2. Backend valida credenciales y genera token Sanctum
+3. Token se almacena en `localStorage`
+4. Todas las requests llevan header `Authorization: Bearer {token}`
+5. Token expira en 1440 minutos (24 horas)
+6. Verificacion por codigo disponible para clientes
+
+---
+
+## Funcionalidades Principales
+
+### Comisiones
+
+Core del negocio. Flujo completo de envios:
+
+```
+PENDIENTE → PRESUPUESTADO → ACEPTADO → CADETE_ASIGNADO → RETIRADO → ENTREGADO
+                                                        → RETIRADO_SUCURSAL → ENCOMIENDA_RETIRADA
+                                    → CANCELADO
+                         → PAGO_VALIDACION → PAGADO → PAGO_CONFIRMADO
+```
+
+- Creacion normal y rapida
+- Asignacion de cadete
+- Tracking publico por ID
+- Items con tipo (paquete, sobre, documento) y tamano
+- Multiples metodos de pago
+- Calculo automatico de IVA segun condicion del cliente
+- Comisiones extraordinarias (fuera de tarifa)
+- Log de cambios de estado (auditoria)
+
+### Facturacion Electronica (ARCA)
+
+Integracion con ARCA (ex-AFIP) para emision de comprobantes electronicos.
+
+**Tipos de comprobante:** Factura A/B/C, Nota de Debito A/B/C, Nota de Credito A/B/C
+
+**Funcionalidades:**
+- Emision de facturas con CAE
+- Facturacion de comisiones (desde estado PAGO_VALIDACION)
+- Facturacion de ingresos (pagos confirmados)
+- Anulacion de facturas
+- Generacion de PDF server-side (dompdf)
+- Envio por email con PDF adjunto
+- Envio por WhatsApp con PDF adjunto (Green API)
+- Consulta de CUIT a ARCA
+- Modo mock para desarrollo (`ARCA_MOCK=true`)
+- Reporte IVA / Libro IVA Ventas
+
+### WhatsApp (Green API)
+
+Mensajeria via Green API Business.
+
+**Funcionalidades:**
+- Envio de mensajes de texto
+- Envio de archivos por URL
+- Upload directo de archivos (PDF, imagenes)
+- Notificaciones automaticas de cambio de estado de comision
+- Notificacion de creacion de comision
+- Campanas masivas con segmentacion por ciudad/historial
+- Variables dinamicas en mensajes (nombre, monto, etc.)
+- Preview de mensajes antes de enviar
+- Estados de campana: borrador → programada → enviando → completada/fallida
+
+### Notificaciones Push (FCM)
+
+Firebase Cloud Messaging para la app movil de cadetes.
+
+- Registro de tokens FCM por dispositivo
+- Notificaciones de asignacion de entrega
+- Notificaciones de cierre de ubicacion
+- Comando artisan `NotifyCadetesLocationClosing`
+
+### Sistema de Franquicias
+
+Multi-tenancy a nivel de franquicia.
+
+- Cada franquicia tiene sus propios datos aislados via `FranchiseScopeMiddleware`
+- Dashboard especifico por franquicia
+- Cuentas por cobrar matriz-franquicia (MatrixReceivables)
+- Admin de franquicia con acceso limitado a su scope
+- Marcado masivo de cuentas como pagadas
+
+### Geolocalizacion
+
+- Google Maps API para geocodificacion
+- Nominatim (OpenStreetMap) como fallback
+- Coordenadas GPS en ubicaciones
+- Calculo de distancia entre puntos
+- Agrupacion por origen
+
+### Feedback y Encuestas
+
+- Creacion de encuestas de satisfaccion
+- Envio por enlace con token unico
+- Dashboard con metricas y analisis
+- Respuestas anonimas
+
+---
+
+## Integraciones Externas
+
+| Servicio | Uso | Config |
+|----------|-----|--------|
+| **ARCA/AFIP** | Facturacion electronica | `ARCA_*` env vars |
+| **Green API** | WhatsApp Business | `WHATSAPP_API_*` env vars |
+| **Firebase** | Push notifications (FCM) | `FIREBASE_CREDENTIALS_PATH` |
+| **Google Maps** | Geocodificacion | `GOOGLE_MAPS_API_KEY` |
+| **Nominatim/OSM** | Geocodificacion fallback | Sin API key |
+| **Groq** | AI (futuro) | `GROQ_API_KEY` |
+
+---
+
+## Comandos Utiles
+
+### Backend
+
+```bash
+# Servidor de desarrollo
+php artisan serve
+
+# Migraciones
+php artisan migrate
+php artisan migrate:fresh --seed
+
+# Tests
+php artisan test
+php artisan test --filter=CommissionTest
+
+# Analisis estatico
+vendor/bin/phpstan analyse
+vendor/bin/php-cs-fixer fix
+
+# Cache
+php artisan config:clear
+php artisan route:clear
+php artisan cache:clear
+
+# Rutas
+php artisan route:list
+php artisan route:list --path=admin/invoices
+
+# Tinker
+php artisan tinker
+
+# Telescope (debug)
+php artisan telescope:install
+```
+
+### Frontend
+
+```bash
+# Dev server (port 3000)
+npm run dev
+
+# Build produccion
+npm run build
+
+# Preview build
+npm run preview
+
+# Tests
+npm test
+
+# Lint
+npm run lint
+```
+
+### Docker
+
+```bash
+docker-compose up -d
+docker-compose down
+docker exec -it ryrapp bash
+docker exec -it ryrapp php artisan migrate
+docker exec -it ryrapp php artisan test
+```
+
+---
+
+## Migracion de Base de Datos Legacy
+
+Scripts disponibles para migrar datos del sistema anterior:
+
+```bash
+# En el contenedor Docker
+./migrate_background.sh      # Migracion en background
+./migrate_low_memory.sh      # Migracion optimizada para bajo consumo de memoria
+./migrate_optimized.sh       # Migracion optimizada
+./scripts/import-old-database.sh  # Importar BD legacy
+```
+
+La BD legacy corre en `mysql_old` (puerto 3307) y se migra a `mysql` (puerto 3306).
+
+---
+
+## Licencia
+
+Proyecto privado. Todos los derechos reservados.
+
+Desarrollado por **Innova Developers**.

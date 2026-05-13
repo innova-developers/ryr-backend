@@ -74,6 +74,7 @@ class CustomerController extends Controller
             $useCase = new CreateCustomerUseCase($this->repository, $this->locationsRepository, $this->destinationRepository);
             $dto = new CreateCustomerDTO(
                 $request->input('dni'),
+                $request->input('cuit'),
                 $request->input('name'),
                 $request->input('last_name'),
                 $request->input('mobile'),
@@ -131,6 +132,7 @@ class CustomerController extends Controller
             $dto = new UpdateCustomerDTO(
                 $id,
                 $request->input('dni'),
+                $request->input('cuit'),
                 $request->input('name'),
                 $request->input('last_name'),
                 $request->input('mobile'),
@@ -188,7 +190,8 @@ class CustomerController extends Controller
             }
 
             $validated = $request->validate([
-                'auto_calculate_iva' => 'required|boolean',
+                'auto_calculate_iva' => 'sometimes|boolean',
+                'iva_status' => 'sometimes|in:auto,always,exempt',
             ]);
 
             $customer = $this->repository->findById($id);
@@ -196,16 +199,22 @@ class CustomerController extends Controller
                 return response()->json(['message' => 'Customer not found'], 404);
             }
 
-            $customer->auto_calculate_iva = $validated['auto_calculate_iva'];
+            if (isset($validated['auto_calculate_iva'])) {
+                $customer->auto_calculate_iva = $validated['auto_calculate_iva'];
+            }
+            if (isset($validated['iva_status'])) {
+                $customer->iva_status = $validated['iva_status'];
+            }
             $customer->save();
 
             return response()->json([
-                'message' => 'Campo auto_calculate_iva actualizado exitosamente',
+                'message' => 'Configuración de IVA actualizada exitosamente',
                 'customer' => [
                     'id' => $customer->id,
                     'name' => $customer->name,
                     'last_name' => $customer->last_name,
                     'auto_calculate_iva' => $customer->auto_calculate_iva,
+                    'iva_status' => $customer->iva_status,
                 ]
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {

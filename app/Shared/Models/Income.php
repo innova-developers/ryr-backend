@@ -17,6 +17,7 @@ class Income extends Model
         'date',
         'detail',
         'amount',
+        'franchise_id',
     ];
 
     protected $casts = [
@@ -32,6 +33,11 @@ class Income extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function franchise(): BelongsTo
+    {
+        return $this->belongsTo(Franchise::class);
     }
 
     public static function newFactory(): IncomeFactory

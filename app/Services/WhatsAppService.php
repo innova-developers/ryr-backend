@@ -10,6 +10,7 @@ class WhatsAppService
     private string $baseUrl;
     private ?string $instanceId;
     private ?string $token;
+    private ?string $lastError = null;
 
     public function __construct()
     {
@@ -18,11 +19,18 @@ class WhatsAppService
         $this->token = config('services.whatsapp.token') ?? '';
     }
 
+    public function getLastError(): ?string
+    {
+        return $this->lastError;
+    }
+
     public function sendMessage(string $phone, string $message): bool
     {
+        $this->lastError = null;
+
         try {
-            // Validar que tenemos las credenciales necesarias
             if (empty($this->instanceId) || empty($this->token)) {
+                $this->lastError = 'Credenciales WhatsApp no configuradas';
                 Log::error('WhatsApp credentials not configured', [
                     'phone' => $phone,
                     'instance_id_set' => !empty($this->instanceId),
@@ -64,6 +72,7 @@ class WhatsAppService
 
                 return true;
             } else {
+                $this->lastError = "HTTP {$statusCode}: " . ($responseData['message'] ?? $response->body());
                 Log::error('Failed to send WhatsApp message via GreenAPI', [
                     'phone' => $cleanPhone,
                     'chat_id' => $chatId,
@@ -75,12 +84,89 @@ class WhatsAppService
                 return false;
             }
         } catch (\Exception $e) {
+            $this->lastError = $e->getMessage();
             Log::error('Exception while sending WhatsApp message via GreenAPI', [
                 'phone' => $phone,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            return false;
+        }
+    }
+
+    public function sendFileByUrl(string $phone, string $fileUrl, ?string $caption = null): bool
+    {
+        $this->lastError = null;
+
+        try {
+            if (empty($this->instanceId) || empty($this->token)) {
+                $this->lastError = 'Credenciales WhatsApp no configuradas';
+                return false;
+            }
+
+            $cleanPhone = $this->cleanPhoneNumber($phone);
+            $chatId = $cleanPhone . '@c.us';
+            $url = "{$this->baseUrl}/waInstance{$this->instanceId}/sendFileByUrl/{$this->token}";
+
+            $payload = [
+                'chatId' => $chatId,
+                'urlFile' => $fileUrl,
+                'fileName' => basename(parse_url($fileUrl, PHP_URL_PATH)) ?: 'image.jpg',
+            ];
+            if ($caption) {
+                $payload['caption'] = $caption;
+            }
+
+            $response = Http::timeout(30)->post($url, $payload);
+
+            if ($response->successful()) {
+                Log::info('WhatsApp file sent via GreenAPI', ['phone' => $cleanPhone, 'file' => $fileUrl]);
+                return true;
+            }
+
+            $this->lastError = "HTTP {$response->status()}: " . ($response->json()['message'] ?? $response->body());
+            Log::error('Failed to send WhatsApp file', ['phone' => $cleanPhone, 'response' => $response->json()]);
+            return false;
+        } catch (\Exception $e) {
+            $this->lastError = $e->getMessage();
+            Log::error('Exception sending WhatsApp file', ['phone' => $phone, 'error' => $e->getMessage()]);
+            return false;
+        }
+    }
+
+    public function sendFileByUpload(string $phone, string $fileContent, string $fileName, ?string $caption = null): bool
+    {
+        $this->lastError = null;
+
+        try {
+            if (empty($this->instanceId) || empty($this->token)) {
+                $this->lastError = 'Credenciales WhatsApp no configuradas';
+                return false;
+            }
+
+            $cleanPhone = $this->cleanPhoneNumber($phone);
+            $chatId = $cleanPhone . '@c.us';
+            $url = "{$this->baseUrl}/waInstance{$this->instanceId}/sendFileByUpload/{$this->token}";
+
+            $response = Http::timeout(60)
+                ->attach('file', $fileContent, $fileName)
+                ->post($url, [
+                    'chatId' => $chatId,
+                    'caption' => $caption ?? '',
+                ]);
+
+            if ($response->successful()) {
+                Log::info('WhatsApp file uploaded via GreenAPI', ['phone' => $cleanPhone, 'file' => $fileName]);
+                return true;
+            }
+
+            $this->lastError = "HTTP {$response->status()}: " . ($response->json()['message'] ?? $response->body());
+            Log::error('Failed to upload WhatsApp file', ['phone' => $cleanPhone, 'response' => $response->json()]);
+            return false;
+        } catch (\Exception $e) {
+            $this->lastError = $e->getMessage();
+            Log::error('Exception uploading WhatsApp file', ['phone' => $phone, 'error' => $e->getMessage()]);
             return false;
         }
     }

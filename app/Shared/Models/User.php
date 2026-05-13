@@ -29,6 +29,7 @@ class User extends Authenticatable
         'commission_percentage',
         'contract_type',
         'payment_per_pickup',
+        'franchise_id',
     ];
 
     protected $hidden = [
@@ -85,10 +86,23 @@ class User extends Authenticatable
         return $this->hasMany(FcmToken::class);
     }
 
+    public function franchise(): BelongsTo
+    {
+        return $this->belongsTo(Franchise::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === UserRole::ADMINISTRADOR;
     }
 
+    public function isFranchiseAdmin(): bool
+    {
+        return $this->role === UserRole::ADMIN_FRANQUICIA;
+    }
 
+    public function isMatrixAdmin(): bool
+    {
+        return in_array($this->role, [UserRole::ADMINISTRADOR, UserRole::MOSTRADOR]);
+    }
 }

@@ -19,6 +19,7 @@ class UpdateCustomerUseCaseTest extends TestCase
         $dto = new UpdateCustomerDTO(
             1,
             '87654321',
+            '20876543210',
             'Jane',
             'Smith',
             '9876543210',

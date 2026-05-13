@@ -6,6 +6,7 @@ class UpdateCustomerDTO
 {
     public int $id;
     public int $dni;
+    public ?string $cuit;
     public string $name;
     public string $lastName;
     public ?string $mobile;
@@ -24,6 +25,7 @@ class UpdateCustomerDTO
     public function __construct(
         int $id,
         int $dni,
+        ?string $cuit,
         string $name,
         string $lastName,
         ?string $mobile,
@@ -42,6 +44,7 @@ class UpdateCustomerDTO
     ) {
         $this->id = $id;
         $this->dni = $dni;
+        $this->cuit = $cuit;
         $this->name = $name;
         $this->lastName = $lastName;
         $this->mobile = $mobile;

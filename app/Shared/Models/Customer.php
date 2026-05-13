@@ -3,6 +3,7 @@
 namespace App\Shared\Models;
 
 use App\Shared\Enums\CurrentAccountStatus;
+use App\Shared\Enums\IvaStatus;
 use Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,6 +18,7 @@ class Customer extends Model
 
     protected $fillable = [
         'dni',
+        'cuit',
         'name',
         'last_name',
         'mobile',
@@ -29,14 +31,17 @@ class Customer extends Model
         'observations',
         'is_premium',
         'auto_calculate_iva',
+        'iva_status',
         'user_id',
         'branch_id',
         'internal_user_id',
+        'franchise_id',
     ];
 
     protected $casts = [
         'is_premium' => 'boolean',
         'auto_calculate_iva' => 'boolean',
+        'iva_status' => IvaStatus::class,
         'dni' => 'integer',
     ];
 
@@ -60,9 +65,24 @@ class Customer extends Model
         return $this->belongsTo(Branch::class);
     }
 
+    public function franchise(): BelongsTo
+    {
+        return $this->belongsTo(Franchise::class);
+    }
+
+    public function commissions(): HasMany
+    {
+        return $this->hasMany(Commission::class, 'client_id');
+    }
+
     public function currentAccounts(): HasMany
     {
         return $this->hasMany(CurrentAccount::class);
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
     }
 
     public function getCurrentBalanceAttribute(): float
