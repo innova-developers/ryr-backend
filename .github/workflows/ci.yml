@@ -48,7 +48,9 @@ jobs:
           restore-keys: composer-
 
       - name: Install dependencies
-        run: composer install --prefer-dist --no-interaction --no-progress
+        run: |
+          composer config --global --unset github-oauth.github.com 2>/dev/null || true
+          composer install --prefer-dist --no-interaction --no-progress
 
       - name: Prepare environment
         run: |
@@ -96,7 +98,9 @@ jobs:
           restore-keys: composer-
 
       - name: Install dependencies
-        run: composer install --prefer-dist --no-interaction --no-progress
+        run: |
+          composer config --global --unset github-oauth.github.com 2>/dev/null || true
+          composer install --prefer-dist --no-interaction --no-progress
 
       - name: PHP-CS-Fixer (dry run)
         run: PHP_CS_FIXER_IGNORE_ENV=1 ./vendor/bin/php-cs-fixer fix --diff --dry-run
