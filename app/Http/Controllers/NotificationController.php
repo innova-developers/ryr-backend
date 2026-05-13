@@ -36,10 +36,10 @@ class NotificationController
         $userId = Auth::id();
         $limit = $request->get('limit', 50);
         $offset = $request->get('offset', 0);
-        
+
         // Manejar diferentes formatos de boolean que puede enviar Flutter
         $unreadOnlyParam = $request->get('unread_only', false);
-        
+
         // Convertir a boolean de manera robusta
         if (is_bool($unreadOnlyParam)) {
             $unreadOnly = $unreadOnlyParam;
@@ -82,7 +82,7 @@ class NotificationController
         try {
             $success = $this->notificationService->markAsRead($id, $userId);
 
-            if (!$success) {
+            if (! $success) {
                 return response()->json([
                     'error' => 'Notificación no encontrada o no tienes permisos para acceder a ella',
                 ], 404);

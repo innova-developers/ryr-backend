@@ -124,8 +124,8 @@ class CurrentAccountController extends Controller
 
             // Para transacciones tipo "debit" con referencia "COM-XXX", usar la fecha de la comisión
             $debitTransactionsWithCommission = $transactions->getCollection()->filter(function ($transaction) {
-                return $transaction->type === 'debit' 
-                    && $transaction->reference 
+                return $transaction->type === 'debit'
+                    && $transaction->reference
                     && preg_match('/^COM-(\d+)$/', $transaction->reference);
             });
 
@@ -135,6 +135,7 @@ class CurrentAccountController extends Controller
                     if (preg_match('/^COM-(\d+)$/', $transaction->reference, $matches)) {
                         return (int) $matches[1];
                     }
+
                     return null;
                 })->filter()->unique()->values()->toArray();
 
@@ -144,14 +145,15 @@ class CurrentAccountController extends Controller
 
                 // Actualizar transaction_date en las transacciones tipo debit
                 $transactions->getCollection()->transform(function ($transaction) use ($commissions) {
-                    if ($transaction->type === 'debit' 
-                        && $transaction->reference 
+                    if ($transaction->type === 'debit'
+                        && $transaction->reference
                         && preg_match('/^COM-(\d+)$/', $transaction->reference, $matches)) {
                         $commissionId = (int) $matches[1];
                         if ($commissions->has($commissionId)) {
                             $transaction->transaction_date = $commissions->get($commissionId);
                         }
                     }
+
                     return $transaction;
                 });
             }
@@ -201,7 +203,7 @@ class CurrentAccountController extends Controller
             ], 200);
         } catch (\Exception $e) {
             $statusCode = str_contains($e->getMessage(), 'no encontrada') ? 404 : 400;
-            
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),

@@ -19,11 +19,11 @@ class CommissionFilterTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->admin = User::factory()->create([
             'role' => UserRole::ADMINISTRADOR,
         ]);
-        
+
         $this->user = User::factory()->create([
             'role' => UserRole::MOSTRADOR,
         ]);
@@ -73,7 +73,7 @@ class CommissionFilterTest extends TestCase
             ->getJson('/api/commissions?method=EFECTIVO');
 
         $response->assertStatus(200);
-        
+
         $data = $response->json();
         $this->assertCount(1, $data['data']);
         $this->assertEquals(PaymentMethod::EFECTIVO->value, $data['data'][0]['payment_method']);
@@ -85,7 +85,7 @@ class CommissionFilterTest extends TestCase
             ->getJson('/api/commissions?method=TRANSFERENCIA');
 
         $response->assertStatus(200);
-        
+
         $data = $response->json();
         $this->assertCount(1, $data['data']);
         $this->assertEquals(PaymentMethod::TRANSFERENCIA->value, $data['data'][0]['payment_method']);
@@ -97,7 +97,7 @@ class CommissionFilterTest extends TestCase
             ->getJson('/api/commissions');
 
         $response->assertStatus(200);
-        
+
         $data = $response->json();
         $this->assertCount(3, $data['data']);
     }
@@ -116,7 +116,7 @@ class CommissionFilterTest extends TestCase
             ->getJson('/api/commissions?method=EFECTIVO&status=SOLICITUD_RECIBIDA');
 
         $response->assertStatus(200);
-        
+
         $data = $response->json();
         // Debería devolver solo las comisiones con método EFECTIVO y status SOLICITUD_RECIBIDA
         $this->assertGreaterThanOrEqual(0, count($data['data']));

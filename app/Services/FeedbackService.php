@@ -8,15 +8,21 @@ use Illuminate\Support\Str;
 
 class FeedbackService
 {
-    public function __construct(private WhatsAppService $whatsAppService) {}
+    public function __construct(private WhatsAppService $whatsAppService)
+    {
+    }
 
     public function createSurveyForCommission(Commission $commission): ?FeedbackSurvey
     {
         $customer = $commission->client;
-        if (!$customer) return null;
+        if (! $customer) {
+            return null;
+        }
 
         $existing = FeedbackSurvey::where('commission_id', $commission->id)->first();
-        if ($existing) return $existing;
+        if ($existing) {
+            return $existing;
+        }
 
         $token = Str::random(64);
 
@@ -40,7 +46,9 @@ class FeedbackService
             ->where('status', 'pending')
             ->first();
 
-        if (!$survey) return null;
+        if (! $survey) {
+            return null;
+        }
 
         $survey->update([
             'rating' => $rating,
@@ -113,7 +121,9 @@ class FeedbackService
 
     private function sendSurveyWhatsApp(FeedbackSurvey $survey, $customer, Commission $commission): void
     {
-        if (empty($customer->mobile)) return;
+        if (empty($customer->mobile)) {
+            return;
+        }
 
         $feedbackUrl = config('app.url') . "/feedback/{$survey->token}";
 

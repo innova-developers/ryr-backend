@@ -26,13 +26,13 @@ class IvaCalculationService
     public function calculateIva(Customer $customer, PaymentMethod $paymentMethod, float $total): array
     {
         $shouldApplyIva = $this->shouldApplyIva($customer, $paymentMethod);
-        
-        if (!$shouldApplyIva) {
+
+        if (! $shouldApplyIva) {
             return [
                 'iva_amount' => 0.0,
                 'iva_applied' => false,
                 'total_with_iva' => $total,
-                'total_without_iva' => $total
+                'total_without_iva' => $total,
             ];
         }
 
@@ -43,7 +43,7 @@ class IvaCalculationService
             'iva_amount' => $ivaAmount,
             'iva_applied' => true,
             'total_with_iva' => $totalWithIva,
-            'total_without_iva' => $total
+            'total_without_iva' => $total,
         ];
     }
 
@@ -67,6 +67,7 @@ class IvaCalculationService
         }
 
         $enabledMethods = SystemSetting::get('iva_payment_methods', ['TRANSFERENCIA']);
+
         return $customer->auto_calculate_iva && in_array($paymentMethod->value, $enabledMethods);
     }
 
@@ -98,7 +99,7 @@ class IvaCalculationService
         $commission->update([
             'iva_amount' => $ivaCalculation['iva_amount'],
             'iva_applied' => $ivaCalculation['iva_applied'],
-            'total' => $ivaCalculation['total_with_iva']
+            'total' => $ivaCalculation['total_with_iva'],
         ]);
 
         return $commission;
@@ -117,7 +118,7 @@ class IvaCalculationService
         $commission->update([
             'iva_amount' => 0.0,
             'iva_applied' => false,
-            'total' => $totalWithoutIva
+            'total' => $totalWithoutIva,
         ]);
 
         return $commission;
@@ -141,7 +142,7 @@ class IvaCalculationService
             'payment_method' => $newPaymentMethod,
             'iva_amount' => $ivaCalculation['iva_amount'],
             'iva_applied' => $ivaCalculation['iva_applied'],
-            'total' => $ivaCalculation['total_with_iva']
+            'total' => $ivaCalculation['total_with_iva'],
         ]);
 
         return $commission;
@@ -156,7 +157,7 @@ class IvaCalculationService
      */
     public function generateIvaNote(float $ivaAmount, bool $applied): string
     {
-        if (!$applied || $ivaAmount == 0) {
+        if (! $applied || $ivaAmount == 0) {
             return '';
         }
 

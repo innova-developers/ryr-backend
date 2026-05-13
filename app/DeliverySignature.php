@@ -58,7 +58,7 @@ class DeliverySignature extends Model
         if (str_starts_with($this->signature_image, 'data:image')) {
             return $this->signature_image;
         }
-        
+
         // Si se guarda como archivo, devolver la URL
         return asset('storage/signatures/' . $this->signature_image);
     }
@@ -73,7 +73,7 @@ class DeliverySignature extends Model
         }
 
         // Verificar que sea base64 válido
-        if (!base64_decode($this->signature_image, true)) {
+        if (! base64_decode($this->signature_image, true)) {
             return false;
         }
 
@@ -96,6 +96,7 @@ class DeliverySignature extends Model
         }
 
         $imageData = base64_decode($this->signature_image);
+
         return strlen($imageData);
     }
 }

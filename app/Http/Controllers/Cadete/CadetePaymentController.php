@@ -62,7 +62,7 @@ class CadetePaymentController extends Controller
             'filters' => [
                 'payment_types' => CadetePayment::getPaymentTypes(),
                 'statuses' => CadetePayment::getStatuses(),
-            ]
+            ],
         ]);
     }
 
@@ -73,19 +73,19 @@ class CadetePaymentController extends Controller
     {
         // Buscar el pago manualmente
         $payment = CadetePayment::find($id);
-        
-        if (!$payment) {
+
+        if (! $payment) {
             return response()->json([
                 'success' => false,
-                'message' => 'Pago no encontrado'
+                'message' => 'Pago no encontrado',
             ], 404);
         }
-        
+
         // Verificar que el pago pertenezca al cadete autenticado
         if ($payment->cadete_id !== Auth::id()) {
             return response()->json([
                 'success' => false,
-                'message' => 'No tienes acceso a este pago'
+                'message' => 'No tienes acceso a este pago',
             ], 403);
         }
 
@@ -94,7 +94,7 @@ class CadetePaymentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Pago obtenido correctamente',
-            'data' => $payment
+            'data' => $payment,
         ]);
     }
 
@@ -110,18 +110,18 @@ class CadetePaymentController extends Controller
 
         $cadeteId = Auth::id();
         $cadete = Auth::user();
-        
+
         // Obtener porcentaje de comisión del cadete
         $commissionPercentage = $cadete->commission_percentage ?? 0;
 
         // Obtener comisiones del cadete
         $commissionsQuery = \App\Shared\Models\Commission::where('cadete_id', $cadeteId);
-        
+
         // Aplicar filtro de fecha si se proporciona
         if ($request->filled('date_from') && $request->filled('date_to')) {
             $commissionsQuery->whereBetween('date', [
                 \Carbon\Carbon::parse($request->date_from)->startOfDay(),
-                \Carbon\Carbon::parse($request->date_to)->endOfDay()
+                \Carbon\Carbon::parse($request->date_to)->endOfDay(),
             ]);
         }
 
@@ -130,15 +130,15 @@ class CadetePaymentController extends Controller
         // Calcular métricas de comisiones usando reduce para sumar correctamente
         // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
         $deliveredCommissions = $commissions->filter(function ($commission) {
-            return $commission->status === \App\Shared\Enums\CommissionStatus::ENTREGADO 
+            return $commission->status === \App\Shared\Enums\CommissionStatus::ENTREGADO
                 || $commission->status === \App\Shared\Enums\CommissionStatus::RETIRADO_SUCURSAL
                 || $commission->status === \App\Shared\Enums\CommissionStatus::PENDIENTE_PAGO
                 || $commission->status === \App\Shared\Enums\CommissionStatus::PAGO_VALIDACION
                 || $commission->status === \App\Shared\Enums\CommissionStatus::PAGO_CONFIRMADO;
         });
-        
+
         $pendingCommissions = $commissions->filter(function ($commission) {
-            return $commission->status !== \App\Shared\Enums\CommissionStatus::ENTREGADO 
+            return $commission->status !== \App\Shared\Enums\CommissionStatus::ENTREGADO
                 && $commission->status !== \App\Shared\Enums\CommissionStatus::RETIRADO_SUCURSAL
                 && $commission->status !== \App\Shared\Enums\CommissionStatus::PENDIENTE_PAGO
                 && $commission->status !== \App\Shared\Enums\CommissionStatus::PAGO_VALIDACION
@@ -151,24 +151,24 @@ class CadetePaymentController extends Controller
             return $carry + (float) $commission->total;
         }, 0);
         $totalEarnings = $totalCommissionAmount * ($commissionPercentage / 100);
-        
+
         // Cantidad de entregas
         $deliveriesCount = $deliveredCommissions->count();
-        
+
         // Promedio por entrega
         $averagePerDelivery = $deliveriesCount > 0 ? $totalEarnings / $deliveriesCount : 0;
-        
+
         // Pendiente (comisiones no entregadas)
         $pendingCommissionAmount = $pendingCommissions->reduce(function ($carry, $commission) {
             return $carry + (float) $commission->total;
         }, 0);
         $pendingEarnings = $pendingCommissionAmount * ($commissionPercentage / 100);
-        
+
         // Ganancias últimos 7 días
         // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
         $last7Days = now()->subDays(7);
         $last7DaysCommissions = $commissions->filter(function ($commission) use ($last7Days) {
-            return ($commission->status === \App\Shared\Enums\CommissionStatus::ENTREGADO 
+            return ($commission->status === \App\Shared\Enums\CommissionStatus::ENTREGADO
                 || $commission->status === \App\Shared\Enums\CommissionStatus::RETIRADO_SUCURSAL
                 || $commission->status === \App\Shared\Enums\CommissionStatus::PENDIENTE_PAGO
                 || $commission->status === \App\Shared\Enums\CommissionStatus::PAGO_VALIDACION
@@ -179,18 +179,18 @@ class CadetePaymentController extends Controller
             return $carry + (float) $commission->total;
         }, 0);
         $last7DaysEarnings = $last7DaysCommissionAmount * ($commissionPercentage / 100);
-        
+
         // Comisión promedio
         $totalAllCommissions = $commissions->reduce(function ($carry, $commission) {
             return $carry + (float) $commission->total;
         }, 0);
         $averageCommission = $commissions->count() > 0 ? $totalAllCommissions / $commissions->count() : 0;
-        
+
         // Entregas hoy
         // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
         $todayDeliveries = $commissions
             ->filter(function ($commission) {
-                return ($commission->status === \App\Shared\Enums\CommissionStatus::ENTREGADO 
+                return ($commission->status === \App\Shared\Enums\CommissionStatus::ENTREGADO
                     || $commission->status === \App\Shared\Enums\CommissionStatus::RETIRADO_SUCURSAL
                     || $commission->status === \App\Shared\Enums\CommissionStatus::PENDIENTE_PAGO
                     || $commission->status === \App\Shared\Enums\CommissionStatus::PAGO_VALIDACION
@@ -198,13 +198,13 @@ class CadetePaymentController extends Controller
                     && $commission->updated_at >= now()->startOfDay();
             })
             ->count();
-        
+
         // Próximo pago (primer pago pendiente)
         $nextPayment = CadetePayment::where('cadete_id', $cadeteId)
             ->where('status', CadetePayment::STATUS_PENDING)
             ->orderBy('payment_date', 'asc')
             ->first();
-        
+
         $nextPaymentAmount = $nextPayment ? $nextPayment->net_amount : 0;
 
         // Resumen de pagos (mantener compatibilidad)
@@ -224,7 +224,7 @@ class CadetePaymentController extends Controller
             'average_commission' => round($averageCommission, 2),
             'today_deliveries' => $todayDeliveries,
             'next_payment_amount' => round($nextPaymentAmount, 2),
-            
+
             // Resumen de comisiones por estado
             'commissions_summary' => [
                 'total_commissions' => $commissions->count(),
@@ -234,7 +234,7 @@ class CadetePaymentController extends Controller
                     return $commission->status === \App\Shared\Enums\CommissionStatus::CANCELADO;
                 })->count(),
             ],
-            
+
             // Resumen de pagos (compatibilidad)
             'payments_summary' => [
                 'total_payments' => $payments->count(),
@@ -246,18 +246,18 @@ class CadetePaymentController extends Controller
                 'cancelled_payments' => $payments->where('status', CadetePayment::STATUS_CANCELLED)->count(),
                 'cancelled_amount' => $payments->where('status', CadetePayment::STATUS_CANCELLED)->sum('net_amount'),
             ],
-            
+
             // Configuración del cadete
             'cadete_info' => [
                 'commission_percentage' => $commissionPercentage,
                 'name' => $cadete->name,
-            ]
+            ],
         ];
 
         return response()->json([
             'success' => true,
             'message' => 'Resumen de ganancias obtenido correctamente',
-            'data' => $summary
+            'data' => $summary,
         ]);
     }
 
@@ -271,11 +271,11 @@ class CadetePaymentController extends Controller
             ->orderBy('payment_date', 'asc')
             ->first();
 
-        if (!$nextPayment) {
+        if (! $nextPayment) {
             return response()->json([
                 'success' => true,
                 'message' => 'No hay pagos pendientes',
-                'data' => null
+                'data' => null,
             ]);
         }
 
@@ -284,7 +284,7 @@ class CadetePaymentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Próximo pago obtenido correctamente',
-            'data' => $nextPayment
+            'data' => $nextPayment,
         ]);
     }
 
@@ -307,7 +307,7 @@ class CadetePaymentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Pagos recientes obtenidos correctamente',
-            'data' => $recentPayments
+            'data' => $recentPayments,
         ]);
     }
 }

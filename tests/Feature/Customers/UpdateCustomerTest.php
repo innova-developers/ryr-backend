@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Customers;
 
+use App\Shared\Enums\UserRole;
 use App\Shared\Models\Branch;
 use App\Shared\Models\Customer;
 use App\Shared\Models\User;
-use App\Shared\Enums\UserRole;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -104,14 +104,14 @@ class UpdateCustomerTest extends TestCase
     {
         $branch = Branch::factory()->create();
         $adminUser = User::factory()->create(['role' => UserRole::ADMINISTRADOR, 'branch_id' => $branch->id]);
-        
+
         // Crear un usuario cliente
         $clientUser = User::factory()->create([
             'email' => 'cliente@example.com',
             'role' => UserRole::CLIENTE,
-            'branch_id' => null
+            'branch_id' => null,
         ]);
-        
+
         // Crear un cliente asociado al usuario
         $customer = Customer::factory()->create([
             'email' => 'cliente@example.com',
@@ -162,7 +162,7 @@ class UpdateCustomerTest extends TestCase
     {
         $branch = Branch::factory()->create();
         $adminUser = User::factory()->create(['role' => UserRole::ADMINISTRADOR, 'branch_id' => $branch->id]);
-        
+
         // Crear un cliente sin usuario asociado
         $customer = Customer::factory()->create([
             'email' => 'cliente@example.com',

@@ -57,10 +57,10 @@ class LoginTest extends TestCase
         } else {
             $response->assertStatus(403)
                 ->assertJson([
-                    'error' => 'scope_validation_failed'
+                    'error' => 'scope_validation_failed',
                 ])
                 ->assertJsonFragment([
-                    'message' => "El usuario con rol '{$role->value}' no tiene permisos para acceder a la aplicación web. Solo administradores pueden acceder."
+                    'message' => "El usuario con rol '{$role->value}' no tiene permisos para acceder a la aplicación web. Solo administradores pueden acceder.",
                 ]);
         }
     }
@@ -82,10 +82,10 @@ class LoginTest extends TestCase
         } else {
             $response->assertStatus(403)
                 ->assertJson([
-                    'error' => 'scope_validation_failed'
+                    'error' => 'scope_validation_failed',
                 ])
                 ->assertJsonFragment([
-                    'message' => "El usuario con rol '{$role->value}' no tiene permisos para acceder a la aplicación móvil. Solo cadetes y cadetes externos pueden acceder."
+                    'message' => "El usuario con rol '{$role->value}' no tiene permisos para acceder a la aplicación móvil. Solo cadetes y cadetes externos pueden acceder.",
                 ]);
         }
     }
@@ -93,7 +93,7 @@ class LoginTest extends TestCase
     public function test_login_requires_scope_parameter()
     {
         $user = User::factory()->create(['role' => UserRole::ADMINISTRADOR]);
-        
+
         $response = $this->postJson('/api/login', [
             'email' => $user->email,
             'password' => 'password',
@@ -107,7 +107,7 @@ class LoginTest extends TestCase
     public function test_login_with_invalid_scope()
     {
         $user = User::factory()->create(['role' => UserRole::ADMINISTRADOR]);
-        
+
         $response = $this->postJson('/api/login', [
             'email' => $user->email,
             'password' => 'password',
@@ -121,7 +121,7 @@ class LoginTest extends TestCase
     public function test_login_with_invalid_credentials()
     {
         $user = User::factory()->create(['role' => UserRole::ADMINISTRADOR]);
-        
+
         $response = $this->postJson('/api/login', [
             'email' => $user->email,
             'password' => 'wrong_password',
@@ -131,7 +131,7 @@ class LoginTest extends TestCase
         $response->assertStatus(401)
             ->assertJson([
                 'error' => 'invalid_credentials',
-                'message' => 'Credenciales inválidas'
+                'message' => 'Credenciales inválidas',
             ]);
     }
 }

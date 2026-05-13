@@ -2,10 +2,10 @@
 
 namespace App\Shared\Models;
 
+use App\DeliverySignature;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\CommissionType;
 use App\Shared\Enums\PaymentMethod;
-use App\DeliverySignature;
 use Database\Factories\CommissionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

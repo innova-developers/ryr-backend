@@ -11,7 +11,6 @@ use App\Shared\Models\Commission;
 use App\Shared\Models\Expense;
 use App\Shared\Models\Franchise;
 use App\Shared\Models\Income;
-use Exception;
 use Illuminate\Database\QueryException;
 
 class FranchiseEloquentRepository implements FranchiseRepository
@@ -102,7 +101,7 @@ class FranchiseEloquentRepository implements FranchiseRepository
     public function update(UpdateFranchiseDTO $dto): Franchise
     {
         $franchise = Franchise::find($dto->id);
-        if (!$franchise) {
+        if (! $franchise) {
             throw new \RuntimeException('Franquicia no encontrada');
         }
 
@@ -131,7 +130,7 @@ class FranchiseEloquentRepository implements FranchiseRepository
     public function delete(int $id): bool
     {
         $franchise = Franchise::find($id);
-        if (!$franchise) {
+        if (! $franchise) {
             throw new \RuntimeException('Franquicia no encontrada');
         }
 
@@ -146,10 +145,10 @@ class FranchiseEloquentRepository implements FranchiseRepository
     {
         $franchise = Franchise::with(['branches', 'customers'])->find($franchiseId);
 
-        if (!$dateFrom) {
+        if (! $dateFrom) {
             $dateFrom = now()->startOfYear()->toDateString();
         }
-        if (!$dateTo) {
+        if (! $dateTo) {
             $dateTo = now()->toDateString();
         }
 
@@ -205,6 +204,7 @@ class FranchiseEloquentRepository implements FranchiseRepository
         $evolution = array_map(function ($row) use ($monthlyExpenses, $franchise) {
             $expenses = $monthlyExpenses[$row['month']]['total'] ?? 0;
             $matrixCut = $row['income'] * ($franchise->commission_percentage_to_matrix / 100);
+
             return [
                 'month' => $row['month'],
                 'commissions' => (int) $row['count'],
@@ -303,7 +303,7 @@ class FranchiseEloquentRepository implements FranchiseRepository
     public function getSettlementReport(int $franchiseId, string $dateFrom, string $dateTo): array
     {
         $franchise = Franchise::find($franchiseId);
-        if (!$franchise) {
+        if (! $franchise) {
             throw new \RuntimeException('Franquicia no encontrada');
         }
 

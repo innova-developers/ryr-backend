@@ -6,18 +6,14 @@ use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
+use App\DeliverySignature;
 use App\Shared\Enums\CommissionItemSize;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\CommissionType;
 use App\Shared\Models\Commission;
-use App\Shared\Models\CommissionLog;
 use App\Shared\Models\CurrentAccount;
 use App\Shared\Models\ShipmentLocation;
 use App\Shared\Models\Transport;
-use App\Shared\Models\User;
-use App\Shared\Enums\UserRole;
-use App\DeliverySignature;
-use App\Services\NominatimService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -32,19 +28,19 @@ class CadeteController extends Controller
     public function profile(): JsonResponse
     {
         $user = Auth::user();
-        
+
         // Cargar la relación con la sucursal
         $user->load('branch');
-        
+
         // Obtener el transporte asignado al cadete
         $transport = Transport::where('cadete_id', $user->id)->first();
-        
+
         // Obtener estadísticas básicas del cadete
         $totalCommissions = Commission::where('cadete_id', $user->id)->count();
         $completedCommissions = Commission::where('cadete_id', $user->id)
                                           ->where('status', CommissionStatus::ENTREGADO)
                                           ->count();
-        
+
         return response()->json([
             'success' => true,
             'cadete' => [
@@ -54,14 +50,14 @@ class CadeteController extends Controller
                 'role' => $user->role->value,
                 'role_label' => $this->getRoleLabel($user->role->value),
                 'branch_id' => $user->branch_id,
-                
+
                 // Información de contratación
                 'contract_type' => $user->contract_type ?? 'fixed_salary',
                 'contract_type_label' => $this->getContractTypeLabel($user->contract_type ?? 'fixed_salary'),
                 'base_salary' => $user->base_salary,
                 'commission_percentage' => $user->commission_percentage,
                 'income_percentage' => $user->income_percentage,
-                
+
                 // Información de la sucursal
                 'branch' => $user->branch ? [
                     'id' => $user->branch->id,
@@ -71,7 +67,7 @@ class CadeteController extends Controller
                     'secondary_phone' => $user->branch->secondary_phone,
                     'schedule' => $user->branch->schedule,
                 ] : null,
-                
+
                 // Información del transporte
                 'transport' => $transport ? [
                     'id' => $transport->id,
@@ -81,18 +77,18 @@ class CadeteController extends Controller
                     'insurance' => $transport->insurance,
                     'usage' => $transport->usage,
                 ] : null,
-                
+
                 // Estadísticas básicas
                 'stats' => [
                     'total_commissions' => $totalCommissions,
                     'completed_commissions' => $completedCommissions,
                     'success_rate' => $totalCommissions > 0 ? round(($completedCommissions / $totalCommissions) * 100, 1) : 0,
                 ],
-                
+
                 // Información del sistema
                 'created_at' => $user->created_at->format('Y-m-d H:i:s'),
                 'last_login' => $user->last_login_at ?? null,
-            ]
+            ],
         ]);
     }
 
@@ -102,30 +98,30 @@ class CadeteController extends Controller
     public function updateProfile(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
+
         // Validar los datos de entrada
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|unique:users,email,' . $user->id,
             'phone' => 'sometimes|string|max:20|nullable',
         ]);
-        
+
         // Actualizar solo los campos proporcionados
         $user->fill($validated);
         $user->save();
-        
+
         // Cargar la relación con la sucursal para la respuesta
         $user->load('branch');
-        
+
         // Obtener el transporte asignado al cadete
         $transport = Transport::where('cadete_id', $user->id)->first();
-        
+
         // Obtener estadísticas básicas del cadete
         $totalCommissions = Commission::where('cadete_id', $user->id)->count();
         $completedCommissions = Commission::where('cadete_id', $user->id)
                                           ->where('status', CommissionStatus::ENTREGADO)
                                           ->count();
-        
+
         return response()->json([
             'success' => true,
             'message' => 'Perfil actualizado exitosamente',
@@ -135,14 +131,14 @@ class CadeteController extends Controller
                 'email' => $user->email,
                 'role' => $user->role->value,
                 'role_label' => $this->getRoleLabel($user->role->value),
-                
+
                 // Información de contratación
                 'contract_type' => $user->contract_type ?? 'fixed_salary',
                 'contract_type_label' => $this->getContractTypeLabel($user->contract_type ?? 'fixed_salary'),
                 'base_salary' => $user->base_salary,
                 'commission_percentage' => $user->commission_percentage,
                 'income_percentage' => $user->income_percentage,
-                
+
                 // Información de la sucursal
                 'branch' => $user->branch ? [
                     'id' => $user->branch->id,
@@ -152,7 +148,7 @@ class CadeteController extends Controller
                     'secondary_phone' => $user->branch->secondary_phone,
                     'schedule' => $user->branch->schedule,
                 ] : null,
-                
+
                 // Información del transporte
                 'transport' => $transport ? [
                     'id' => $transport->id,
@@ -162,18 +158,18 @@ class CadeteController extends Controller
                     'insurance' => $transport->insurance,
                     'usage' => $transport->usage,
                 ] : null,
-                
+
                 // Estadísticas básicas
                 'stats' => [
                     'total_commissions' => $totalCommissions,
                     'completed_commissions' => $completedCommissions,
                     'success_rate' => $totalCommissions > 0 ? round(($completedCommissions / $totalCommissions) * 100, 1) : 0,
                 ],
-                
+
                 // Información del sistema
                 'created_at' => $user->created_at->format('Y-m-d H:i:s'),
                 'last_login' => $user->last_login_at ?? null,
-            ]
+            ],
         ]);
     }
 
@@ -200,36 +196,36 @@ class CadeteController extends Controller
                 'status_requested' => $request->status,
                 'errors' => $e->errors(),
                 'ip' => $request->ip(),
-                'user_agent' => $request->userAgent()
+                'user_agent' => $request->userAgent(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Estado no válido. Estados válidos: ' . implode(', ', CommissionStatus::getValidCadeteStatuses()),
                 'errors' => $e->errors(),
-                'valid_statuses' => CommissionStatus::getValidCadeteStatuses()
+                'valid_statuses' => CommissionStatus::getValidCadeteStatuses(),
             ], 422);
         }
 
         $user = Auth::user();
-        
+
         // Verificar que el cadete tenga acceso a esta comisión
         $commission = Commission::where('cadete_id', $user->id)
                                ->where('id', $id)
                                ->first();
 
-        if (!$commission) {
+        if (! $commission) {
             \Log::warning('Cadete intentó acceder a comisión no autorizada', [
                 'cadete_id' => $user->id,
                 'cadete_name' => $user->name,
                 'commission_id' => $id,
                 'ip' => $request->ip(),
-                'user_agent' => $request->userAgent()
+                'user_agent' => $request->userAgent(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Envío no encontrado o no tienes permisos para modificarlo'
+                'message' => 'Envío no encontrado o no tienes permisos para modificarlo',
             ], 404);
         }
 
@@ -238,15 +234,15 @@ class CadeteController extends Controller
             $oldStatus = $commission->status;
             $oldStatusValue = $oldStatus->value;
             $oldStatusLabel = $oldStatus->getCadeteStatus();
-            
+
             // Guardar el tipo de comisión antes de actualizar
             $commissionType = $commission->type;
-            
+
             // Convertir el estado del cadete al estado administrativo
             $adminStatus = CommissionStatus::fromCadeteStatus($request->status);
             $newStatusValue = $adminStatus->value;
             $newStatusLabel = $adminStatus->getCadeteStatus();
-            
+
             // Log del cambio de estado
             \Log::info('Cadete actualizando estado de comisión', [
                 'cadete_id' => $user->id,
@@ -254,31 +250,31 @@ class CadeteController extends Controller
                 'commission_id' => $commission->id,
                 'old_status' => [
                     'value' => $oldStatusValue,
-                    'label' => $oldStatusLabel
+                    'label' => $oldStatusLabel,
                 ],
                 'new_status' => [
                     'value' => $newStatusValue,
                     'label' => $newStatusLabel,
-                    'requested_status' => $request->status
+                    'requested_status' => $request->status,
                 ],
                 'observation' => $request->observation,
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ]);
-            
+
             // Usar el UseCase para actualizar el estado (incluye notificaciones automáticas)
             $useCase = app(\App\Contexts\Commissions\Application\UpdateCommissionStatusUseCase::class);
-            $details = 'Estado actualizado por cadete: ' . $request->status . 
+            $details = 'Estado actualizado por cadete: ' . $request->status .
                       ($request->observation ? ' - Observación: ' . $request->observation : '');
-            
+
             $useCase($commission->id, $adminStatus, $details, false);
 
             // Recargar la comisión para obtener el estado actualizado
             $commission->refresh();
 
             // Si se marca como entregado y se proporcionan datos de firma, guardar la firma
-            if (($request->status === 'Entregado' || $newStatusValue === CommissionStatus::ENTREGADO->value) 
+            if (($request->status === 'Entregado' || $newStatusValue === CommissionStatus::ENTREGADO->value)
                 && ($request->has('receiver_name') || $request->has('signature_image'))) {
                 // Crear la firma de entrega solo si se proporcionan datos
                 $signatureData = [
@@ -291,12 +287,12 @@ class CadeteController extends Controller
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
                 ];
-                
+
                 // Solo incluir signature_image si está presente y no es null
-                if ($request->has('signature_image') && !empty($request->signature_image)) {
+                if ($request->has('signature_image') && ! empty($request->signature_image)) {
                     $signatureData['signature_image'] = $request->signature_image;
                 }
-                
+
                 DeliverySignature::create($signatureData);
 
                 \Log::info('Firma de entrega registrada exitosamente', [
@@ -304,7 +300,7 @@ class CadeteController extends Controller
                     'commission_id' => $commission->id,
                     'receiver_name' => $request->receiver_name,
                     'receiver_phone' => $request->receiver_phone,
-                    'has_signature' => !empty($request->signature_image)
+                    'has_signature' => ! empty($request->signature_image),
                 ]);
             }
 
@@ -316,7 +312,7 @@ class CadeteController extends Controller
 
                 // Cambiar estado a PENDIENTE_PAGO primero
                 $commissionRepository->updateStatus($commission->id, CommissionStatus::PENDIENTE_PAGO);
-                
+
                 // Crear log de cambio a PENDIENTE_PAGO
                 $logDto = new CreateCommissionLogDTO(
                     commissionId: $commission->id,
@@ -331,7 +327,7 @@ class CadeteController extends Controller
                 if ($commissionType === CommissionType::ORDINARIA) {
                     // Actualizar estado a PAGO_VALIDACION
                     $commissionRepository->updateStatus($commission->id, CommissionStatus::PAGO_VALIDACION);
-                    
+
                     // Crear log del cambio automático a PAGO_VALIDACION
                     $logDtoAuto = new CreateCommissionLogDTO(
                         commissionId: $commission->id,
@@ -344,12 +340,12 @@ class CadeteController extends Controller
 
                     // Obtener la comisión actualizada para crear el movimiento
                     $updatedCommission = $commissionRepository->findById($commission->id);
-                    
+
                     // Crear movimiento en cuenta corriente
                     $this->createCurrentAccountTransaction($updatedCommission, $currentAccountRepository);
                 }
                 // Si es EXTRAORDINARIA: solo queda en PENDIENTE_PAGO (sin crear movimiento)
-                
+
                 // Refrescar la comisión para obtener el estado final actualizado
                 $commission->refresh();
             }
@@ -361,7 +357,7 @@ class CadeteController extends Controller
                 'commission_id' => $commission->id,
                 'status_updated' => $newStatusValue,
                 'updated_at' => $commission->updated_at->toISOString(),
-                'total_changes' => $commission->getChanges()
+                'total_changes' => $commission->getChanges(),
             ]);
 
             return response()->json([
@@ -372,7 +368,7 @@ class CadeteController extends Controller
                     'status' => $commission->status->value,
                     'status_label' => $commission->status->getCadeteStatus(),
                     'updated_at' => $commission->updated_at->format('Y-m-d H:i:s'),
-                ]
+                ],
             ]);
 
         } catch (\InvalidArgumentException $e) {
@@ -384,13 +380,13 @@ class CadeteController extends Controller
                 'error' => $e->getMessage(),
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Error en el estado: ' . $e->getMessage(),
-                'valid_statuses' => CommissionStatus::getValidCadeteStatuses()
+                'valid_statuses' => CommissionStatus::getValidCadeteStatuses(),
             ], 400);
         } catch (\Exception $e) {
             \Log::error('Error inesperado al actualizar estado de comisión', [
@@ -402,12 +398,12 @@ class CadeteController extends Controller
                 'trace' => $e->getTraceAsString(),
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al actualizar el estado: ' . $e->getMessage()
+                'message' => 'Error al actualizar el estado: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -432,35 +428,35 @@ class CadeteController extends Controller
                 'longitude' => $request->longitude ?? 'null',
                 'errors' => $e->errors(),
                 'ip' => $request->ip(),
-                'user_agent' => $request->userAgent()
+                'user_agent' => $request->userAgent(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Datos de ubicación inválidos',
-                'errors' => $e->errors()
+                'errors' => $e->errors(),
             ], 422);
         }
 
         $user = Auth::user();
-        
+
         // Verificar que el cadete tenga acceso a esta comisión
         $commission = Commission::where('cadete_id', $user->id)
                                ->where('id', $id)
                                ->first();
 
-        if (!$commission) {
+        if (! $commission) {
             \Log::warning('Cadete intentó enviar ubicación para comisión no autorizada', [
                 'cadete_id' => $user->id,
                 'cadete_name' => $user->name,
                 'commission_id' => $id,
                 'ip' => $request->ip(),
-                'user_agent' => $request->userAgent()
+                'user_agent' => $request->userAgent(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Envío no encontrado o no tienes permisos para enviar ubicación'
+                'message' => 'Envío no encontrado o no tienes permisos para enviar ubicación',
             ], 404);
         }
 
@@ -475,11 +471,11 @@ class CadeteController extends Controller
                     'latitude' => $request->latitude,
                     'longitude' => $request->longitude,
                     'address' => $request->address,
-                    'observation' => $request->observation
+                    'observation' => $request->observation,
                 ],
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ]);
 
             $location = ShipmentLocation::create([
@@ -500,10 +496,10 @@ class CadeteController extends Controller
                 'location_id' => $location->id,
                 'coordinates' => [
                     'latitude' => $location->latitude,
-                    'longitude' => $location->longitude
+                    'longitude' => $location->longitude,
                 ],
                 'recorded_at' => $location->recorded_at->toISOString(),
-                'total_locations_for_commission' => ShipmentLocation::where('commission_id', $commission->id)->count()
+                'total_locations_for_commission' => ShipmentLocation::where('commission_id', $commission->id)->count(),
             ]);
 
             return response()->json([
@@ -516,7 +512,7 @@ class CadeteController extends Controller
                     'address' => $location->address,
                     'observation' => $location->observation,
                     'recorded_at' => $location->recorded_at->format('Y-m-d H:i:s'),
-                ]
+                ],
             ]);
 
         } catch (\Exception $e) {
@@ -528,18 +524,18 @@ class CadeteController extends Controller
                     'latitude' => $request->latitude,
                     'longitude' => $request->longitude,
                     'address' => $request->address,
-                    'observation' => $request->observation
+                    'observation' => $request->observation,
                 ],
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
-                'timestamp' => now()->toISOString()
+                'timestamp' => now()->toISOString(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al registrar la ubicación: ' . $e->getMessage()
+                'message' => 'Error al registrar la ubicación: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -550,15 +546,15 @@ class CadeteController extends Controller
     public function stats(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
+
         // Obtener transportes asignados al cadete
         $transportIds = Transport::where('cadete_id', $user->id)->pluck('id');
-        
+
         if ($transportIds->isEmpty()) {
             return response()->json([
                 'success' => true,
                 'message' => 'No tienes transportes asignados',
-                'stats' => []
+                'stats' => [],
             ]);
         }
 
@@ -620,7 +616,7 @@ class CadeteController extends Controller
                 'transports' => Transport::where('cadete_id', $user->id)
                                         ->select('id', 'plate', 'description')
                                         ->get(),
-            ]
+            ],
         ]);
     }
 
@@ -634,7 +630,7 @@ class CadeteController extends Controller
 
     /**
      * Función privada común para obtener entregas con o sin filtro de estados en proceso
-     * 
+     *
      * @param Request $request
      * @param bool $filterInProcessStatuses Si es true, aplica filtro de estados en proceso cuando no se especifica status
      * @return JsonResponse
@@ -642,7 +638,7 @@ class CadeteController extends Controller
     private function getDeliveries(Request $request, bool $filterInProcessStatuses): JsonResponse
     {
         $user = Auth::user();
-        
+
         // Construir query base usando cadete_id directamente
         $query = Commission::with([
             'client:id,name,last_name,phone,address',
@@ -650,7 +646,7 @@ class CadeteController extends Controller
             'destinationLocation:id,name,address,origin,phone,schedule,latitude,longitude',
             'items:id,commission_id,type,size,quantity,detail',
             'transport:id,plate,description',
-            'deliverySignature:id,commission_id,receiver_name,receiver_phone,notes,delivery_timestamp'
+            'deliverySignature:id,commission_id,receiver_name,receiver_phone,notes,delivery_timestamp',
         ])
         ->where('cadete_id', $user->id);
 
@@ -675,15 +671,15 @@ class CadeteController extends Controller
             ];
             $query->whereIn('status', $inProcessStatuses);
         }
-        
+
         if ($request->filled('date_from')) {
             $query->whereDate('date', '>=', $request->date_from);
         }
-        
+
         if ($request->filled('date_to')) {
             $query->whereDate('date', '<=', $request->date_to);
         }
-        
+
         // Búsqueda por texto
         if ($request->filled('search')) {
             $search = $request->search;
@@ -715,17 +711,20 @@ class CadeteController extends Controller
         // Ordenamiento
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
-        
+
         switch ($sortBy) {
             case 'estimated_pickup_time':
                 $query->orderBy('date', $sortOrder);
+
                 break;
             case 'commission_amount':
                 $query->orderBy('total', $sortOrder);
+
                 break;
             case 'created_at':
             default:
                 $query->orderBy('created_at', $sortOrder);
+
                 break;
         }
 
@@ -738,28 +737,28 @@ class CadeteController extends Controller
             // Obtener coordenadas de ubicaciones
             $pickupCoordinates = $this->getLocationCoordinates($commission->originLocation);
             $deliveryCoordinates = $this->getLocationCoordinates($commission->destinationLocation);
-            
+
             return [
                 'id' => $commission->id,
                 'tracking_number' => $commission->id,
-                'customer_name' => $commission->client ? 
+                'customer_name' => $commission->client ?
                     $commission->client->name . ' ' . $commission->client->last_name : 'N/A',
                 'customer_address' => $commission->client ? $commission->client->address . ' ,' . $commission->client->origin : 'N/A',
                 'customer_phone' => $commission->client ? $commission->client->phone : 'N/A',
-                'pickup_address' => $commission->originLocation ? 
+                'pickup_address' => $commission->originLocation ?
                     $commission->originLocation->name . ', ' . $commission->originLocation->address  . ' ,' . $commission->originLocation->origin : 'N/A',
-                'pickup_phone' => $commission->originLocation ? $commission->originLocation->phone  : 'N/A',
+                'pickup_phone' => $commission->originLocation ? $commission->originLocation->phone : 'N/A',
                 'pickup_latitude' => $pickupCoordinates ? ($pickupCoordinates['latitude'] ?? null) : null,
                 'pickup_longitude' => $pickupCoordinates ? ($pickupCoordinates['longitude'] ?? null) : null,
-                'delivery_address' => $commission->destinationLocation ? 
+                'delivery_address' => $commission->destinationLocation ?
                     $commission->destinationLocation->name . ', ' . $commission->destinationLocation->address  . ' ,' . $commission->destinationLocation->origin : 'N/A',
-                'delivery_phone' => $commission->destinationLocation ? $commission->destinationLocation->phone  : 'N/A',
+                'delivery_phone' => $commission->destinationLocation ? $commission->destinationLocation->phone : 'N/A',
                 'delivery_latitude' => $deliveryCoordinates ? ($deliveryCoordinates['latitude'] ?? null) : null,
                 'delivery_longitude' => $deliveryCoordinates ? ($deliveryCoordinates['longitude'] ?? null) : null,
                 'status' => $commission->status->getCadeteStatus(),
                 'status_label' => $commission->status->getCadeteStatus(),
                 'estimated_pickup_time' => $commission->originLocation ? $commission->originLocation->schedule : 'N/A',
-                'estimated_delivery_time' => $commission->destinationLocation ? $commission->destinationLocation->schedule : 'N/A', 
+                'estimated_delivery_time' => $commission->destinationLocation ? $commission->destinationLocation->schedule : 'N/A',
                 'commission_amount' => $commission->total,
                 'created_at' => $commission->created_at->toISOString(),
                 'updated_at' => $commission->updated_at->toISOString(),
@@ -779,16 +778,16 @@ class CadeteController extends Controller
 
         // Calcular resumen con TODAS las comisiones del cadete (sin filtro de estados en proceso)
         $summaryQuery = Commission::where('cadete_id', $user->id);
-        
+
         // Aplicar filtros de fecha si existen (pero no el filtro de estados)
         if ($request->filled('date_from')) {
             $summaryQuery->whereDate('date', '>=', $request->date_from);
         }
-        
+
         if ($request->filled('date_to')) {
             $summaryQuery->whereDate('date', '<=', $request->date_to);
         }
-        
+
         $summary = $this->calculateDeliveriesSummaryWithFilters($summaryQuery);
 
         return response()->json([
@@ -802,10 +801,10 @@ class CadeteController extends Controller
                     'total' => $deliveries->total(),
                     'last_page' => $deliveries->lastPage(),
                     'from' => $deliveries->firstItem(),
-                    'to' => $deliveries->lastItem()
+                    'to' => $deliveries->lastItem(),
                 ],
-                'summary' => $summary
-            ]
+                'summary' => $summary,
+            ],
         ]);
     }
 
@@ -815,18 +814,18 @@ class CadeteController extends Controller
     public function shipments(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
+
         // Verificar si el cadete tiene transportes asignados
         $transportIds = Transport::where('cadete_id', $user->id)->pluck('id');
-        
+
         if ($transportIds->isEmpty()) {
             return response()->json([
                 'success' => true,
                 'message' => 'No tienes transportes asignados',
-                'shipments' => []
+                'shipments' => [],
             ]);
         }
-        
+
         // Construir query base usando cadete_id directamente
         $query = Commission::with([
             'client:id,name,last_name,phone,address',
@@ -834,7 +833,7 @@ class CadeteController extends Controller
             'destinationLocation:id,name,address,origin,phone,schedule',
             'items:id,commission_id,type,size,quantity,detail',
             'transport:id,plate,description',
-            'deliverySignature:id,commission_id,receiver_name,receiver_phone,notes,delivery_timestamp'
+            'deliverySignature:id,commission_id,receiver_name,receiver_phone,notes,delivery_timestamp',
         ])
         ->where('cadete_id', $user->id);
 
@@ -842,19 +841,19 @@ class CadeteController extends Controller
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-        
+
         if ($request->filled('date')) {
             $query->whereDate('date', $request->date);
         }
-        
+
         if ($request->filled('date_from')) {
             $query->whereDate('date', '>=', $request->date_from);
         }
-        
+
         if ($request->filled('date_to')) {
             $query->whereDate('date', '<=', $request->date_to);
         }
-        
+
         // Búsqueda por texto
         if ($request->filled('search')) {
             $search = $request->search;
@@ -886,17 +885,20 @@ class CadeteController extends Controller
         // Ordenamiento
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
-        
+
         switch ($sortBy) {
             case 'date':
                 $query->orderBy('date', $sortOrder);
+
                 break;
             case 'total':
                 $query->orderBy('total', $sortOrder);
+
                 break;
             case 'created_at':
             default:
                 $query->orderBy('created_at', $sortOrder);
+
                 break;
         }
 
@@ -909,7 +911,7 @@ class CadeteController extends Controller
             // Obtener coordenadas de ubicaciones
             $pickupCoordinates = $this->getLocationCoordinates($commission->originLocation);
             $deliveryCoordinates = $this->getLocationCoordinates($commission->destinationLocation);
-            
+
             return [
                 'id' => $commission->id,
                 'tracking_number' => $commission->id,
@@ -969,7 +971,7 @@ class CadeteController extends Controller
             'success' => true,
             'shipments' => $transformedShipments,
             'total' => $shipments->total(),
-            'filters' => $filters
+            'filters' => $filters,
         ]);
     }
 
@@ -979,7 +981,7 @@ class CadeteController extends Controller
     public function earnings(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
+
         // Validar parámetros
         $request->validate([
             'period' => 'nullable|string|in:today,week,month,year,custom',
@@ -1009,10 +1011,10 @@ class CadeteController extends Controller
 
         // Obtener comisiones para cálculos
         $commissions = $baseQuery->with([
-            'client', 
-            'destination', 
-            'originLocation', 
-            'destinationLocation'
+            'client',
+            'destination',
+            'originLocation',
+            'destinationLocation',
         ])->get();
 
         // Obtener el porcentaje de comisión del cadete
@@ -1056,9 +1058,9 @@ class CadeteController extends Controller
                 'pagination' => $recentPayments['pagination'],
                 'commission_info' => [
                     'cadete_commission_percentage' => $cadeteCommissionPercentage,
-                    'explanation' => "El cadete recibe el {$cadeteCommissionPercentage}% del total de cada comisión entregada"
-                ]
-            ]
+                    'explanation' => "El cadete recibe el {$cadeteCommissionPercentage}% del total de cada comisión entregada",
+                ],
+            ],
         ]);
     }
 
@@ -1069,9 +1071,9 @@ class CadeteController extends Controller
     {
         // Obtener el ID del cadete autenticado
         $user = Auth::user();
-        
+
         $totalDeliveries = Commission::where('cadete_id', $user->id)->count();
-        
+
         // Estados pendientes (solo comisiones recién asignadas)
         $pending = Commission::where('cadete_id', $user->id)
                             ->whereIn('status', [
@@ -1084,10 +1086,10 @@ class CadeteController extends Controller
                                 CommissionStatus::PAGO_CONFIRMADO,
                                 CommissionStatus::EN_SUCURSAL_DESTINO,
                                 CommissionStatus::CANCELADO,
-                                CommissionStatus::EN_ANALISIS
+                                CommissionStatus::EN_ANALISIS,
                             ])
                             ->count();
-        
+
         // Estados en progreso (desde en camino al origen hasta en proceso de entrega)
         $inProgress = Commission::where('cadete_id', $user->id)
                                ->whereIn('status', [
@@ -1096,18 +1098,18 @@ class CadeteController extends Controller
                                    CommissionStatus::ENCOMIENDA_RETIRADA,
                                    CommissionStatus::EN_CAMINO_PLANTA,
                                    CommissionStatus::EN_TRANSITO_DESTINO,
-                                   CommissionStatus::EN_PROCESO_ENTREGA
+                                   CommissionStatus::EN_PROCESO_ENTREGA,
                                ])
                                ->count();
-        
+
         // Estados completados exitosamente
         $completed = Commission::where('cadete_id', $user->id)
                               ->whereIn('status', [
                                   CommissionStatus::ENTREGADO,
-                                  CommissionStatus::RETIRADO_SUCURSAL
+                                  CommissionStatus::RETIRADO_SUCURSAL,
                               ])
                               ->count();
-        
+
         // Estados de incidencia que puede reportar el cadete (no incluye CANCELADO)
         $cancelled = Commission::where('cadete_id', $user->id)
                               ->whereIn('status', [
@@ -1115,21 +1117,21 @@ class CadeteController extends Controller
                                   CommissionStatus::REPROGRAMANDO_ENTREGA,
                                   CommissionStatus::DISPONIBLE_RETIRO,
                                   CommissionStatus::EN_DEVOLUCION,
-                                  CommissionStatus::DEVUELTO_REMITENTE
+                                  CommissionStatus::DEVUELTO_REMITENTE,
                               ])
                               ->count();
-        
+
         // Calcular ganancias totales de comisiones completadas
         $totalCommissionAmount = Commission::where('cadete_id', $user->id)
                                           ->whereIn('status', [
                                               CommissionStatus::ENTREGADO,
-                                              CommissionStatus::RETIRADO_SUCURSAL
+                                              CommissionStatus::RETIRADO_SUCURSAL,
                                           ])
                                           ->sum('total');
-        
+
         // Obtener el porcentaje de comisión del cadete
         $cadeteCommissionPercentage = $user->commission_percentage ?? 0;
-        
+
         // Calcular ganancias reales del cadete basadas en su porcentaje
         $totalEarnings = $totalCommissionAmount * ($cadeteCommissionPercentage / 100);
 
@@ -1141,7 +1143,7 @@ class CadeteController extends Controller
             'cancelled' => $cancelled,
             'total_earnings' => round($totalEarnings, 2),
             'total_commission_amount' => round($totalCommissionAmount, 2),
-            'commission_percentage' => $cadeteCommissionPercentage
+            'commission_percentage' => $cadeteCommissionPercentage,
         ];
     }
 
@@ -1174,7 +1176,7 @@ class CadeteController extends Controller
                                    CommissionStatus::BUSCANDO_CADETE,
                                    CommissionStatus::EN_SUCURSAL_DESTINO,
                                    CommissionStatus::CANCELADO,
-                                   CommissionStatus::EN_ANALISIS
+                                   CommissionStatus::EN_ANALISIS,
                                ])
                                ->count();
 
@@ -1186,7 +1188,7 @@ class CadeteController extends Controller
                                          CommissionStatus::ENCOMIENDA_RETIRADA,
                                          CommissionStatus::EN_CAMINO_PLANTA,
                                          CommissionStatus::EN_TRANSITO_DESTINO,
-                                         CommissionStatus::EN_PROCESO_ENTREGA
+                                         CommissionStatus::EN_PROCESO_ENTREGA,
                                      ])
                                      ->count();
 
@@ -1198,7 +1200,7 @@ class CadeteController extends Controller
                                        CommissionStatus::RETIRADO_SUCURSAL,
                                        CommissionStatus::PENDIENTE_PAGO,
                                        CommissionStatus::PAGO_VALIDACION,
-                                       CommissionStatus::PAGO_CONFIRMADO
+                                       CommissionStatus::PAGO_CONFIRMADO,
                                    ])
                                    ->count();
 
@@ -1209,7 +1211,7 @@ class CadeteController extends Controller
                                        CommissionStatus::REPROGRAMANDO_ENTREGA,
                                        CommissionStatus::DISPONIBLE_RETIRO,
                                        CommissionStatus::EN_DEVOLUCION,
-                                       CommissionStatus::DEVUELTO_REMITENTE
+                                       CommissionStatus::DEVUELTO_REMITENTE,
                                    ])
                                    ->count();
 
@@ -1221,13 +1223,13 @@ class CadeteController extends Controller
                                                   CommissionStatus::RETIRADO_SUCURSAL,
                                                   CommissionStatus::PENDIENTE_PAGO,
                                                   CommissionStatus::PAGO_VALIDACION,
-                                                  CommissionStatus::PAGO_CONFIRMADO
+                                                  CommissionStatus::PAGO_CONFIRMADO,
                                               ])
                                               ->sum('total');
-        
+
         // Obtener el porcentaje de comisión del cadete
         $cadeteCommissionPercentage = $user->commission_percentage ?? 0;
-        
+
         // Calcular ganancias reales del cadete basadas en su porcentaje
         $totalEarnings = $totalCommissionAmount * ($cadeteCommissionPercentage / 100);
 
@@ -1239,7 +1241,7 @@ class CadeteController extends Controller
             'cancelled' => $cancelled,
             'total_earnings' => round($totalEarnings, 2),
             'total_commission_amount' => round($totalCommissionAmount, 2),
-            'commission_percentage' => $cadeteCommissionPercentage
+            'commission_percentage' => $cadeteCommissionPercentage,
         ];
     }
 
@@ -1255,7 +1257,7 @@ class CadeteController extends Controller
         // Contar items por tamaño usando los valores del enum
         $smallCount = $items->where('size', CommissionItemSize::SMALL)->sum('quantity');
         $largeCount = $items->where('size', CommissionItemSize::LARGE)->sum('quantity');
-        
+
         if ($smallCount > 0 && $largeCount > 0) {
             return "{$smallCount} chicos, {$largeCount} grandes";
         } elseif ($smallCount > 0) {
@@ -1308,48 +1310,53 @@ class CadeteController extends Controller
     private function getPeriodDates(Request $request): array
     {
         $period = $request->get('period', 'month');
-        
+
         switch ($period) {
             case 'today':
                 $startDate = now()->startOfDay();
                 $endDate = now()->endOfDay();
                 $label = 'Hoy';
+
                 break;
-                
+
             case 'week':
                 $startDate = now()->startOfWeek();
                 $endDate = now()->endOfWeek();
                 $label = 'Esta semana';
+
                 break;
-                
+
             case 'month':
                 $startDate = now()->startOfMonth();
                 $endDate = now()->endOfMonth();
                 $label = 'Este mes';
+
                 break;
-                
+
             case 'year':
                 $startDate = now()->startOfYear();
                 $endDate = now()->endOfYear();
                 $label = 'Este año';
+
                 break;
-                
+
             case 'custom':
                 $startDate = \Carbon\Carbon::parse($request->date_from)->startOfDay();
                 $endDate = \Carbon\Carbon::parse($request->date_to)->endOfDay();
                 $label = 'Período personalizado';
+
                 break;
-                
+
             default:
                 $startDate = now()->startOfMonth();
                 $endDate = now()->endOfMonth();
                 $label = 'Este mes';
         }
-        
+
         return [
             'start' => $startDate,
             'end' => $endDate,
-            'label' => $label
+            'label' => $label,
         ];
     }
 
@@ -1366,17 +1373,17 @@ class CadeteController extends Controller
                     CommissionStatus::RETIRADO_SUCURSAL,
                     CommissionStatus::PENDIENTE_PAGO,
                     CommissionStatus::PAGO_VALIDACION,
-                    CommissionStatus::PAGO_CONFIRMADO
+                    CommissionStatus::PAGO_CONFIRMADO,
                 ]);
             case 'pending':
                 return $query->whereIn('status', [
                     CommissionStatus::EN_TRANSITO_DESTINO,
-                    CommissionStatus::EN_PROCESO_ENTREGA
+                    CommissionStatus::EN_PROCESO_ENTREGA,
                 ]);
             case 'cancelled':
                 return $query->whereIn('status', [
                     CommissionStatus::CANCELADO,
-                    CommissionStatus::INTENTO_ENTREGA_FALLIDO
+                    CommissionStatus::INTENTO_ENTREGA_FALLIDO,
                 ]);
             default:
                 return $query;
@@ -1391,25 +1398,25 @@ class CadeteController extends Controller
         // Usar filter() para comparar correctamente los enums
         // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
         $deliveredCommissions = $commissions->filter(function ($commission) {
-            return $commission->status === CommissionStatus::ENTREGADO 
+            return $commission->status === CommissionStatus::ENTREGADO
                 || $commission->status === CommissionStatus::RETIRADO_SUCURSAL
                 || $commission->status === CommissionStatus::PENDIENTE_PAGO
                 || $commission->status === CommissionStatus::PAGO_VALIDACION
                 || $commission->status === CommissionStatus::PAGO_CONFIRMADO;
         });
-        
+
         // Usar reduce() para sumar correctamente los totales
         $totalCommissionAmount = $deliveredCommissions->reduce(function ($carry, $commission) {
             return $carry + (float) $commission->total;
         }, 0);
-        
+
         // Calcular ganancias reales del cadete basadas en su porcentaje
         $totalEarnings = $totalCommissionAmount * ($commissionPercentage / 100);
-        
+
         $totalDeliveries = $deliveredCommissions->count();
-        
+
         $averagePerDelivery = $totalDeliveries > 0 ? $totalEarnings / $totalDeliveries : 0;
-        
+
         return [
             'total_earnings' => round($totalEarnings, 2),
             'total_deliveries' => $totalDeliveries,
@@ -1418,7 +1425,7 @@ class CadeteController extends Controller
             'currency' => 'ARS',
             'period_label' => $periodLabel,
             'formatted_total' => '$' . number_format($totalEarnings, 0, ',', '.'),
-            'formatted_commission_amount' => '$' . number_format($totalCommissionAmount, 0, ',', '.')
+            'formatted_commission_amount' => '$' . number_format($totalCommissionAmount, 0, ',', '.'),
         ];
     }
 
@@ -1431,27 +1438,27 @@ class CadeteController extends Controller
         // TODO: Implementar lógica real de método de pago cuando esté disponible
         // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
         $deliveredCommissions = $commissions->filter(function ($commission) {
-            return $commission->status === CommissionStatus::ENTREGADO 
+            return $commission->status === CommissionStatus::ENTREGADO
                 || $commission->status === CommissionStatus::RETIRADO_SUCURSAL
                 || $commission->status === CommissionStatus::PENDIENTE_PAGO
                 || $commission->status === CommissionStatus::PAGO_VALIDACION
                 || $commission->status === CommissionStatus::PAGO_CONFIRMADO;
         });
-        
+
         $totalCommissionAmount = $deliveredCommissions->reduce(function ($carry, $commission) {
             return $carry + (float) $commission->total;
         }, 0);
-        
+
         // Calcular ganancias reales del cadete basadas en su porcentaje
         $cashEarnings = $totalCommissionAmount * ($commissionPercentage / 100);
-        
+
         $cardEarnings = 0; // TODO: Implementar cuando esté disponible
         $transferEarnings = 0; // TODO: Implementar cuando esté disponible
         $bonuses = 0; // TODO: Implementar cuando esté disponible
         $deductions = 0; // TODO: Implementar cuando esté disponible
-        
+
         $netEarnings = $cashEarnings + $cardEarnings + $transferEarnings + $bonuses - $deductions;
-        
+
         return [
             'cash_earnings' => round($cashEarnings, 2),
             'card_earnings' => round($cardEarnings, 2),
@@ -1460,7 +1467,7 @@ class CadeteController extends Controller
             'deductions' => round($deductions, 2),
             'net_earnings' => round($netEarnings, 2),
             'total_commission_amount' => round($totalCommissionAmount, 2),
-            'commission_percentage' => $commissionPercentage
+            'commission_percentage' => $commissionPercentage,
         ];
     }
 
@@ -1473,10 +1480,10 @@ class CadeteController extends Controller
         $totalAmount = $commissions->reduce(function ($carry, $commission) {
             return $carry + (float) $commission->total;
         }, 0);
-        
+
         // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
         $paidCommissions = $commissions->filter(function ($commission) {
-            return $commission->status === CommissionStatus::ENTREGADO 
+            return $commission->status === CommissionStatus::ENTREGADO
                 || $commission->status === CommissionStatus::RETIRADO_SUCURSAL
                 || $commission->status === CommissionStatus::PENDIENTE_PAGO
                 || $commission->status === CommissionStatus::PAGO_VALIDACION
@@ -1487,7 +1494,7 @@ class CadeteController extends Controller
         }, 0);
         $paidEarnings = $paidCommissionAmount * ($commissionPercentage / 100);
         $paidCount = $paidCommissions->count();
-        
+
         $pendingCommissions = $commissions->filter(function ($commission) {
             return $commission->status === CommissionStatus::EN_TRANSITO_DESTINO
                 || $commission->status === CommissionStatus::EN_PROCESO_ENTREGA;
@@ -1497,7 +1504,7 @@ class CadeteController extends Controller
         }, 0);
         $pendingEarnings = $pendingCommissionAmount * ($commissionPercentage / 100);
         $pendingCount = $pendingCommissions->count();
-        
+
         $cancelledCommissions = $commissions->filter(function ($commission) {
             return $commission->status === CommissionStatus::CANCELADO
                 || $commission->status === CommissionStatus::INTENTO_ENTREGA_FALLIDO;
@@ -1507,26 +1514,26 @@ class CadeteController extends Controller
         }, 0);
         $cancelledEarnings = $cancelledCommissionAmount * ($commissionPercentage / 100);
         $cancelledCount = $cancelledCommissions->count();
-        
+
         return [
             'paid' => [
                 'commission_amount' => round($paidCommissionAmount, 2),
                 'earnings' => round($paidEarnings, 2),
                 'count' => $paidCount,
-                'percentage' => $totalAmount > 0 ? round(($paidCommissionAmount / $totalAmount) * 100, 1) : 0
+                'percentage' => $totalAmount > 0 ? round(($paidCommissionAmount / $totalAmount) * 100, 1) : 0,
             ],
             'pending' => [
                 'commission_amount' => round($pendingCommissionAmount, 2),
                 'earnings' => round($pendingEarnings, 2),
                 'count' => $pendingCount,
-                'percentage' => $totalAmount > 0 ? round(($pendingCommissionAmount / $totalAmount) * 100, 1) : 0
+                'percentage' => $totalAmount > 0 ? round(($pendingCommissionAmount / $totalAmount) * 100, 1) : 0,
             ],
             'cancelled' => [
                 'commission_amount' => round($cancelledCommissionAmount, 2),
                 'earnings' => round($cancelledEarnings, 2),
                 'count' => $cancelledCount,
-                'percentage' => $totalAmount > 0 ? round(($cancelledCommissionAmount / $totalAmount) * 100, 1) : 0
-            ]
+                'percentage' => $totalAmount > 0 ? round(($cancelledCommissionAmount / $totalAmount) * 100, 1) : 0,
+            ],
         ];
     }
 
@@ -1537,35 +1544,35 @@ class CadeteController extends Controller
     {
         $dailyData = [];
         $currentDate = $startDate->copy();
-        
+
         while ($currentDate <= $endDate) {
             $dateKey = $currentDate->format('Y-m-d');
-            
+
             $dayCommissions = $commissions->filter(function ($commission) use ($currentDate) {
                 return $commission->date && $commission->date->format('Y-m-d') === $currentDate->format('Y-m-d');
             });
-            
+
             // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
             $dayDeliveredCommissions = $dayCommissions->filter(function ($commission) {
-                return $commission->status === CommissionStatus::ENTREGADO 
+                return $commission->status === CommissionStatus::ENTREGADO
                     || $commission->status === CommissionStatus::RETIRADO_SUCURSAL
                     || $commission->status === CommissionStatus::PENDIENTE_PAGO
                     || $commission->status === CommissionStatus::PAGO_VALIDACION
                     || $commission->status === CommissionStatus::PAGO_CONFIRMADO;
             });
-            
+
             $dayCommissionAmount = $dayDeliveredCommissions->reduce(function ($carry, $commission) {
                 return $carry + (float) $commission->total;
             }, 0);
-            
+
             // Calcular ganancias reales del cadete basadas en su porcentaje
             $dayEarnings = $dayCommissionAmount * ($commissionPercentage / 100);
-            
+
             $dayDeliveries = $dayDeliveredCommissions->count();
-            
+
             // TODO: Implementar cálculo real de horas trabajadas
             $hoursWorked = $dayDeliveries > 0 ? min(8, $dayDeliveries * 0.5) : 0;
-            
+
             $dailyData[] = [
                 'date' => $dateKey,
                 'commission_amount' => round($dayCommissionAmount, 2),
@@ -1573,12 +1580,12 @@ class CadeteController extends Controller
                 'deliveries' => $dayDeliveries,
                 'hours_worked' => round($hoursWorked, 1),
                 'formatted_commission_amount' => '$' . number_format($dayCommissionAmount, 0, ',', '.'),
-                'formatted_earnings' => '$' . number_format($dayEarnings, 0, ',', '.')
+                'formatted_earnings' => '$' . number_format($dayEarnings, 0, ',', '.'),
             ];
-            
+
             $currentDate->addDay();
         }
-        
+
         return $dailyData;
     }
 
@@ -1589,16 +1596,17 @@ class CadeteController extends Controller
     {
         // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
         $deliveredCommissions = $commissions->filter(function ($commission) {
-            return $commission->status === CommissionStatus::ENTREGADO 
+            return $commission->status === CommissionStatus::ENTREGADO
                 || $commission->status === CommissionStatus::RETIRADO_SUCURSAL
                 || $commission->status === CommissionStatus::PENDIENTE_PAGO
                 || $commission->status === CommissionStatus::PAGO_VALIDACION
                 || $commission->status === CommissionStatus::PAGO_CONFIRMADO;
         });
-        
+
         $routes = $deliveredCommissions->groupBy(function ($commission) {
             $origin = $commission->destination->origin ?? 'N/A';
             $destination = $commission->destination->destination ?? 'N/A';
+
             return $origin . ' → ' . $destination;
         })->map(function ($routeCommissions, $routeName) use ($commissionPercentage) {
             $routeCommissionAmount = $routeCommissions->reduce(function ($carry, $commission) {
@@ -1608,26 +1616,27 @@ class CadeteController extends Controller
             $earnings = $routeCommissionAmount * ($commissionPercentage / 100);
             $deliveries = $routeCommissions->count();
             $averagePerDelivery = $deliveries > 0 ? $earnings / $deliveries : 0;
-            
+
             return [
                 'route' => $routeName,
                 'commission_amount' => round($routeCommissionAmount, 2),
                 'earnings' => round($earnings, 2),
                 'deliveries' => $deliveries,
                 'average_per_delivery' => round($averagePerDelivery, 2),
-                'percentage' => 0 // TODO: Calcular porcentaje del total
+                'percentage' => 0, // TODO: Calcular porcentaje del total
             ];
         })->sortByDesc('earnings')->take(5)->values();
-        
+
         // Calcular porcentajes
         $totalEarnings = $routes->sum('earnings');
         if ($totalEarnings > 0) {
             $routes = $routes->map(function ($route) use ($totalEarnings) {
                 $route['percentage'] = round(($route['earnings'] / $totalEarnings) * 100, 1);
+
                 return $route;
             });
         }
-        
+
         return $routes->toArray();
     }
 
@@ -1639,23 +1648,23 @@ class CadeteController extends Controller
         $totalDeliveries = $commissions->count();
         // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
         $completedDeliveries = $commissions->filter(function ($commission) {
-            return $commission->status === CommissionStatus::ENTREGADO 
+            return $commission->status === CommissionStatus::ENTREGADO
                 || $commission->status === CommissionStatus::RETIRADO_SUCURSAL
                 || $commission->status === CommissionStatus::PENDIENTE_PAGO
                 || $commission->status === CommissionStatus::PAGO_VALIDACION
                 || $commission->status === CommissionStatus::PAGO_CONFIRMADO;
         })->count();
-        
+
         $deliverySuccessRate = $totalDeliveries > 0 ? round(($completedDeliveries / $totalDeliveries) * 100, 1) : 0;
-        
+
         // TODO: Implementar cálculos reales cuando estén disponibles
         $customerRating = 4.8; // Placeholder
         $onTimePercentage = 87.5; // Placeholder
-        
+
         return [
             'delivery_success_rate' => $deliverySuccessRate,
             'customer_rating' => $customerRating,
-            'on_time_percentage' => $onTimePercentage
+            'on_time_percentage' => $onTimePercentage,
         ];
     }
 
@@ -1666,23 +1675,23 @@ class CadeteController extends Controller
     {
         $page = $request->get('page', 1);
         $perPage = $request->get('per_page', 20);
-        
+
         // Filtrar solo comisiones completadas
         // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
         $completedCommissions = $commissions->filter(function ($commission) {
-            return $commission->status === CommissionStatus::ENTREGADO 
+            return $commission->status === CommissionStatus::ENTREGADO
                 || $commission->status === CommissionStatus::RETIRADO_SUCURSAL
                 || $commission->status === CommissionStatus::PENDIENTE_PAGO
                 || $commission->status === CommissionStatus::PAGO_VALIDACION
                 || $commission->status === CommissionStatus::PAGO_CONFIRMADO;
         });
-        
+
         // Simular pagos basados en comisiones (TODO: Implementar tabla real de pagos)
         $payments = $completedCommissions->map(function ($commission, $index) use ($commissionPercentage) {
             $commissionAmount = $commission->total;
             // Calcular ganancias reales del cadete basadas en su porcentaje
             $earnings = $commissionAmount * ($commissionPercentage / 100);
-            
+
             return [
                 'id' => $commission->id,
                 'date' => $commission->date ? $commission->date->toISOString() : null,
@@ -1693,15 +1702,15 @@ class CadeteController extends Controller
                 'reference' => 'TXN-' . $commission->id,
                 'deliveries_count' => 1,
                 'formatted_commission_amount' => '$' . number_format($commissionAmount, 0, ',', '.'),
-                'formatted_earnings' => '$' . number_format($earnings, 0, ',', '.')
+                'formatted_earnings' => '$' . number_format($earnings, 0, ',', '.'),
             ];
         })->sortByDesc('date');
-        
+
         // Paginación manual
         $total = $payments->count();
         $offset = ($page - 1) * $perPage;
         $paginatedPayments = $payments->slice($offset, $perPage);
-        
+
         return [
             'data' => $paginatedPayments->values(),
             'pagination' => [
@@ -1710,8 +1719,8 @@ class CadeteController extends Controller
                 'total' => $total,
                 'last_page' => ceil($total / $perPage),
                 'from' => $offset + 1,
-                'to' => min($offset + $perPage, $total)
-            ]
+                'to' => min($offset + $perPage, $total),
+            ],
         ];
     }
 
@@ -1728,18 +1737,18 @@ class CadeteController extends Controller
                 CommissionStatus::RETIRADO_SUCURSAL,
                 CommissionStatus::PENDIENTE_PAGO,
                 CommissionStatus::PAGO_VALIDACION,
-                CommissionStatus::PAGO_CONFIRMADO
+                CommissionStatus::PAGO_CONFIRMADO,
             ])
             ->sum('total');
-        
+
         // Calcular ganancias reales del cadete basadas en su porcentaje
         $currentPeriodEarnings = $currentPeriodCommissionAmount * ($commissionPercentage / 100);
-        
+
         // Calcular período anterior
         $periodLength = $startDate->diffInDays($endDate);
         $previousStartDate = $startDate->copy()->subDays($periodLength);
         $previousEndDate = $startDate->copy()->subDay();
-        
+
         // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
         $previousPeriodCommissionAmount = Commission::where('cadete_id', $cadeteId)
             ->whereBetween('date', [$previousStartDate, $previousEndDate])
@@ -1748,31 +1757,31 @@ class CadeteController extends Controller
                 CommissionStatus::RETIRADO_SUCURSAL,
                 CommissionStatus::PENDIENTE_PAGO,
                 CommissionStatus::PAGO_VALIDACION,
-                CommissionStatus::PAGO_CONFIRMADO
+                CommissionStatus::PAGO_CONFIRMADO,
             ])
             ->sum('total');
-        
+
         // Calcular ganancias reales del cadete basadas en su porcentaje
         $previousPeriodEarnings = $previousPeriodCommissionAmount * ($commissionPercentage / 100);
-        
-        $growthPercentage = $previousPeriodEarnings > 0 
+
+        $growthPercentage = $previousPeriodEarnings > 0
             ? round((($currentPeriodEarnings - $previousPeriodEarnings) / $previousPeriodEarnings) * 100, 1)
             : 0;
-        
+
         $trend = $growthPercentage >= 0 ? 'up' : 'down';
-        
+
         return [
             'earnings_growth' => [
                 'percentage' => abs($growthPercentage),
                 'compared_to' => 'período_anterior',
-                'trend' => $trend
+                'trend' => $trend,
             ],
             'commission_growth' => [
                 'current_period_commission' => round($currentPeriodCommissionAmount, 2),
                 'previous_period_commission' => round($previousPeriodCommissionAmount, 2),
                 'current_period_earnings' => round($currentPeriodEarnings, 2),
-                'previous_period_earnings' => round($previousPeriodEarnings, 2)
-            ]
+                'previous_period_earnings' => round($previousPeriodEarnings, 2),
+            ],
         ];
     }
 
@@ -1782,7 +1791,7 @@ class CadeteController extends Controller
      */
     private function getLocationCoordinates($location): ?array
     {
-        if (!$location) {
+        if (! $location) {
             return null;
         }
 
@@ -1803,27 +1812,28 @@ class CadeteController extends Controller
             if ($coordinates) {
                 $location->update([
                     'latitude' => $coordinates['latitude'],
-                    'longitude' => $coordinates['longitude']
+                    'longitude' => $coordinates['longitude'],
                 ]);
-                
+
                 // Refrescar el modelo para que tenga las coordenadas actualizadas
                 $location->refresh();
-                
+
                 \Log::info('Coordenadas calculadas y guardadas para ubicación', [
                     'location_id' => $location->id,
                     'address' => $location->address,
                     'origin' => $location->origin,
                     'latitude' => $coordinates['latitude'],
-                    'longitude' => $coordinates['longitude']
+                    'longitude' => $coordinates['longitude'],
                 ]);
-                
+
                 return $coordinates;
             } else {
                 \Log::warning('No se pudieron calcular coordenadas para ubicación', [
                     'location_id' => $location->id,
                     'address' => $location->address,
-                    'origin' => $location->origin
+                    'origin' => $location->origin,
                 ]);
+
                 return null;
             }
         } catch (\Exception $e) {
@@ -1831,8 +1841,9 @@ class CadeteController extends Controller
                 'location_id' => $location->id,
                 'address' => $location->address,
                 'origin' => $location->origin,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -1857,11 +1868,12 @@ class CadeteController extends Controller
                 'commission_id' => $commission->id,
                 'reference' => $reference,
             ]);
+
             return;
         }
 
         // Asegurar que la relación destination esté cargada
-        if (!$commission->relationLoaded('destination')) {
+        if (! $commission->relationLoaded('destination')) {
             $commission->load('destination');
         }
 

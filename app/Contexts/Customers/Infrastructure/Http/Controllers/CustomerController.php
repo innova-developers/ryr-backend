@@ -60,7 +60,7 @@ class CustomerController extends Controller
 
             // Si el usuario no tiene branch_id (super admin), establecer en 1
             $branchId = $user->branch_id ?? 1;
-            
+
             $useCaseCreateUser = new CreateUserUseCase($this->userRepository);
             $dtoCreateUser = new CreateUserDTO(
                 $request->input('name'),
@@ -121,14 +121,14 @@ class CustomerController extends Controller
 
             // Obtener el customer actual para preservar user_id si no se proporciona
             $currentCustomer = $this->repository->findById($id);
-            if (!$currentCustomer) {
+            if (! $currentCustomer) {
                 return response()->json(['message' => 'Customer not found'], 404);
             }
 
             $useCase = new UpdateCustomerUseCase($this->repository, $this->locationsRepository, $this->destinationRepository);
             // Si el usuario no tiene branch_id (super admin), establecer en 1
             $branchId = $user->branch_id ?? 1;
-            
+
             $dto = new UpdateCustomerDTO(
                 $id,
                 $request->input('dni'),
@@ -195,7 +195,7 @@ class CustomerController extends Controller
             ]);
 
             $customer = $this->repository->findById($id);
-            if (!$customer) {
+            if (! $customer) {
                 return response()->json(['message' => 'Customer not found'], 404);
             }
 
@@ -215,7 +215,7 @@ class CustomerController extends Controller
                     'last_name' => $customer->last_name,
                     'auto_calculate_iva' => $customer->auto_calculate_iva,
                     'iva_status' => $customer->iva_status,
-                ]
+                ],
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             $errors = $e->errors();
@@ -223,10 +223,10 @@ class CustomerController extends Controller
             foreach ($errors as $field => $messages) {
                 $errorMessages[] = $field . ': ' . implode(', ', $messages);
             }
-            
+
             return response()->json([
                 'message' => 'Datos inválidos: ' . implode(', ', $errorMessages),
-                'errors' => $errors
+                'errors' => $errors,
             ], 422);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Error al actualizar el campo: ' . $e->getMessage()], 500);

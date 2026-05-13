@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Notification;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Commission;
-use App\Shared\Models\User;
 use Illuminate\Support\Facades\Log;
 
 class NotificationService
@@ -58,12 +57,12 @@ class NotificationService
         ?string $details = null
     ): ?Notification {
         // Solo crear notificación si el estado requiere notificación al cadete
-        if (!in_array($newStatus, self::CADETE_NOTIFICATION_STATUSES)) {
+        if (! in_array($newStatus, self::CADETE_NOTIFICATION_STATUSES)) {
             return null;
         }
 
         // Solo notificar si hay un cadete asignado
-        if (!$commission->cadete_id) {
+        if (! $commission->cadete_id) {
             return null;
         }
 
@@ -95,6 +94,7 @@ class NotificationService
                 'new_status' => $newStatus->value,
                 'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -104,7 +104,7 @@ class NotificationService
      */
     public function createCommissionAssignedNotification(Commission $commission): ?Notification
     {
-        if (!$commission->cadete_id) {
+        if (! $commission->cadete_id) {
             return null;
         }
 
@@ -135,6 +135,7 @@ class NotificationService
                 'cadete_id' => $commission->cadete_id,
                 'error' => $e->getMessage(),
             ]);
+
             return null;
         }
     }
@@ -175,11 +176,12 @@ class NotificationService
             ->where('user_id', $userId)
             ->first();
 
-        if (!$notification) {
+        if (! $notification) {
             return false;
         }
 
         $notification->markAsRead();
+
         return true;
     }
 
@@ -227,7 +229,7 @@ class NotificationService
     private function getNotificationMessage(Commission $commission, CommissionStatus $status, ?string $details = null): string
     {
         $baseMessage = "Comisión #{$commission->id}: {$status->getCadeteStatus()}";
-        
+
         if ($details) {
             $baseMessage .= " - {$details}";
         }
@@ -264,10 +266,11 @@ class NotificationService
     private function sendFcmPushNotification(int $userId, string $title, string $body, array $data): void
     {
         try {
-            if (!$this->fcmService) {
+            if (! $this->fcmService) {
                 Log::warning('FcmNotificationService no disponible para enviar push notification', [
                     'user_id' => $userId,
                 ]);
+
                 return;
             }
 

@@ -21,7 +21,8 @@ class InvoiceController
         private InvoiceService $invoiceService,
         private ArcaService $arcaService,
         private WhatsAppService $whatsAppService,
-    ) {}
+    ) {
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -39,6 +40,7 @@ class InvoiceController
     public function show(Invoice $invoice): JsonResponse
     {
         $invoice->load(['customer', 'commission', 'currentAccount', 'user']);
+
         return response()->json($invoice);
     }
 
@@ -116,6 +118,7 @@ class InvoiceController
     public function pdf(Invoice $invoice): JsonResponse
     {
         $data = $this->invoiceService->getInvoicePdfData($invoice);
+
         return response()->json($data);
     }
 
@@ -181,7 +184,7 @@ class InvoiceController
             caption: $validated['message'] ?? null,
         );
 
-        if (!$sent) {
+        if (! $sent) {
             return response()->json([
                 'error' => $this->whatsAppService->getLastError() ?: 'Error al enviar WhatsApp',
             ], 500);
@@ -196,7 +199,7 @@ class InvoiceController
 
         $result = $this->arcaService->consultarContribuyente($cuit);
 
-        if (!$result) {
+        if (! $result) {
             return response()->json(['error' => 'No se encontró el contribuyente'], 404);
         }
 

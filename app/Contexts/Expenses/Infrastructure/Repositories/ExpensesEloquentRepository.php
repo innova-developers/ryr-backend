@@ -8,7 +8,6 @@ use App\Contexts\Expenses\Application\DTOs\UpdateExpenseDTO;
 use App\Contexts\Expenses\Domain\Repositories\ExpensesRepository;
 use App\Shared\Enums\UserRole;
 use App\Shared\Models\Expense;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 
 class ExpensesEloquentRepository implements ExpensesRepository

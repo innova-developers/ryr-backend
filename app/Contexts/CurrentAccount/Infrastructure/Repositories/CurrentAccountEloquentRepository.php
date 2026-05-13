@@ -6,11 +6,11 @@ use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Application\DTO\CurrentAccountFilterDTO;
 use App\Contexts\CurrentAccount\Application\DTO\UpdateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
-use App\Shared\Enums\CurrentAccountStatus;
 use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\CurrentAccountStatus;
+use App\Shared\Models\Commission;
 use App\Shared\Models\CurrentAccount;
 use App\Shared\Models\Customer;
-use App\Shared\Models\Commission;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 
@@ -69,6 +69,7 @@ class CurrentAccountEloquentRepository implements CurrentAccountRepository
         // que el orden lógico por transaction_date sea el que determina el balance acumulado.
         if ($dto->type === 'debit') {
             $this->recalculateBalances($dto->customerId);
+
             return $currentAccount->fresh();
         }
 
@@ -195,7 +196,7 @@ class CurrentAccountEloquentRepository implements CurrentAccountRepository
     {
         $transaction = $this->findById($id);
 
-        if (!$transaction) {
+        if (! $transaction) {
             throw new \Exception('Transacción no encontrada');
         }
 
@@ -212,8 +213,8 @@ class CurrentAccountEloquentRepository implements CurrentAccountRepository
         // Cambiar el estado a OK y guardar quién verificó
         // Intentar obtener el usuario autenticado, si no existe, usar internal_user_id del customer
         $userId = Auth::id();
-        
-        if (!$userId) {
+
+        if (! $userId) {
             // Si no hay usuario autenticado, usar el internal_user_id del customer asociado
             $customer = Customer::find($transaction->customer_id);
             if ($customer && $customer->internal_user_id) {
@@ -222,7 +223,7 @@ class CurrentAccountEloquentRepository implements CurrentAccountRepository
                 throw new \Exception('Usuario no autenticado y el cliente no tiene internal_user_id asignado');
             }
         }
-        
+
         $transaction->update([
             'status' => CurrentAccountStatus::OK,
             'verified_by_user_id' => $userId,
@@ -237,7 +238,7 @@ class CurrentAccountEloquentRepository implements CurrentAccountRepository
         $customerBalance = $this->getCustomerBalance($transaction->customer_id);
         if ($customerBalance == 0) {
             Customer::where('id', $transaction->customer_id)->update(['internal_user_id' => null]);
-            
+
             // Marcar solo las comisiones en estado PAGO_VALIDACION como PAGO_CONFIRMADO
             Commission::where('client_id', $transaction->customer_id)
                 ->where('status', CommissionStatus::PAGO_VALIDACION->value)

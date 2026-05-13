@@ -19,7 +19,7 @@ enum CommissionStatus: string
     case EN_PROCESO_ENTREGA = 'EN_PROCESO_ENTREGA';
     case ENTREGADO = 'ENTREGADO';
     case RETIRADO_SUCURSAL = 'RETIRADO_SUCURSAL';
-    
+
     // Estados de incidencia
     case INTENTO_ENTREGA_FALLIDO = 'INTENTO_ENTREGA_FALLIDO';
     case INTENTO_RETIRO_FALLIDO = 'INTENTO_RETIRO_FALLIDO';
@@ -29,7 +29,7 @@ enum CommissionStatus: string
     case DEVUELTO_REMITENTE = 'DEVUELTO_REMITENTE';
     case CANCELADO = 'CANCELADO';
     case EN_ANALISIS = 'EN_ANALISIS';
-    
+
     // Estados de pago (para landing de usuario)
     case PENDIENTE_PAGO = 'PENDIENTE_PAGO';
     case PAGO_VALIDACION = 'PAGO_VALIDACION';
@@ -53,7 +53,7 @@ enum CommissionStatus: string
             self::EN_PROCESO_ENTREGA => 'En proceso de entrega',
             self::ENTREGADO => 'Entregado',
             self::RETIRADO_SUCURSAL => 'Retirado en sucursal',
-            
+
             // Estados de incidencia que puede reportar el cadete
             self::INTENTO_ENTREGA_FALLIDO => 'Intento de entrega fallido',
             self::INTENTO_RETIRO_FALLIDO => 'Intento de retiro fallido',
@@ -61,9 +61,9 @@ enum CommissionStatus: string
             self::DISPONIBLE_RETIRO => 'Disponible para retiro en sucursal',
             self::EN_DEVOLUCION => 'En devolución al remitente',
             self::DEVUELTO_REMITENTE => 'Devuelto al remitente',
-            
+
             // Estados administrativos (ocultos para cadete)
-            self::SOLICITUD_RECIBIDA, self::BUSCANDO_CADETE, 
+            self::SOLICITUD_RECIBIDA, self::BUSCANDO_CADETE,
             self::PENDIENTE_PAGO, self::PAGO_VALIDACION, self::PAGO_CONFIRMADO,
             self::EN_SUCURSAL_DESTINO, self::CANCELADO, self::EN_ANALISIS => 'En proceso',
             self::EN_SUCURSAL => 'En sucursal',
@@ -93,7 +93,7 @@ enum CommissionStatus: string
             self::EN_PROCESO_ENTREGA => 'En proceso de entrega',
             self::ENTREGADO => 'Entregado',
             self::RETIRADO_SUCURSAL => 'Retirado en sucursal',
-            
+
             // Estados de incidencia
             self::INTENTO_ENTREGA_FALLIDO => 'Intento de entrega fallido',
             self::INTENTO_RETIRO_FALLIDO => 'Intento de retiro fallido',
@@ -130,7 +130,7 @@ enum CommissionStatus: string
             self::EN_PROCESO_ENTREGA => 'En proceso de entrega',
             self::ENTREGADO => 'Entregado',
             self::RETIRADO_SUCURSAL => 'Retirado en sucursal',
-            
+
             // Estados de incidencia
             self::INTENTO_ENTREGA_FALLIDO => 'Intento de entrega fallido',
             self::INTENTO_RETIRO_FALLIDO => 'Intento de retiro fallido',
@@ -170,7 +170,7 @@ enum CommissionStatus: string
             'En proceso de entrega' => self::EN_PROCESO_ENTREGA,
             'Entregado' => self::ENTREGADO,
             'Retirado en sucursal' => self::RETIRADO_SUCURSAL,
-            
+
             // Estados de incidencia que puede reportar el cadete
             'Intento de entrega fallido' => self::INTENTO_ENTREGA_FALLIDO,
             'Intento de retiro fallido' => self::INTENTO_RETIRO_FALLIDO,
@@ -180,7 +180,7 @@ enum CommissionStatus: string
             'Devuelto al remitente' => self::DEVUELTO_REMITENTE,
             'En sucursal' => self::EN_SUCURSAL,
             'En planta' => self::EN_PLANTA,
-            
+
         };
     }
 
@@ -241,7 +241,7 @@ enum CommissionStatus: string
             self::ENTREGADO,
             self::RETIRADO_SUCURSAL,
             self::DEVUELTO_REMITENTE,
-            self::CANCELADO
+            self::CANCELADO,
         ]);
     }
 

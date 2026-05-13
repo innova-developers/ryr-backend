@@ -19,7 +19,7 @@ class TestNominatimGeocoding extends Command
         $this->newLine();
 
         $nominatimService = new NominatimService();
-        
+
         $startTime = microtime(true);
         $coordinates = $nominatimService->getCoordinates($address, $city);
         $endTime = microtime(true);
@@ -39,4 +39,3 @@ class TestNominatimGeocoding extends Command
         }
     }
 }
-

@@ -16,7 +16,7 @@ class CreateCustomerUseCase
         private readonly CustomerRepository $repository,
         private readonly LocationsRepository $locationsRepository,
         private readonly DestinationRepository $destinationRepository
-        ) {
+    ) {
     }
 
     public function __invoke(CreateCustomerDTO $dto): Customer

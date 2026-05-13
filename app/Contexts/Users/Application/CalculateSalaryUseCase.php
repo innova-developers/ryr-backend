@@ -41,14 +41,17 @@ class CalculateSalaryUseCase
             case 'per_pickup':
                 $baseSalary = 0;
                 $commissionAmount = $commissionsCount * ($user->payment_per_pickup ?? 0);
+
                 break;
             case 'fixed_plus_commission':
                 $baseSalary = $user->base_salary ?? 0;
                 $commissionAmount = $commissionsTotal * ($user->commission_percentage / 100);
+
                 break;
             case 'fixed_salary':
                 $baseSalary = $user->base_salary ?? 0;
                 $commissionAmount = 0;
+
                 break;
         }
 

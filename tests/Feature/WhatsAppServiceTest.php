@@ -95,7 +95,7 @@ class WhatsAppServiceTest extends TestCase
         $reflection = new \ReflectionClass($this->whatsappService);
         $method = $reflection->getMethod($methodName);
         $method->setAccessible(true);
-        
+
         return $method->invokeArgs($this->whatsappService, $parameters);
     }
 }

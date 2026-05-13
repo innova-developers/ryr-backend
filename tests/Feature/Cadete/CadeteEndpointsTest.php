@@ -9,7 +9,6 @@ use App\Shared\Models\Commission;
 use App\Shared\Models\Customer;
 use App\Shared\Models\Destination;
 use App\Shared\Models\Location;
-use App\Shared\Models\ShipmentLocation;
 use App\Shared\Models\Transport;
 use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,7 +32,7 @@ class CadeteEndpointsTest extends TestCase
 
         // Crear datos de prueba
         $this->branch = Branch::factory()->create();
-        
+
         $this->cadete = User::factory()->create([
             'role' => UserRole::CADETE,
             'branch_id' => $this->branch->id,
@@ -94,8 +93,8 @@ class CadeteEndpointsTest extends TestCase
                             'phone',
                             'insurance',
                             'usage',
-                        ]
-                    ]
+                        ],
+                    ],
                 ])
                 ->assertJsonPath('cadete.id', $this->cadete->id)
                 ->assertJsonPath('cadete.role', UserRole::CADETE->value)
@@ -121,7 +120,7 @@ class CadeteEndpointsTest extends TestCase
         $response->assertStatus(403)
                 ->assertJson([
                     'message' => 'Acceso denegado. Solo cadetes y cadetes externos pueden acceder a esta funcionalidad.',
-                    'user_role' => UserRole::ADMINISTRADOR->value
+                    'user_role' => UserRole::ADMINISTRADOR->value,
                 ]);
     }
 
@@ -153,11 +152,11 @@ class CadeteEndpointsTest extends TestCase
                             'origin',
                             'destination',
                             'items',
-                            'transport'
-                        ]
+                            'transport',
+                        ],
                     ],
                     'total',
-                    'filters'
+                    'filters',
                 ])
                 ->assertJsonPath('shipments.0.id', $this->commission->id)
                 ->assertJsonPath('shipments.0.status', CommissionStatus::SOLICITUD_RECIBIDA->value);
@@ -201,7 +200,7 @@ class CadeteEndpointsTest extends TestCase
                 ->assertJson([
                     'success' => true,
                     'message' => 'No tienes transportes asignados',
-                    'shipments' => []
+                    'shipments' => [],
                 ]);
     }
 
@@ -222,8 +221,8 @@ class CadeteEndpointsTest extends TestCase
                         'id',
                         'status',
                         'status_label',
-                        'updated_at'
-                    ]
+                        'updated_at',
+                    ],
                 ])
                 ->assertJsonPath('shipment.status', 'EN_TRANSITO_DESTINO');
 
@@ -239,7 +238,7 @@ class CadeteEndpointsTest extends TestCase
         // Crear otro cadete con otro transporte
         $otherCadete = User::factory()->create(['role' => UserRole::CADETE]);
         $otherTransport = Transport::factory()->create(['cadete_id' => $otherCadete->id]);
-        
+
         // Crear comisión asignada al otro transporte
         $otherCommission = Commission::factory()->create([
             'transport_id' => $otherTransport->id,
@@ -254,7 +253,7 @@ class CadeteEndpointsTest extends TestCase
 
         $response->assertStatus(404)
                 ->assertJson([
-                    'message' => 'Envío no encontrado o no tienes permisos para modificarlo'
+                    'message' => 'Envío no encontrado o no tienes permisos para modificarlo',
                 ]);
     }
 
@@ -281,13 +280,13 @@ class CadeteEndpointsTest extends TestCase
                         'longitude',
                         'address',
                         'observation',
-                        'recorded_at'
-                    ]
+                        'recorded_at',
+                    ],
                 ])
-                ->assertJsonPath('location.latitude', function($value) use ($locationData) {
+                ->assertJsonPath('location.latitude', function ($value) use ($locationData) {
                     return abs($value - $locationData['latitude']) < 0.0001;
                 })
-                ->assertJsonPath('location.longitude', function($value) use ($locationData) {
+                ->assertJsonPath('location.longitude', function ($value) use ($locationData) {
                     return abs($value - $locationData['longitude']) < 0.0001;
                 });
 
@@ -318,7 +317,7 @@ class CadeteEndpointsTest extends TestCase
 
         $response->assertStatus(404)
                 ->assertJson([
-                    'message' => 'Envío no encontrado o no tienes permisos para enviar ubicación'
+                    'message' => 'Envío no encontrado o no tienes permisos para enviar ubicación',
                 ]);
     }
 
@@ -334,23 +333,23 @@ class CadeteEndpointsTest extends TestCase
                     'stats' => [
                         'period' => [
                             'start_date',
-                            'end_date'
+                            'end_date',
                         ],
                         'totals' => [
                             'shipments',
                             'revenue',
                             'delivered',
-                            'delivery_rate'
+                            'delivery_rate',
                         ],
                         'by_status' => [
                             'pendiente',
                             'en_transito',
                             'entregado',
-                            'cancelado'
+                            'cancelado',
                         ],
                         'daily_shipments',
-                        'transports'
-                    ]
+                        'transports',
+                    ],
                 ]);
     }
 

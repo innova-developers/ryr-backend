@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Log;
 
 class CampaignService
 {
-    public function __construct(private WhatsAppService $whatsAppService) {}
+    public function __construct(private WhatsAppService $whatsAppService)
+    {
+    }
 
     public function getSegmentedCustomers(array $filters, ?int $franchiseId = null): Collection
     {
@@ -21,7 +23,7 @@ class CampaignService
             $query->where('franchise_id', $franchiseId);
         }
 
-        if (!empty($filters['city'])) {
+        if (! empty($filters['city'])) {
             $query->where('city', 'LIKE', '%' . $filters['city'] . '%');
         }
 
@@ -29,51 +31,51 @@ class CampaignService
             $query->where('is_premium', $filters['is_premium'] === 'true' || $filters['is_premium'] === true);
         }
 
-        if (!empty($filters['iva_status'])) {
+        if (! empty($filters['iva_status'])) {
             $query->where('iva_status', $filters['iva_status']);
         }
 
-        if (!empty($filters['has_mobile'])) {
+        if (! empty($filters['has_mobile'])) {
             $query->where(function ($q) {
                 $q->where(fn ($q2) => $q2->whereNotNull('mobile')->where('mobile', '!=', ''))
                   ->orWhere(fn ($q2) => $q2->whereNotNull('phone')->where('phone', '!=', ''));
             });
         }
 
-        if (!empty($filters['has_email'])) {
+        if (! empty($filters['has_email'])) {
             $query->whereNotNull('email')->where('email', '!=', '');
         }
 
-        if (!empty($filters['branch_id'])) {
+        if (! empty($filters['branch_id'])) {
             $query->where('branch_id', (int) $filters['branch_id']);
         }
 
-        if (!empty($filters['internal_user_id'])) {
+        if (! empty($filters['internal_user_id'])) {
             $query->where('internal_user_id', (int) $filters['internal_user_id']);
         }
 
-        if (!empty($filters['min_commissions'])) {
+        if (! empty($filters['min_commissions'])) {
             $minCount = (int) $filters['min_commissions'];
             $query->whereHas('commissions', null, '>=', $minCount);
         }
 
-        if (!empty($filters['min_balance'])) {
+        if (! empty($filters['min_balance'])) {
             $query->whereHas('currentAccounts', function ($q) use ($filters) {
                 $q->havingRaw('SUM(amount) >= ?', [(float) $filters['min_balance']]);
             });
         }
 
-        if (!empty($filters['max_balance'])) {
+        if (! empty($filters['max_balance'])) {
             $query->whereHas('currentAccounts', function ($q) use ($filters) {
                 $q->havingRaw('SUM(amount) <= ?', [(float) $filters['max_balance']]);
             });
         }
 
-        if (!empty($filters['created_after'])) {
+        if (! empty($filters['created_after'])) {
             $query->where('created_at', '>=', $filters['created_after']);
         }
 
-        if (!empty($filters['created_before'])) {
+        if (! empty($filters['created_before'])) {
             $query->where('created_at', '<=', $filters['created_before']);
         }
 
@@ -87,7 +89,7 @@ class CampaignService
             $campaign->franchise_id
         );
 
-        $eligible = $customers->filter(fn ($c) => !empty($c->mobile) || !empty($c->phone));
+        $eligible = $customers->filter(fn ($c) => ! empty($c->mobile) || ! empty($c->phone));
 
         return [
             'total_customers' => $customers->count(),
@@ -110,9 +112,9 @@ class CampaignService
             $campaign->franchise_id
         );
 
-        $eligible = $customers->filter(fn ($c) => !empty($c->mobile) || !empty($c->phone));
+        $eligible = $customers->filter(fn ($c) => ! empty($c->mobile) || ! empty($c->phone));
         $delayMs = max(500, $campaign->message_delay_ms ?? 1000);
-        $hasImage = !empty($campaign->image_url);
+        $hasImage = ! empty($campaign->image_url);
 
         $campaign->update([
             'status' => CampaignStatus::SENDING,
@@ -125,18 +127,19 @@ class CampaignService
         $isFirst = true;
 
         foreach ($eligible as $customer) {
-            if (!$isFirst) {
+            if (! $isFirst) {
                 usleep($delayMs * 1000);
             }
             $isFirst = false;
 
-            if (!$this->isWithinSendWindow($campaign)) {
+            if (! $this->isWithinSendWindow($campaign)) {
                 Log::info('Campaign paused: outside send window', ['campaign_id' => $campaign->id]);
+
                 break;
             }
 
             $message = $this->renderMessage($campaign->message_template, $customer);
-            $sendPhone = !empty($customer->mobile) ? $customer->mobile : $customer->phone;
+            $sendPhone = ! empty($customer->mobile) ? $customer->mobile : $customer->phone;
 
             if ($hasImage) {
                 $sent = $this->whatsAppService->sendFileByUrl($sendPhone, $campaign->image_url, $message);
@@ -179,7 +182,7 @@ class CampaignService
 
     private function isWithinSendWindow(WhatsAppCampaign $campaign): bool
     {
-        if (!$campaign->send_time_start && !$campaign->send_time_end) {
+        if (! $campaign->send_time_start && ! $campaign->send_time_end) {
             return true;
         }
 
@@ -198,7 +201,7 @@ class CampaignService
 
     public function renderMessage(string $template, ?Customer $customer): string
     {
-        if (!$customer) {
+        if (! $customer) {
             return $template;
         }
 

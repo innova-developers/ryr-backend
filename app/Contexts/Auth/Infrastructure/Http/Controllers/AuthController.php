@@ -23,17 +23,17 @@ class AuthController extends Controller
         } catch (InvalidScopeException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
-                'error' => 'scope_validation_failed'
+                'error' => 'scope_validation_failed',
             ], 403);
         } catch (\InvalidArgumentException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
-                'error' => 'invalid_credentials'
+                'error' => 'invalid_credentials',
             ], 401);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Error interno del servidor',
-                'error' => 'internal_error'
+                'error' => 'internal_error',
             ], 500);
         }
     }

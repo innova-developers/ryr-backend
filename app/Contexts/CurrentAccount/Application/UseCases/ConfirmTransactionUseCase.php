@@ -17,4 +17,3 @@ class ConfirmTransactionUseCase
         return $this->repository->confirmTransaction($id);
     }
 }
-

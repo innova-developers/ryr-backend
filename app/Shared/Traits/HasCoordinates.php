@@ -43,19 +43,19 @@ trait HasCoordinates
             if ($coordinates) {
                 $this->latitude = $coordinates['latitude'];
                 $this->longitude = $coordinates['longitude'];
-                
+
                 Log::info('Coordinates calculated for location', [
                     'location_id' => $this->id,
                     'address' => $this->address,
                     'origin' => $this->origin,
                     'latitude' => $this->latitude,
-                    'longitude' => $this->longitude
+                    'longitude' => $this->longitude,
                 ]);
             } else {
                 Log::warning('Could not calculate coordinates for location', [
                     'location_id' => $this->id,
                     'address' => $this->address,
-                    'origin' => $this->origin
+                    'origin' => $this->origin,
                 ]);
             }
         } catch (\Exception $e) {
@@ -63,7 +63,7 @@ trait HasCoordinates
                 'location_id' => $this->id,
                 'address' => $this->address,
                 'origin' => $this->origin,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -76,7 +76,7 @@ trait HasCoordinates
         if ($this->latitude && $this->longitude) {
             return [
                 'latitude' => $this->latitude,
-                'longitude' => $this->longitude
+                'longitude' => $this->longitude,
             ];
         }
 
@@ -88,6 +88,6 @@ trait HasCoordinates
      */
     public function hasCoordinates(): bool
     {
-        return !is_null($this->latitude) && !is_null($this->longitude);
+        return ! is_null($this->latitude) && ! is_null($this->longitude);
     }
 }

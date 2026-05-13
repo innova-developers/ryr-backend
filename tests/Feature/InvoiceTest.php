@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Services\ArcaService;
 use App\Services\WhatsAppService;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\InvoiceType;

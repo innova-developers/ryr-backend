@@ -43,6 +43,7 @@ class IvaReportController extends Controller
             ->get()
             ->map(function ($item) {
                 $type = InvoiceType::tryFrom($item->tipo_comprobante);
+
                 return [
                     'tipo_comprobante' => $item->tipo_comprobante,
                     'label' => $type?->label() ?? 'Desconocido',
@@ -127,6 +128,7 @@ class IvaReportController extends Controller
             ->get()
             ->map(function ($inv) {
                 $type = InvoiceType::tryFrom($inv->tipo_comprobante);
+
                 return [
                     'id' => $inv->id,
                     'type_label' => $type?->shortLabel() ?? '?',

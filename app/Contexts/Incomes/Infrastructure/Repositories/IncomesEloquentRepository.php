@@ -34,6 +34,7 @@ class IncomesEloquentRepository implements IncomesRepository
             ->when($filterDTO->userId, fn ($q) => $q->where('user_id', $filterDTO->userId))
             ->when($filterDTO->search, function ($q) use ($filterDTO) {
                 $searchTerm = '%' . $filterDTO->search . '%';
+
                 return $q->where(function ($query) use ($searchTerm) {
                     $query->where('detail', 'LIKE', $searchTerm)
                         ->orWhere('amount', 'LIKE', $searchTerm)

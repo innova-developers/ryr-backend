@@ -20,7 +20,7 @@ class LoginUseCase
         if (! Auth::attempt($loginDTO->getCredentials())) {
             throw new \InvalidArgumentException('Credenciales inválidas');
         }
-        
+
         $user = Auth::user();
         if (! $user) {
             throw new \RuntimeException('No se pudo obtener el usuario autenticado');
@@ -28,7 +28,7 @@ class LoginUseCase
 
         // Validar scope según el rol del usuario
         $this->validateUserScope($user->role, $loginDTO->scope);
-        
+
         $token = $user->createToken('Personal Access Token')->plainTextToken;
 
         return LoginMapper::map($user, $token);
@@ -42,23 +42,25 @@ class LoginUseCase
         switch ($scope) {
             case 'web':
                 // Permitir acceso a administradores, mostradores y cadetes
-                if (!in_array($userRole, [
-                    UserRole::ADMINISTRADOR, 
-                    UserRole::MOSTRADOR, 
+                if (! in_array($userRole, [
+                    UserRole::ADMINISTRADOR,
+                    UserRole::MOSTRADOR,
                     UserRole::CADETE,
                     UserRole::CADETE_EXTERNO,
-                    UserRole::COBRADOR
+                    UserRole::COBRADOR,
                 ])) {
                     throw new InvalidScopeException($userRole->value, $scope);
                 }
+
                 break;
-                
+
             case 'app':
-                if (!in_array($userRole, [UserRole::CADETE, UserRole::CADETE_EXTERNO])) {
+                if (! in_array($userRole, [UserRole::CADETE, UserRole::CADETE_EXTERNO])) {
                     throw new InvalidScopeException($userRole->value, $scope);
                 }
+
                 break;
-                
+
             default:
                 throw new InvalidScopeException($userRole->value, $scope);
         }

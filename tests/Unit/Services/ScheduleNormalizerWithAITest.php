@@ -26,7 +26,7 @@ class ScheduleNormalizerWithAITest extends TestCase
 
         // Solo crear servicio con IA si hay API key configurada
         $apiKey = config('services.groq.api_key');
-        if (!empty($apiKey)) {
+        if (! empty($apiKey)) {
             $this->serviceWithAI = new ScheduleNormalizerService(new GroqAIClient($apiKey));
         }
     }
@@ -153,7 +153,7 @@ class ScheduleNormalizerWithAITest extends TestCase
                     ['high', 'medium', 'low'],
                     "Confidence should be high, medium or low"
                 );
-                
+
                 // Si la confianza es high, significa que regex lo parseó (no se usó IA)
                 // Si es medium o low, significa que se usó IA
                 if ($range['confidence'] === 'high') {
@@ -197,7 +197,7 @@ class ScheduleNormalizerWithAITest extends TestCase
         // Verificar que con IA se puede parsear
         $aiResult = $this->serviceWithAI->normalize($complexSchedule);
         $this->assertNotEmpty($aiResult['ranges'], 'AI should parse this complex format');
-        
+
         // Verificar estructura de los rangos
         foreach ($aiResult['ranges'] as $range) {
             $this->assertArrayHasKey('start', $range);
@@ -206,7 +206,7 @@ class ScheduleNormalizerWithAITest extends TestCase
             $this->assertMatchesRegularExpression('/^\d{2}:\d{2}$/', $range['start']);
             $this->assertMatchesRegularExpression('/^\d{2}:\d{2}$/', $range['end']);
         }
-        
+
         // Si regex puede parsearlo parcialmente, está bien. Lo importante es que IA también funcione
         // Verificar que el servicio con IA puede procesar formatos complejos
         $this->assertGreaterThanOrEqual(1, count($aiResult['ranges']), 'AI should find at least one range');
@@ -234,4 +234,3 @@ class ScheduleNormalizerWithAITest extends TestCase
         // Lo que importa es que la estructura sea válida y no haya errores
     }
 }
-

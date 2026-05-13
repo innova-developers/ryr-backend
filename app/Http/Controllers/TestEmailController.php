@@ -4,14 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Mail\CommissionStatusChangedMail;
 use App\Services\WhatsAppService;
+use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Commission;
 use App\Shared\Models\Customer;
-use App\Shared\Enums\CommissionStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class TestEmailController extends Controller
 {
@@ -28,8 +28,8 @@ class TestEmailController extends Controller
     {
         try {
             $email = $request->get('email');
-            
-            if (!$email) {
+
+            if (! $email) {
                 return response()->json([
                     'success' => false,
                     'message' => 'El parámetro email es requerido',
@@ -40,15 +40,15 @@ class TestEmailController extends Controller
             $commission = Commission::with(['originLocation', 'destinationLocation', 'client'])
                 ->first();
 
-            if (!$commission) {
+            if (! $commission) {
                 // Si no hay comisiones, crear datos de prueba
                 $commission = $this->createTestCommission();
                 $customer = $this->createTestCustomer($email);
             } else {
                 // Usar el cliente de la comisión o crear uno de prueba
                 $customer = $commission->client;
-                
-                if (!$customer) {
+
+                if (! $customer) {
                     $customer = $this->createTestCustomer($email);
                 } else {
                     // Crear una copia del cliente con el email de prueba
@@ -114,7 +114,7 @@ class TestEmailController extends Controller
         $commission->status = CommissionStatus::ENTREGADO;
         $commission->total = 1500.00;
         $commission->notes = 'Comisión de prueba para envío de email';
-        
+
         // Crear locations de prueba
         $originLocation = new \App\Shared\Models\Location();
         $originLocation->name = 'Cliente Prueba';
@@ -122,17 +122,17 @@ class TestEmailController extends Controller
         $originLocation->origin = 'Buenos Aires';
         $originLocation->phone = '+54 11 1234-5678';
         $originLocation->schedule = 'Lunes a Viernes 9:00 - 18:00';
-        
+
         $destinationLocation = new \App\Shared\Models\Location();
         $destinationLocation->name = 'Destino Prueba';
         $destinationLocation->address = 'Av. Santa Fe 5678';
         $destinationLocation->origin = 'Córdoba';
         $destinationLocation->phone = '+54 351 9876-5432';
         $destinationLocation->schedule = 'Lunes a Viernes 8:00 - 17:00';
-        
+
         $commission->setRelation('originLocation', $originLocation);
         $commission->setRelation('destinationLocation', $destinationLocation);
-        
+
         return $commission;
     }
 
@@ -149,7 +149,7 @@ class TestEmailController extends Controller
         $customer->dni = '12345678';
         $customer->phone = '+54 11 1234-5678';
         $customer->mobile = '+54 11 9876-5432';
-        
+
         return $customer;
     }
 
@@ -161,8 +161,8 @@ class TestEmailController extends Controller
     {
         try {
             $phone = $request->get('phone');
-            
-            if (!$phone) {
+
+            if (! $phone) {
                 return response()->json([
                     'success' => false,
                     'message' => 'El parámetro phone es requerido',
@@ -173,15 +173,15 @@ class TestEmailController extends Controller
             $commission = Commission::with(['originLocation', 'destinationLocation', 'client'])
                 ->first();
 
-            if (!$commission) {
+            if (! $commission) {
                 // Si no hay comisiones, crear datos de prueba
                 $commission = $this->createTestCommission();
                 $customer = $this->createTestCustomer('test@example.com');
             } else {
                 // Usar el cliente de la comisión o crear uno de prueba
                 $customer = $commission->client;
-                
-                if (!$customer) {
+
+                if (! $customer) {
                     $customer = $this->createTestCustomer('test@example.com');
                 } else {
                     // Crear una copia del cliente
@@ -244,4 +244,3 @@ class TestEmailController extends Controller
         }
     }
 }
-

@@ -3,14 +3,14 @@
 namespace Tests\Feature\Admin;
 
 use App\CadetePayment;
-use App\Shared\Models\User;
+use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\UserRole;
 use App\Shared\Models\Branch;
+use App\Shared\Models\Commission;
 use App\Shared\Models\Customer;
 use App\Shared\Models\Destination;
 use App\Shared\Models\Location;
-use App\Shared\Models\Commission;
-use App\Shared\Enums\UserRole;
-use App\Shared\Enums\CommissionStatus;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -37,14 +37,14 @@ class CadetePaymentControllerTest extends TestCase
         // Crear administrador
         $this->admin = User::factory()->create([
             'role' => UserRole::ADMINISTRADOR,
-            'branch_id' => $this->branch->id
+            'branch_id' => $this->branch->id,
         ]);
 
         // Crear cadete
         $this->cadete = User::factory()->create([
             'role' => UserRole::CADETE->value,
             'branch_id' => $this->branch->id,
-            'commission_percentage' => 25.0
+            'commission_percentage' => 25.0,
         ]);
 
 
@@ -55,18 +55,18 @@ class CadetePaymentControllerTest extends TestCase
         // Crear ubicaciones
         $this->originLocation = Location::factory()->create([
             'name' => 'Almacén Central',
-            'origin' => 'CABA'
+            'origin' => 'CABA',
         ]);
 
         $this->destinationLocation = Location::factory()->create([
             'name' => 'Oficina Norte',
-            'origin' => 'Zona Norte'
+            'origin' => 'Zona Norte',
         ]);
 
         // Crear destino
         $this->destination = Destination::factory()->create([
             'origin' => 'CABA',
-            'destination' => 'Zona Norte'
+            'destination' => 'Zona Norte',
         ]);
 
         Sanctum::actingAs($this->admin);
@@ -78,7 +78,7 @@ class CadetePaymentControllerTest extends TestCase
         // Crear algunos pagos de prueba
         CadetePayment::factory()->count(3)->create([
             'cadete_id' => $this->cadete->id,
-            'admin_id' => $this->admin->id
+            'admin_id' => $this->admin->id,
         ]);
 
         $response = $this->getJson('/api/admin/cadete-payments');
@@ -95,11 +95,11 @@ class CadetePaymentControllerTest extends TestCase
                     'period_start', 'period_end', 'description', 'notes',
                     'reference_number', 'transaction_id', 'paid_at', 'created_at', 'updated_at',
                     'cadete' => ['id', 'name', 'email'],
-                    'admin' => ['id', 'name', 'email']
-                ]
+                    'admin' => ['id', 'name', 'email'],
+                ],
             ],
             'pagination',
-            'filters'
+            'filters',
         ]);
 
         $this->assertCount(3, $response->json('data'));
@@ -117,7 +117,7 @@ class CadetePaymentControllerTest extends TestCase
             'destination_location_id' => $this->destinationLocation->id,
             'status' => CommissionStatus::ENTREGADO,
             'total' => 1000.00,
-            'date' => now()
+            'date' => now(),
         ]);
 
         $paymentData = [
@@ -132,7 +132,7 @@ class CadetePaymentControllerTest extends TestCase
             'period_end' => now()->endOfMonth()->format('Y-m-d'),
             'description' => 'Pago mensual de agosto',
             'notes' => 'Incluye bono por productividad',
-            'reference_number' => 'PAY-2025-08-001'
+            'reference_number' => 'PAY-2025-08-001',
         ];
 
         $response = $this->postJson('/api/admin/cadete-payments', $paymentData);
@@ -144,13 +144,13 @@ class CadetePaymentControllerTest extends TestCase
             'data' => [
                 'id', 'cadete_id', 'admin_id', 'payment_type', 'payment_method',
                 'base_salary', 'bonus_amount', 'deduction_amount', 'net_amount',
-                'status', 'payment_date', 'period_start', 'period_end'
-            ]
+                'status', 'payment_date', 'period_start', 'period_end',
+            ],
         ]);
 
         // Verificar que se calculó correctamente la comisión (25% de $1000 = $250)
         $this->assertEquals(250.00, $response->json('data.commission_amount'));
-        
+
         // Verificar que se calculó correctamente el monto neto
         $expectedNetAmount = 80000 + 250 + 10000 - 5000; // base + comisión + bono - deducción
         $this->assertEquals($expectedNetAmount, $response->json('data.net_amount'));
@@ -160,7 +160,7 @@ class CadetePaymentControllerTest extends TestCase
             'cadete_id' => $this->cadete->id,
             'admin_id' => $this->admin->id,
             'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
-            'status' => CadetePayment::STATUS_PENDING
+            'status' => CadetePayment::STATUS_PENDING,
         ]);
     }
 
@@ -169,7 +169,7 @@ class CadetePaymentControllerTest extends TestCase
     {
         $nonCadeteUser = User::factory()->create([
             'role' => UserRole::CLIENTE->value,
-            'branch_id' => $this->branch->id
+            'branch_id' => $this->branch->id,
         ]);
 
         $paymentData = [
@@ -187,7 +187,7 @@ class CadetePaymentControllerTest extends TestCase
         $response->assertStatus(400);
         $response->assertJson([
             'success' => false,
-            'message' => 'El usuario especificado no es un cadete'
+            'message' => 'El usuario especificado no es un cadete',
         ]);
     }
 
@@ -203,7 +203,7 @@ class CadetePaymentControllerTest extends TestCase
             'payment_date' => '2025-08-15',
             'period_start' => '2025-08-01',
             'period_end' => '2025-08-31',
-            'description' => 'Pago mensual agosto'
+            'description' => 'Pago mensual agosto',
         ];
 
         $firstResponse = $this->postJson('/api/admin/cadete-payments', $firstPaymentData);
@@ -223,7 +223,7 @@ class CadetePaymentControllerTest extends TestCase
             ->where('period_start', '2025-08-01 00:00:00')
             ->where('period_end', '2025-08-31 00:00:00')
             ->count();
-        
+
         $this->assertEquals(1, $existingPayments, 'Debe existir exactamente un pago para este período');
 
         // Intentar crear otro pago para el mismo período
@@ -242,7 +242,7 @@ class CadetePaymentControllerTest extends TestCase
         $response->assertStatus(400);
         $response->assertJson([
             'success' => false,
-            'message' => 'Ya existe un pago para este cadete en el período especificado'
+            'message' => 'Ya existe un pago para este cadete en el período especificado',
         ]);
     }
 
@@ -263,7 +263,7 @@ class CadetePaymentControllerTest extends TestCase
             'payment_date' => '2025-08-15',
             'period_start' => '2025-08-01',
             'period_end' => '2025-08-31',
-            'description' => 'Pago mensual agosto'
+            'description' => 'Pago mensual agosto',
         ]);
 
         $response = $this->getJson("/api/admin/cadete-payments/{$payment->id}");
@@ -274,8 +274,8 @@ class CadetePaymentControllerTest extends TestCase
             'data' => [
                 'id' => $payment->id,
                 'cadete_id' => $this->cadete->id,
-                'admin_id' => $this->admin->id
-            ]
+                'admin_id' => $this->admin->id,
+            ],
         ]);
     }
 
@@ -296,13 +296,13 @@ class CadetePaymentControllerTest extends TestCase
             'payment_date' => '2025-08-15',
             'period_start' => '2025-08-01',
             'period_end' => '2025-08-31',
-            'description' => 'Pago mensual agosto'
+            'description' => 'Pago mensual agosto',
         ]);
 
         $updateData = [
             'base_salary' => 90000.00,
             'bonus_amount' => 15000.00,
-            'description' => 'Pago actualizado'
+            'description' => 'Pago actualizado',
         ];
 
         $response = $this->putJson("/api/admin/cadete-payments/{$payment->id}", $updateData);
@@ -310,7 +310,7 @@ class CadetePaymentControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson([
             'success' => true,
-            'message' => 'Pago actualizado exitosamente'
+            'message' => 'Pago actualizado exitosamente',
         ]);
 
         // Verificar que se actualizó en la base de datos
@@ -318,7 +318,7 @@ class CadetePaymentControllerTest extends TestCase
             'id' => $payment->id,
             'base_salary' => 90000.00,
             'bonus_amount' => 15000.00,
-            'description' => 'Pago actualizado'
+            'description' => 'Pago actualizado',
         ]);
     }
 
@@ -340,11 +340,11 @@ class CadetePaymentControllerTest extends TestCase
             'period_start' => '2025-08-01',
             'period_end' => '2025-08-31',
             'description' => 'Pago mensual agosto',
-            'paid_at' => now()
+            'paid_at' => now(),
         ]);
 
         $updateData = [
-            'base_salary' => 90000.00
+            'base_salary' => 90000.00,
         ];
 
         $response = $this->putJson("/api/admin/cadete-payments/{$payment->id}", $updateData);
@@ -352,7 +352,7 @@ class CadetePaymentControllerTest extends TestCase
         $response->assertStatus(400);
         $response->assertJson([
             'success' => false,
-            'message' => 'No se puede editar un pago que ya ha sido pagado'
+            'message' => 'No se puede editar un pago que ya ha sido pagado',
         ]);
     }
 
@@ -373,7 +373,7 @@ class CadetePaymentControllerTest extends TestCase
             'payment_date' => '2025-08-15',
             'period_start' => '2025-08-01',
             'period_end' => '2025-08-31',
-            'description' => 'Pago mensual agosto'
+            'description' => 'Pago mensual agosto',
         ]);
 
         $response = $this->deleteJson("/api/admin/cadete-payments/{$payment->id}");
@@ -381,12 +381,12 @@ class CadetePaymentControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson([
             'success' => true,
-            'message' => 'Pago eliminado exitosamente'
+            'message' => 'Pago eliminado exitosamente',
         ]);
 
         // Verificar que se marcó como eliminado (SoftDeletes)
         $this->assertSoftDeleted('cadete_payments', [
-            'id' => $payment->id
+            'id' => $payment->id,
         ]);
     }
 
@@ -408,7 +408,7 @@ class CadetePaymentControllerTest extends TestCase
             'period_start' => '2025-08-01',
             'period_end' => '2025-08-31',
             'description' => 'Pago mensual agosto',
-            'paid_at' => now()
+            'paid_at' => now(),
         ]);
 
         $response = $this->deleteJson("/api/admin/cadete-payments/{$payment->id}");
@@ -416,7 +416,7 @@ class CadetePaymentControllerTest extends TestCase
         $response->assertStatus(400);
         $response->assertJson([
             'success' => false,
-            'message' => 'No se puede eliminar un pago que ya ha sido pagado'
+            'message' => 'No se puede eliminar un pago que ya ha sido pagado',
         ]);
     }
 
@@ -437,7 +437,7 @@ class CadetePaymentControllerTest extends TestCase
             'payment_date' => '2025-08-15',
             'period_start' => '2025-08-01',
             'period_end' => '2025-08-31',
-            'description' => 'Pago mensual agosto'
+            'description' => 'Pago mensual agosto',
         ]);
 
         $response = $this->patchJson("/api/admin/cadete-payments/{$payment->id}/mark-as-paid");
@@ -445,13 +445,13 @@ class CadetePaymentControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson([
             'success' => true,
-            'message' => 'Pago marcado como pagado exitosamente'
+            'message' => 'Pago marcado como pagado exitosamente',
         ]);
 
         // Verificar que se actualizó en la base de datos
         $this->assertDatabaseHas('cadete_payments', [
             'id' => $payment->id,
-            'status' => CadetePayment::STATUS_PAID
+            'status' => CadetePayment::STATUS_PAID,
         ]);
     }
 
@@ -472,7 +472,7 @@ class CadetePaymentControllerTest extends TestCase
             'payment_date' => '2025-08-15',
             'period_start' => '2025-08-01',
             'period_end' => '2025-08-31',
-            'description' => 'Pago mensual agosto'
+            'description' => 'Pago mensual agosto',
         ]);
 
         // Crear un archivo de prueba
@@ -481,13 +481,13 @@ class CadetePaymentControllerTest extends TestCase
         $response = $this->patchJson("/api/admin/cadete-payments/{$payment->id}/mark-as-paid", [
             'receipt' => $file,
             'transaction_id' => 'TXN123456',
-            'notes' => 'Pago realizado por transferencia bancaria'
+            'notes' => 'Pago realizado por transferencia bancaria',
         ]);
 
         $response->assertStatus(200);
         $response->assertJson([
             'success' => true,
-            'message' => 'Pago marcado como pagado exitosamente con comprobante adjunto'
+            'message' => 'Pago marcado como pagado exitosamente con comprobante adjunto',
         ]);
 
         // Verificar que se actualizó en la base de datos
@@ -495,7 +495,7 @@ class CadetePaymentControllerTest extends TestCase
             'id' => $payment->id,
             'status' => CadetePayment::STATUS_PAID,
             'payment_proof_filename' => 'comprobante.pdf',
-            'payment_proof_mime_type' => 'application/pdf'
+            'payment_proof_mime_type' => 'application/pdf',
         ]);
 
         // Verificar que el archivo se guardó
@@ -505,7 +505,7 @@ class CadetePaymentControllerTest extends TestCase
         $this->assertDatabaseHas('cadete_payments', [
             'id' => $payment->id,
             'transaction_id' => 'TXN123456',
-            'notes' => 'Pago realizado por transferencia bancaria'
+            'notes' => 'Pago realizado por transferencia bancaria',
         ]);
     }
 
@@ -526,14 +526,14 @@ class CadetePaymentControllerTest extends TestCase
             'payment_date' => '2025-08-15',
             'period_start' => '2025-08-01',
             'period_end' => '2025-08-31',
-            'description' => 'Pago mensual agosto'
+            'description' => 'Pago mensual agosto',
         ]);
 
         // Crear un archivo de prueba con tipo inválido
         $file = \Illuminate\Http\UploadedFile::fake()->create('documento.txt', 100, 'text/plain');
 
         $response = $this->patchJson("/api/admin/cadete-payments/{$payment->id}/mark-as-paid", [
-            'receipt' => $file
+            'receipt' => $file,
         ]);
 
         $response->assertStatus(422);
@@ -542,7 +542,7 @@ class CadetePaymentControllerTest extends TestCase
         // Verificar que el pago no se marcó como pagado
         $this->assertDatabaseHas('cadete_payments', [
             'id' => $payment->id,
-            'status' => CadetePayment::STATUS_PENDING
+            'status' => CadetePayment::STATUS_PENDING,
         ]);
     }
 
@@ -552,11 +552,11 @@ class CadetePaymentControllerTest extends TestCase
         // Crear un archivo real para el test
         $testFilePath = storage_path('app/public/payment_proofs/test_file.pdf');
         $testFileDir = dirname($testFilePath);
-        
-        if (!is_dir($testFileDir)) {
+
+        if (! is_dir($testFileDir)) {
             mkdir($testFileDir, 0755, true);
         }
-        
+
         // Crear un archivo PDF simple
         file_put_contents($testFilePath, '%PDF-1.4 test file');
 
@@ -610,7 +610,7 @@ class CadetePaymentControllerTest extends TestCase
             'payment_date' => '2025-08-15',
             'period_start' => '2025-08-01',
             'period_end' => '2025-08-31',
-            'description' => 'Pago mensual agosto'
+            'description' => 'Pago mensual agosto',
         ]);
 
         $response = $this->getJson("/api/admin/cadete-payments/{$payment->id}/download-proof");
@@ -618,7 +618,7 @@ class CadetePaymentControllerTest extends TestCase
         $response->assertStatus(404);
         $response->assertJson([
             'success' => false,
-            'message' => 'Este pago no tiene comprobante de pago'
+            'message' => 'Este pago no tiene comprobante de pago',
         ]);
     }
 
@@ -639,7 +639,7 @@ class CadetePaymentControllerTest extends TestCase
             'payment_date' => '2025-08-15',
             'period_start' => '2025-08-01',
             'period_end' => '2025-08-31',
-            'description' => 'Pago mensual agosto'
+            'description' => 'Pago mensual agosto',
         ]);
 
         $response = $this->patchJson("/api/admin/cadete-payments/{$payment->id}/mark-as-cancelled");
@@ -647,13 +647,13 @@ class CadetePaymentControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson([
             'success' => true,
-            'message' => 'Pago cancelado exitosamente'
+            'message' => 'Pago cancelado exitosamente',
         ]);
 
         // Verificar que se actualizó en la base de datos
         $this->assertDatabaseHas('cadete_payments', [
             'id' => $payment->id,
-            'status' => CadetePayment::STATUS_CANCELLED
+            'status' => CadetePayment::STATUS_CANCELLED,
         ]);
     }
 
@@ -674,7 +674,7 @@ class CadetePaymentControllerTest extends TestCase
             'payment_date' => '2025-08-15',
             'period_start' => '2025-08-01',
             'period_end' => '2025-08-31',
-            'description' => 'Pago mensual agosto'
+            'description' => 'Pago mensual agosto',
         ]);
 
         $response = $this->getJson("/api/admin/cadete-payments/cadete/{$this->cadete->id}");
@@ -706,10 +706,10 @@ class CadetePaymentControllerTest extends TestCase
                     'paid_at',
                     'created_at',
                     'updated_at',
-                ]
+                ],
             ],
             'pagination',
-            'cadete'
+            'cadete',
         ]);
 
         $this->assertCount(1, $response->json('data'));
@@ -723,19 +723,19 @@ class CadetePaymentControllerTest extends TestCase
         CadetePayment::factory()->count(2)->create([
             'cadete_id' => $this->cadete->id,
             'admin_id' => $this->admin->id,
-            'status' => CadetePayment::STATUS_PENDING
+            'status' => CadetePayment::STATUS_PENDING,
         ]);
 
         CadetePayment::factory()->count(3)->create([
             'cadete_id' => $this->cadete->id,
             'admin_id' => $this->admin->id,
-            'status' => CadetePayment::STATUS_PAID
+            'status' => CadetePayment::STATUS_PAID,
         ]);
 
         CadetePayment::factory()->create([
             'cadete_id' => $this->cadete->id,
             'admin_id' => $this->admin->id,
-            'status' => CadetePayment::STATUS_CANCELLED
+            'status' => CadetePayment::STATUS_CANCELLED,
         ]);
 
         $response = $this->getJson('/api/admin/cadete-payments/summary');
@@ -747,8 +747,8 @@ class CadetePaymentControllerTest extends TestCase
             'data' => [
                 'total_payments', 'total_amount', 'pending_payments', 'pending_amount',
                 'paid_payments', 'paid_amount', 'cancelled_payments', 'cancelled_amount',
-                'by_payment_type'
-            ]
+                'by_payment_type',
+            ],
         ]);
 
         $data = $response->json('data');
@@ -763,18 +763,18 @@ class CadetePaymentControllerTest extends TestCase
     {
         $otherCadete = User::factory()->create([
             'role' => UserRole::CADETE->value,
-            'branch_id' => $this->branch->id
+            'branch_id' => $this->branch->id,
         ]);
 
         // Crear pagos para ambos cadetes
         CadetePayment::factory()->count(2)->create([
             'cadete_id' => $this->cadete->id,
-            'admin_id' => $this->admin->id
+            'admin_id' => $this->admin->id,
         ]);
 
         CadetePayment::factory()->count(3)->create([
             'cadete_id' => $otherCadete->id,
-            'admin_id' => $this->admin->id
+            'admin_id' => $this->admin->id,
         ]);
 
         $response = $this->getJson("/api/admin/cadete-payments?cadete_id={$this->cadete->id}");
@@ -802,7 +802,7 @@ class CadetePaymentControllerTest extends TestCase
                 'payment_date' => now()->subYears($i + 1)->format('Y-m-d'),
                 'period_start' => now()->subYears($i + 1)->startOfMonth()->format('Y-m-d'),
                 'period_end' => now()->subYears($i + 1)->endOfMonth()->format('Y-m-d'),
-                'description' => "Pago mensual {$i}"
+                'description' => "Pago mensual {$i}",
             ]);
         }
 
@@ -821,7 +821,7 @@ class CadetePaymentControllerTest extends TestCase
                 'payment_date' => now()->subYears($i + 4)->format('Y-m-d'),
                 'period_start' => now()->subYears($i + 4)->startOfMonth()->format('Y-m-d'),
                 'period_end' => now()->subYears($i + 4)->endOfMonth()->format('Y-m-d'),
-                'description' => "Pago mensual pagado {$i}"
+                'description' => "Pago mensual pagado {$i}",
             ]);
         }
 
@@ -837,13 +837,13 @@ class CadetePaymentControllerTest extends TestCase
         CadetePayment::factory()->count(2)->create([
             'cadete_id' => $this->cadete->id,
             'admin_id' => $this->admin->id,
-            'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY
+            'payment_type' => CadetePayment::PAYMENT_TYPE_MONTHLY,
         ]);
 
         CadetePayment::factory()->count(3)->create([
             'cadete_id' => $this->cadete->id,
             'admin_id' => $this->admin->id,
-            'payment_type' => CadetePayment::PAYMENT_TYPE_BONUS
+            'payment_type' => CadetePayment::PAYMENT_TYPE_BONUS,
         ]);
 
         $response = $this->getJson('/api/admin/cadete-payments?payment_type=monthly');
@@ -870,7 +870,7 @@ class CadetePaymentControllerTest extends TestCase
             'payment_date' => '2025-08-15',
             'period_start' => '2025-08-01',
             'period_end' => '2025-08-31',
-            'description' => 'Pago mensual actual'
+            'description' => 'Pago mensual actual',
         ]);
 
         $response = $this->getJson('/api/admin/cadete-payments?date_from=2025-07-01&date_to=2025-08-31');
@@ -986,7 +986,7 @@ class CadetePaymentControllerTest extends TestCase
     public function admin_can_calculate_cadete_payment()
     {
         $testDate = '2025-08-22';
-        
+
         // Crear comisiones para el cadete en el período especificado
         // Usar create() directamente para evitar problemas con el factory
         for ($i = 0; $i < 5; $i++) {
@@ -1000,7 +1000,7 @@ class CadetePaymentControllerTest extends TestCase
                 'cadete_id' => $this->cadete->id,
                 'status' => CommissionStatus::ENTREGADO->value,
                 'total' => 1000.00,
-                'date' => $testDate
+                'date' => $testDate,
             ]);
         }
 
@@ -1015,7 +1015,7 @@ class CadetePaymentControllerTest extends TestCase
                 'cadete_id' => $this->cadete->id,
                 'status' => CommissionStatus::CADETE_ASIGNADO->value,
                 'total' => 500.00,
-                'date' => $testDate
+                'date' => $testDate,
             ]);
         }
 
@@ -1025,7 +1025,7 @@ class CadetePaymentControllerTest extends TestCase
             'commissions_with_date' => Commission::where('cadete_id', $this->cadete->id)->where('date', $testDate)->count(),
             'all_commissions_dates' => Commission::where('cadete_id', $this->cadete->id)->pluck('date')->toArray(),
             'test_date' => $testDate,
-            'test_date_type' => gettype($testDate)
+            'test_date_type' => gettype($testDate),
         ]);
 
         $requestData = [
@@ -1034,16 +1034,16 @@ class CadetePaymentControllerTest extends TestCase
             'period_end' => $testDate,
             'base_salary' => 50000,
             'commission_percentage' => 15,
-            'income_percentage' => 10
+            'income_percentage' => 10,
         ];
 
         $response = $this->postJson('/api/admin/cadete-payments/calculate', $requestData);
 
         $response->assertStatus(200);
-        
+
         $data = $response->json('data');
         $contractType = $data['cadete_info']['contract_type'];
-        
+
         // Verificar estructura base
         $response->assertJsonStructure([
             'success',
@@ -1053,35 +1053,35 @@ class CadetePaymentControllerTest extends TestCase
                 'period_info' => ['period_start', 'period_end', 'days_count'],
                 'commissions_summary' => [
                     'total_commissions', 'delivered_commissions', 'pending_commissions',
-                    'total_commission_value', 'commission_amount'
+                    'total_commission_value', 'commission_amount',
                 ],
                 'calculated_amounts' => [
-                    'gross_total', 'net_amount'
-                ]
-            ]
+                    'gross_total', 'net_amount',
+                ],
+            ],
         ]);
-        
+
         // Verificar campos específicos según el tipo de contratación
         if ($contractType === 'fixed_salary') {
             $response->assertJsonStructure([
                 'data' => [
                     'cadete_info' => ['id', 'name', 'contract_type', 'contract_type_label', 'base_salary'],
-                    'calculated_amounts' => ['base_salary', 'commission_amount', 'gross_total', 'net_amount']
-                ]
+                    'calculated_amounts' => ['base_salary', 'commission_amount', 'gross_total', 'net_amount'],
+                ],
             ]);
         } elseif ($contractType === 'commission_based') {
             $response->assertJsonStructure([
                 'data' => [
                     'cadete_info' => ['id', 'name', 'contract_type', 'contract_type_label', 'commission_percentage'],
-                    'calculated_amounts' => ['commission_amount', 'gross_total', 'net_amount']
-                ]
+                    'calculated_amounts' => ['commission_amount', 'gross_total', 'net_amount'],
+                ],
             ]);
         }
-        
+
         // Verificar información del cadete
         $this->assertEquals($this->cadete->id, $data['cadete_info']['id']);
         $this->assertEquals($contractType, $data['cadete_info']['contract_type']);
-        
+
         // Verificar campos según el tipo de contratación
         if ($contractType === 'fixed_salary') {
             $this->assertEquals(50000, $data['cadete_info']['base_salary']);
@@ -1110,7 +1110,7 @@ class CadetePaymentControllerTest extends TestCase
         } elseif ($contractType === 'commission_based') {
             $this->assertEquals(975.00, $data['calculated_amounts']['gross_total']); // Solo comisión
         }
-        
+
         $this->assertEquals(0, $data['calculated_amounts']['deductions']);
         $this->assertEquals($data['calculated_amounts']['gross_total'], $data['calculated_amounts']['net_amount']);
     }
@@ -1123,22 +1123,22 @@ class CadetePaymentControllerTest extends TestCase
             'cadete_id' => $this->cadete->id,
             'status' => CommissionStatus::ENTREGADO,
             'total' => 2000.00,
-            'date' => now()->format('Y-m-d')
+            'date' => now()->format('Y-m-d'),
         ]);
 
         $requestData = [
             'cadete_id' => $this->cadete->id,
             'period_start' => now()->format('Y-m-d'),
-            'period_end' => now()->format('Y-m-d')
+            'period_end' => now()->format('Y-m-d'),
         ];
 
         $response = $this->postJson('/api/admin/cadete-payments/calculate', $requestData);
 
         $response->assertStatus(200);
-        
+
         $data = $response->json('data');
         $contractType = $data['cadete_info']['contract_type'];
-        
+
         // Verificar estructura base
         $response->assertJsonStructure([
             'success',
@@ -1148,29 +1148,29 @@ class CadetePaymentControllerTest extends TestCase
                 'period_info' => ['period_start', 'period_end', 'days_count'],
                 'commissions_summary' => [
                     'total_commissions', 'delivered_commissions', 'pending_commissions',
-                    'total_commission_value', 'commission_amount'
+                    'total_commission_value', 'commission_amount',
                 ],
                 'calculated_amounts' => [
-                    'gross_total', 'net_amount'
-                ]
-            ]
+                    'gross_total', 'net_amount',
+                ],
+            ],
         ]);
-        
+
         // Verificar campos específicos según el tipo de contratación
         if ($contractType === 'fixed_salary') {
             $response->assertJsonStructure([
                 'data' => [
                     'cadete_info' => ['id', 'name', 'contract_type', 'contract_type_label', 'base_salary'],
-                    'calculated_amounts' => ['base_salary', 'commission_amount', 'gross_total', 'net_amount']
-                ]
+                    'calculated_amounts' => ['base_salary', 'commission_amount', 'gross_total', 'net_amount'],
+                ],
             ]);
             $this->assertEquals($this->cadete->base_salary ?? 0, $data['cadete_info']['base_salary']);
         } elseif ($contractType === 'commission_based') {
             $response->assertJsonStructure([
                 'data' => [
                     'cadete_info' => ['id', 'name', 'contract_type', 'contract_type_label', 'commission_percentage'],
-                    'calculated_amounts' => ['commission_amount', 'gross_total', 'net_amount']
-                ]
+                    'calculated_amounts' => ['commission_amount', 'gross_total', 'net_amount'],
+                ],
             ]);
             $this->assertEquals($this->cadete->commission_percentage ?? 0, $data['cadete_info']['commission_percentage']);
         }
@@ -1186,7 +1186,7 @@ class CadetePaymentControllerTest extends TestCase
         $requestData = [
             'cadete_id' => 999, // ID inexistente
             'period_start' => now()->format('Y-m-d'),
-            'period_end' => now()->format('Y-m-d')
+            'period_end' => now()->format('Y-m-d'),
         ];
 
         $response = $this->postJson('/api/admin/cadete-payments/calculate', $requestData);
@@ -1201,7 +1201,7 @@ class CadetePaymentControllerTest extends TestCase
         $requestData = [
             'cadete_id' => $this->cadete->id,
             'period_start' => now()->format('Y-m-d'),
-            'period_end' => now()->subDay()->format('Y-m-d') // Fecha fin antes que inicio
+            'period_end' => now()->subDay()->format('Y-m-d'), // Fecha fin antes que inicio
         ];
 
         $response = $this->postJson('/api/admin/cadete-payments/calculate', $requestData);
@@ -1218,7 +1218,7 @@ class CadetePaymentControllerTest extends TestCase
             'period_start' => now()->format('Y-m-d'),
             'period_end' => now()->format('Y-m-d'),
             'commission_percentage' => 150, // Porcentaje inválido (> 100)
-            'income_percentage' => -10 // Porcentaje negativo
+            'income_percentage' => -10, // Porcentaje negativo
         ];
 
         $response = $this->postJson('/api/admin/cadete-payments/calculate', $requestData);
@@ -1233,13 +1233,13 @@ class CadetePaymentControllerTest extends TestCase
         // Crear un usuario que no sea cadete
         $nonCadeteUser = User::factory()->create([
             'role' => UserRole::ADMINISTRADOR,
-            'branch_id' => $this->branch->id
+            'branch_id' => $this->branch->id,
         ]);
 
         $requestData = [
             'cadete_id' => $nonCadeteUser->id,
             'period_start' => now()->format('Y-m-d'),
-            'period_end' => now()->format('Y-m-d')
+            'period_end' => now()->format('Y-m-d'),
         ];
 
         $response = $this->postJson('/api/admin/cadete-payments/calculate', $requestData);
@@ -1247,7 +1247,7 @@ class CadetePaymentControllerTest extends TestCase
         $response->assertStatus(400);
         $response->assertJson([
             'success' => false,
-            'message' => 'El usuario especificado no es un cadete'
+            'message' => 'El usuario especificado no es un cadete',
         ]);
     }
 
@@ -1259,7 +1259,7 @@ class CadetePaymentControllerTest extends TestCase
             'role' => UserRole::CADETE_EXTERNO->value,
             'branch_id' => $this->branch->id,
             'commission_percentage' => 20.0,
-            'contract_type' => 'commission_based'
+            'contract_type' => 'commission_based',
         ]);
 
         // Crear comisiones para el cadete externo
@@ -1267,24 +1267,24 @@ class CadetePaymentControllerTest extends TestCase
             'cadete_id' => $cadeteExterno->id,
             'status' => CommissionStatus::ENTREGADO,
             'total' => 1500.00,
-            'date' => now()->format('Y-m-d')
+            'date' => now()->format('Y-m-d'),
         ]);
 
         $requestData = [
             'cadete_id' => $cadeteExterno->id,
             'period_start' => now()->format('Y-m-d'),
-            'period_end' => now()->format('Y-m-d')
+            'period_end' => now()->format('Y-m-d'),
         ];
 
         $response = $this->postJson('/api/admin/cadete-payments/calculate', $requestData);
 
         $response->assertStatus(200);
-        
+
         $data = $response->json('data');
         $this->assertEquals($cadeteExterno->id, $data['cadete_info']['id']);
         $this->assertEquals('commission_based', $data['cadete_info']['contract_type']);
         $this->assertEquals(20.0, $data['cadete_info']['commission_percentage']);
-        
+
         // Verificar cálculo de comisión
         $expectedCommissionAmount = 3000.00 * (20.0 / 100);
         $this->assertEquals($expectedCommissionAmount, $data['commissions_summary']['commission_amount']);

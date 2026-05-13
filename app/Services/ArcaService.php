@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Shared\Enums\InvoiceType;
-use App\Shared\Models\Customer;
 use Exception;
 use Illuminate\Support\Facades\Log;
 
@@ -24,7 +23,7 @@ class ArcaService
         $this->mockMode = config('afip.mock_arca', true);
         $this->puntoVenta = (int) config('afip.punto_venta', 5);
 
-        if (!$this->mockMode) {
+        if (! $this->mockMode) {
             try {
                 $this->afip = new \Afip([
                     'CUIT' => $this->cuit,
@@ -37,6 +36,7 @@ class ArcaService
                 ]);
             } catch (Exception $e) {
                 Log::error('Error inicializando AFIP: ' . $e->getMessage());
+
                 throw $e;
             }
         }
@@ -47,6 +47,7 @@ class ArcaService
         $cae = str_pad((string) rand(10000000000000, 99999999999999), 14, '0', STR_PAD_LEFT);
         $dias = rand(7, 14);
         $vencimiento = date('Ymd', strtotime("+{$dias} days"));
+
         return ['cae' => $cae, 'vencimiento' => $vencimiento];
     }
 
@@ -79,8 +80,12 @@ class ArcaService
             $invoiceType = InvoiceType::tryFrom($tipoComprobante);
             $ivaId = 5; // 21% default
             $ivaRate = (float) ($datos['iva_rate'] ?? 21);
-            if ($ivaRate == 10.5) $ivaId = 4;
-            if ($ivaRate == 27) $ivaId = 6;
+            if ($ivaRate == 10.5) {
+                $ivaId = 4;
+            }
+            if ($ivaRate == 27) {
+                $ivaId = 6;
+            }
 
             $data = [
                 'CantReg' => 1,
@@ -115,6 +120,7 @@ class ArcaService
             if ($this->mockMode) {
                 $mock = $this->generarDatosMock();
                 Log::info("ARCA MOCK: Emitiendo comprobante tipo {$tipoComprobante}");
+
                 return [
                     'success' => true,
                     'cae' => $mock['cae'],
@@ -137,6 +143,7 @@ class ArcaService
             ];
         } catch (Exception $e) {
             Log::error('Error emitiendo comprobante ARCA: ' . $e->getMessage());
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -148,7 +155,9 @@ class ArcaService
     {
         try {
             $cuitLimpio = preg_replace('/[^0-9]/', '', $cuit);
-            if (strlen($cuitLimpio) < 11) return null;
+            if (strlen($cuitLimpio) < 11) {
+                return null;
+            }
 
             if ($this->mockMode) {
                 return [
@@ -159,29 +168,49 @@ class ArcaService
             }
 
             $persona = $this->getAfip()->RegisterScopeThirteen->GetTaxpayerDetails((int) $cuitLimpio);
-            if (!$persona) return null;
+            if (! $persona) {
+                return null;
+            }
 
             $razonSocial = $persona->razonSocial
                 ?? trim(($persona->apellido ?? '') . ', ' . ($persona->nombre ?? ''));
 
             $tipoResponsable = 'Consumidor Final';
-            if (!empty($persona->impuestos)) {
+            if (! empty($persona->impuestos)) {
                 $impuestos = is_array($persona->impuestos) ? $persona->impuestos : [$persona->impuestos];
                 foreach ($impuestos as $imp) {
                     $idImp = (int) ($imp->idImpuesto ?? 0);
-                    if (strtoupper($imp->estado ?? '') !== 'ACTIVO') continue;
-                    if ($idImp === 30) { $tipoResponsable = 'IVA Responsable Inscripto'; break; }
-                    if ($idImp === 32) { $tipoResponsable = 'IVA Exento'; break; }
-                    if ($idImp === 20) { $tipoResponsable = 'Monotributista'; break; }
+                    if (strtoupper($imp->estado ?? '') !== 'ACTIVO') {
+                        continue;
+                    }
+                    if ($idImp === 30) {
+                        $tipoResponsable = 'IVA Responsable Inscripto';
+
+                        break;
+                    }
+                    if ($idImp === 32) {
+                        $tipoResponsable = 'IVA Exento';
+
+                        break;
+                    }
+                    if ($idImp === 20) {
+                        $tipoResponsable = 'Monotributista';
+
+                        break;
+                    }
                 }
             }
 
             $domicilio = null;
-            if (!empty($persona->domicilio)) {
+            if (! empty($persona->domicilio)) {
                 $domicilios = is_array($persona->domicilio) ? $persona->domicilio : [$persona->domicilio];
                 $dom = null;
                 foreach ($domicilios as $d) {
-                    if (strtoupper($d->tipoDomicilio ?? '') === 'FISCAL') { $dom = $d; break; }
+                    if (strtoupper($d->tipoDomicilio ?? '') === 'FISCAL') {
+                        $dom = $d;
+
+                        break;
+                    }
                 }
                 $dom ??= $domicilios[0] ?? null;
                 if ($dom) {
@@ -194,6 +223,7 @@ class ArcaService
             return compact('razonSocial', 'tipoResponsable', 'domicilio');
         } catch (Exception $e) {
             Log::warning('Error consultando padrón ARCA: ' . $e->getMessage());
+
             return null;
         }
     }
@@ -205,7 +235,7 @@ class ArcaService
 
     private function getAfip(): \Afip
     {
-        if (!$this->afip) {
+        if (! $this->afip) {
             $this->afip = new \Afip([
                 'CUIT' => $this->cuit,
                 'production' => $this->production,
@@ -216,6 +246,7 @@ class ArcaService
                 'ta_folder' => __DIR__ . '/AFIP/Afip_res/',
             ]);
         }
+
         return $this->afip;
     }
 }

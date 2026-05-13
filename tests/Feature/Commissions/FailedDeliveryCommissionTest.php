@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Commissions;
 
-use App\Contexts\Commissions\Application\UpdateCommissionStatusUseCase;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Commission;
 use App\Shared\Models\Customer;

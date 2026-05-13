@@ -5,12 +5,12 @@ namespace App\Services;
 use App\Shared\Models\FcmToken;
 use App\Shared\Models\User;
 use Illuminate\Support\Facades\Log;
-use Kreait\Firebase\Factory;
-use Kreait\Firebase\Messaging\CloudMessage;
-use Kreait\Firebase\Messaging\Notification;
 use Kreait\Firebase\Exception\Messaging\InvalidArgument;
 use Kreait\Firebase\Exception\Messaging\NotFound;
 use Kreait\Firebase\Exception\Messaging\Unregistered;
+use Kreait\Firebase\Factory;
+use Kreait\Firebase\Messaging\CloudMessage;
+use Kreait\Firebase\Messaging\Notification;
 
 class FcmNotificationService
 {
@@ -20,16 +20,17 @@ class FcmNotificationService
     {
         try {
             $firebaseCredentialsPath = config('services.firebase.credentials_path');
-            
-            if (!$firebaseCredentialsPath || !file_exists($firebaseCredentialsPath)) {
+
+            if (! $firebaseCredentialsPath || ! file_exists($firebaseCredentialsPath)) {
                 Log::warning('Firebase credentials file not found', [
                     'path' => $firebaseCredentialsPath,
                 ]);
                 $this->messaging = null;
+
                 return;
             }
 
-            $factory = (new Factory)->withServiceAccount($firebaseCredentialsPath);
+            $factory = (new Factory())->withServiceAccount($firebaseCredentialsPath);
             $this->messaging = $factory->createMessaging();
         } catch (\Exception $e) {
             Log::error('Error inicializando Firebase Messaging', [
@@ -53,10 +54,11 @@ class FcmNotificationService
      */
     public function sendPushToUser(int $userId, array $payload): array
     {
-        if (!$this->messaging) {
+        if (! $this->messaging) {
             Log::warning('Firebase Messaging no está configurado, no se puede enviar notificación', [
                 'user_id' => $userId,
             ]);
+
             return [
                 'success' => false,
                 'message' => 'Firebase no está configurado',
@@ -72,6 +74,7 @@ class FcmNotificationService
                 'user_id' => $userId,
                 'payload' => $payload,
             ]);
+
             return [
                 'success' => false,
                 'message' => 'Título y cuerpo son requeridos',
@@ -90,6 +93,7 @@ class FcmNotificationService
             Log::info('Usuario no tiene tokens FCM activos', [
                 'user_id' => $userId,
             ]);
+
             return [
                 'success' => false,
                 'message' => 'Usuario no tiene tokens FCM registrados',
@@ -111,7 +115,7 @@ class FcmNotificationService
         foreach ($tokens as $token) {
             try {
                 $result = $this->sendToToken($token->fcm_token, $payload, $token->platform);
-                
+
                 if ($result['success']) {
                     $results['sent']++;
                     $token->markAsUsed();
@@ -148,7 +152,7 @@ class FcmNotificationService
         }
 
         $results['message'] = "Enviadas: {$results['sent']}, Fallidas: {$results['failed']}";
-        
+
         Log::info('Notificación FCM enviada a usuario', [
             'user_id' => $userId,
             'results' => $results,
@@ -219,6 +223,7 @@ class FcmNotificationService
                 'token' => substr($fcmToken, 0, 20) . '...',
                 'error' => $e->getMessage(),
             ]);
+
             return [
                 'success' => false,
                 'invalid_token' => true,
@@ -230,6 +235,7 @@ class FcmNotificationService
                 'token' => substr($fcmToken, 0, 20) . '...',
                 'error' => $e->getMessage(),
             ]);
+
             return [
                 'success' => false,
                 'invalid_token' => true,
@@ -241,6 +247,7 @@ class FcmNotificationService
                 'token' => substr($fcmToken, 0, 20) . '...',
                 'error' => $e->getMessage(),
             ]);
+
             return [
                 'success' => false,
                 'invalid_token' => false,
@@ -253,6 +260,7 @@ class FcmNotificationService
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return [
                 'success' => false,
                 'invalid_token' => false,
@@ -280,7 +288,7 @@ class FcmNotificationService
         foreach ($userIds as $userId) {
             $result = $this->sendPushToUser($userId, $payload);
             $results['details'][$userId] = $result;
-            
+
             if ($result['sent'] > 0) {
                 $results['successful']++;
             } else {
@@ -318,6 +326,7 @@ class FcmNotificationService
                 Log::info('No hay cadetes con tokens FCM activos para notificar', [
                     'branch_id' => $branchId,
                 ]);
+
                 return [
                     'total_users' => 0,
                     'successful' => 0,
@@ -332,6 +341,7 @@ class FcmNotificationService
                 'error' => $e->getMessage(),
                 'branch_id' => $branchId,
             ]);
+
             return [
                 'total_users' => 0,
                 'successful' => 0,
@@ -341,4 +351,3 @@ class FcmNotificationService
         }
     }
 }
-

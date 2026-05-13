@@ -2,14 +2,14 @@
 
 namespace Tests\Feature\Commissions;
 
-use App\Shared\Models\Commission;
-use App\Shared\Models\User;
-use App\Shared\Models\Customer;
-use App\Shared\Models\Branch;
-use App\Shared\Models\Destination;
-use App\Shared\Models\Location;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\UserRole;
+use App\Shared\Models\Branch;
+use App\Shared\Models\Commission;
+use App\Shared\Models\Customer;
+use App\Shared\Models\Destination;
+use App\Shared\Models\Location;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -94,9 +94,9 @@ class CommissionWithCadeteTest extends TestCase
                     'current_branch',
                     'cadete',
                     'items',
-                ]
+                ],
             ],
-            'meta'
+            'meta',
         ]);
 
         $commissionData = $response->json('data')[0];
@@ -134,7 +134,7 @@ class CommissionWithCadeteTest extends TestCase
                 'logs',
                 'created_at',
                 'updated_at',
-            ]
+            ],
         ]);
 
         $commissionData = $response->json('data');
@@ -184,7 +184,7 @@ class CommissionWithCadeteTest extends TestCase
 
         $response->assertStatus(200);
         $commissions = $response->json('data');
-        
+
         // Encontrar la comisión sin cadete
         $commissionData = collect($commissions)->firstWhere('id', $commissionWithoutCadete->id);
         $this->assertNotNull($commissionData);

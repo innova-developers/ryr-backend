@@ -14,7 +14,9 @@ use Illuminate\Support\Facades\Storage;
 
 class WhatsAppCampaignController extends Controller
 {
-    public function __construct(private CampaignService $campaignService) {}
+    public function __construct(private CampaignService $campaignService)
+    {
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -85,7 +87,7 @@ class WhatsAppCampaignController extends Controller
     {
         $campaign = WhatsAppCampaign::findOrFail($id);
 
-        if (!in_array($campaign->status, [CampaignStatus::DRAFT, CampaignStatus::SCHEDULED])) {
+        if (! in_array($campaign->status, [CampaignStatus::DRAFT, CampaignStatus::SCHEDULED])) {
             return response()->json(['message' => 'Solo se pueden editar campañas en borrador o programadas'], 422);
         }
 
@@ -152,7 +154,7 @@ class WhatsAppCampaignController extends Controller
     {
         $campaign = WhatsAppCampaign::findOrFail($id);
 
-        if (!in_array($campaign->status, [CampaignStatus::DRAFT, CampaignStatus::SCHEDULED])) {
+        if (! in_array($campaign->status, [CampaignStatus::DRAFT, CampaignStatus::SCHEDULED])) {
             return response()->json(['message' => 'Solo se pueden enviar campañas en borrador o programadas'], 422);
         }
 
@@ -203,7 +205,7 @@ class WhatsAppCampaignController extends Controller
         $filtersWithoutMobile = $filters;
         unset($filtersWithoutMobile['has_mobile']);
         $allCustomers = $this->campaignService->getSegmentedCustomers($filtersWithoutMobile, $franchiseId);
-        $eligible = $allCustomers->filter(fn ($c) => !empty($c->mobile) || !empty($c->phone));
+        $eligible = $allCustomers->filter(fn ($c) => ! empty($c->mobile) || ! empty($c->phone));
 
         $paginated = $allCustomers->slice(($page - 1) * $perPage, $perPage);
 
@@ -222,7 +224,7 @@ class WhatsAppCampaignController extends Controller
                 'city' => $c->city,
                 'email' => $c->email,
                 'is_premium' => $c->is_premium,
-                'has_phone' => !empty($c->mobile) || !empty($c->phone),
+                'has_phone' => ! empty($c->mobile) || ! empty($c->phone),
             ])->values(),
         ]);
     }

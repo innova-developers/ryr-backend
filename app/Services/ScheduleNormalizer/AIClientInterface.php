@@ -15,5 +15,3 @@ interface AIClientInterface
      */
     public function parseSchedule(string $rawSchedule): array;
 }
-
-

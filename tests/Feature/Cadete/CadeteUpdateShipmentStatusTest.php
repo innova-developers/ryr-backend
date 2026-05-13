@@ -2,19 +2,19 @@
 
 namespace Tests\Feature\Cadete;
 
+use App\DeliverySignature;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\CommissionType;
 use App\Shared\Enums\UserRole;
-use App\Shared\Models\CommissionLog;
 use App\Shared\Models\Branch;
 use App\Shared\Models\Commission;
+use App\Shared\Models\CommissionLog;
 use App\Shared\Models\CurrentAccount;
 use App\Shared\Models\Customer;
 use App\Shared\Models\Destination;
 use App\Shared\Models\Location;
 use App\Shared\Models\Transport;
 use App\Shared\Models\User;
-use App\DeliverySignature;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -37,27 +37,27 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Crear sucursal
         $this->branch = Branch::factory()->create([
             'name' => 'Sucursal Centro',
             'address' => 'Av. Principal 123',
             'phone' => '011-1234-5678',
         ]);
-        
+
         // Crear cadete
         $this->cadete = User::factory()->create([
             'role' => UserRole::CADETE,
             'branch_id' => $this->branch->id,
         ]);
-        
+
         // Crear transporte asignado al cadete
         $this->transport = Transport::factory()->create([
             'cadete_id' => $this->cadete->id,
             'plate' => 'ABC123',
             'description' => 'Moto Honda CG 150',
         ]);
-        
+
         // Crear cliente
         $this->client = Customer::factory()->create([
             'name' => 'Juan Pérez',
@@ -65,22 +65,22 @@ class CadeteUpdateShipmentStatusTest extends TestCase
             'phone' => '+1234567890',
             'address' => 'Av. Principal 123, Ciudad',
         ]);
-        
+
         // Crear ubicaciones
         $this->originLocation = Location::factory()->create([
             'name' => 'Almacén Central',
             'address' => 'Zona Industrial',
             'phone' => '+1234567891',
         ]);
-        
+
         $this->destinationLocation = Location::factory()->create([
             'name' => 'Oficina Cliente',
             'address' => 'Centro Comercial',
             'phone' => '+1234567892',
         ]);
-        
+
         $this->destination = Destination::factory()->create();
-        
+
         // Crear comisión (por defecto es ORDINARIA, así que cuando se marca como ENTREGADO cambiará a PAGO_VALIDACION)
         $this->commission = Commission::factory()->create([
             'client_id' => $this->client->id,
@@ -105,7 +105,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
                              'receiver_phone' => '+1234567890',
                              'notes' => 'Entregado en recepción',
                              'signature_image' => 'iVBORw0KGgoAAAANSUhEUgAA...',
-                             'delivery_timestamp' => '2025-08-22T15:30:00.000Z'
+                             'delivery_timestamp' => '2025-08-22T15:30:00.000Z',
                          ]);
 
         $response->assertStatus(200)
@@ -124,7 +124,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     {
         $response = $this->actingAs($this->cadete)
                          ->putJson("/api/cadete/deliveries/{$this->commission->id}", [
-                             'status' => 'En proceso de entrega'
+                             'status' => 'En proceso de entrega',
                          ]);
 
         $response->assertStatus(200);
@@ -138,7 +138,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     {
         $response = $this->actingAs($this->cadete)
                          ->putJson("/api/cadete/deliveries/{$this->commission->id}", [
-                             'status' => 'Intento de entrega fallido'
+                             'status' => 'Intento de entrega fallido',
                          ]);
 
         $response->assertStatus(200);
@@ -152,7 +152,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     {
         $response = $this->actingAs($this->cadete)
                          ->putJson("/api/cadete/deliveries/{$this->commission->id}", [
-                             'status' => 'Estado inválido'
+                             'status' => 'Estado inválido',
                          ]);
 
         $response->assertStatus(422)
@@ -166,11 +166,11 @@ class CadeteUpdateShipmentStatusTest extends TestCase
             'role' => UserRole::CADETE,
             'branch_id' => $this->branch->id,
         ]);
-        
+
         $otherTransport = Transport::factory()->create([
             'cadete_id' => $otherCadete->id,
         ]);
-        
+
         $otherCommission = Commission::factory()->create([
             'client_id' => $this->client->id,
             'transport_id' => $otherTransport->id,
@@ -183,12 +183,12 @@ class CadeteUpdateShipmentStatusTest extends TestCase
 
         $response = $this->actingAs($this->cadete)
                          ->putJson("/api/cadete/deliveries/{$otherCommission->id}", [
-                             'status' => 'En proceso de entrega'
+                             'status' => 'En proceso de entrega',
                          ]);
 
         $response->assertStatus(404)
                 ->assertJson([
-                    'message' => 'Envío no encontrado o no tienes permisos para modificarlo'
+                    'message' => 'Envío no encontrado o no tienes permisos para modificarlo',
                 ]);
     }
 
@@ -196,7 +196,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     {
         $response = $this->actingAs($this->cadete)
                          ->putJson("/api/cadete/deliveries/99999", [
-                             'status' => 'En proceso de entrega'
+                             'status' => 'En proceso de entrega',
                          ]);
 
         $response->assertStatus(404);
@@ -205,7 +205,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     public function test_update_requires_authentication()
     {
         $response = $this->putJson("/api/cadete/deliveries/{$this->commission->id}", [
-            'status' => 'Entregado'
+            'status' => 'Entregado',
         ]);
 
         $response->assertStatus(401);
@@ -214,12 +214,12 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     public function test_update_requires_cadete_role()
     {
         $admin = User::factory()->create(['role' => UserRole::ADMINISTRADOR]);
-        
+
         $response = $this->actingAs($admin)
                          ->putJson("/api/cadete/deliveries/{$this->commission->id}", [
-                             'status' => 'Entregado'
+                             'status' => 'Entregado',
                          ]);
-        
+
         $response->assertStatus(403);
     }
 
@@ -233,7 +233,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
                              'receiver_phone' => '+1234567890',
                              'notes' => 'Entregado en recepción',
                              'signature_image' => 'iVBORw0KGgoAAAANSUhEUgAA...',
-                             'delivery_timestamp' => '2025-08-22T15:30:00.000Z'
+                             'delivery_timestamp' => '2025-08-22T15:30:00.000Z',
                          ]);
 
         $response->assertStatus(200);
@@ -274,7 +274,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
             ]);
 
             $requestData = ['status' => $cadeteStatus];
-            
+
             // Si es "Entregado", agregar campos de firma
             if ($cadeteStatus === 'Entregado') {
                 $requestData = array_merge($requestData, [
@@ -282,7 +282,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
                     'receiver_phone' => '+1234567890',
                     'notes' => 'Entregado en recepción',
                     'signature_image' => 'iVBORw0KGgoAAAANSUhEUgAA...',
-                    'delivery_timestamp' => '2025-08-22T15:30:00.000Z'
+                    'delivery_timestamp' => '2025-08-22T15:30:00.000Z',
                 ]);
                 // Para "Entregado" con comisión ORDINARIA, el estado final será PAGO_VALIDACION
                 $expectedAdminStatus = CommissionStatus::PAGO_VALIDACION;
@@ -295,8 +295,11 @@ class CadeteUpdateShipmentStatusTest extends TestCase
 
             // Verificar que se convirtió correctamente
             $commission->refresh();
-            $this->assertEquals($expectedAdminStatus, $commission->status, 
-                "El estado del cadete '{$cadeteStatus}' no se convirtió correctamente a '{$expectedAdminStatus->value}'");
+            $this->assertEquals(
+                $expectedAdminStatus,
+                $commission->status,
+                "El estado del cadete '{$cadeteStatus}' no se convirtió correctamente a '{$expectedAdminStatus->value}'"
+            );
         }
     }
 
@@ -304,14 +307,14 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     {
         $response = $this->actingAs($this->cadete)
                          ->putJson("/api/cadete/deliveries/{$this->commission->id}", [
-                             'status' => 'SOLICITUD_RECIBIDA' // Estado administrativo que no es del cadete
+                             'status' => 'SOLICITUD_RECIBIDA', // Estado administrativo que no es del cadete
                          ]);
 
         $response->assertStatus(422)
                 ->assertJson([
                     'success' => false,
                     'message' => 'Estado no válido. Estados válidos: ' . implode(', ', CommissionStatus::getValidCadeteStatuses()),
-                    'valid_statuses' => CommissionStatus::getValidCadeteStatuses()
+                    'valid_statuses' => CommissionStatus::getValidCadeteStatuses(),
                 ])
                 ->assertJsonValidationErrors(['status']);
     }
@@ -320,7 +323,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     {
         $response = $this->actingAs($this->cadete)
                          ->putJson("/api/cadete/deliveries/{$this->commission->id}", [
-                             'status' => CommissionStatus::REPROGRAMANDO_ENTREGA->value
+                             'status' => CommissionStatus::REPROGRAMANDO_ENTREGA->value,
                          ]);
 
         $response->assertStatus(200);
@@ -334,7 +337,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     {
         $response = $this->actingAs($this->cadete)
                          ->putJson("/api/cadete/deliveries/{$this->commission->id}", [
-                             'status' => 'Reprogramando entrega'
+                             'status' => 'Reprogramando entrega',
                          ]);
 
         $response->assertStatus(200);
@@ -353,7 +356,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
                              'receiver_phone' => '+1234567890',
                              'notes' => 'Entregado en recepción',
                              'signature_image' => 'iVBORw0KGgoAAAANSUhEUgAA...',
-                             'delivery_timestamp' => '2025-08-22T15:30:00.000Z'
+                             'delivery_timestamp' => '2025-08-22T15:30:00.000Z',
                          ]);
 
         $response->assertStatus(200);
@@ -373,7 +376,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
                              'receiver_phone' => '+1234567890',
                              'notes' => 'Entregado en recepción',
                              'signature_image' => 'iVBORw0KGgoAAAANSUhEUgAA...',
-                             'delivery_timestamp' => '2025-08-22T15:30:00.000Z'
+                             'delivery_timestamp' => '2025-08-22T15:30:00.000Z',
                          ]);
 
         $response->assertStatus(200);
@@ -388,7 +391,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     {
         $response = $this->actingAs($this->cadete)
                          ->putJson("/api/cadete/deliveries/{$this->commission->id}", [
-                             'status' => 'Estado inválido'
+                             'status' => 'Estado inválido',
                          ]);
 
         $response->assertStatus(422)
@@ -396,11 +399,11 @@ class CadeteUpdateShipmentStatusTest extends TestCase
                     'success',
                     'message',
                     'errors',
-                    'valid_statuses'
+                    'valid_statuses',
                 ])
                 ->assertJson([
                     'success' => false,
-                    'valid_statuses' => CommissionStatus::getValidCadeteStatuses()
+                    'valid_statuses' => CommissionStatus::getValidCadeteStatuses(),
                 ]);
     }
 
@@ -414,7 +417,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
                              'receiver_phone' => '+1234567890',
                              'notes' => 'Entregado en recepción',
                              'signature_image' => 'iVBORw0KGgoAAAANSUhEUgAA...',
-                             'delivery_timestamp' => '2025-08-22T15:30:00.000Z'
+                             'delivery_timestamp' => '2025-08-22T15:30:00.000Z',
                          ]);
 
         $response->assertStatus(200);
@@ -428,7 +431,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     {
         $response = $this->actingAs($this->cadete)
                          ->putJson("/api/cadete/deliveries/{$this->commission->id}", [
-                             'status' => 'Estado inválido'
+                             'status' => 'Estado inválido',
                          ]);
 
         $response->assertStatus(422);
@@ -442,7 +445,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     {
         $response = $this->actingAs($this->cadete)
                          ->putJson("/api/cadete/deliveries/99999", [
-                             'status' => 'En proceso de entrega'
+                             'status' => 'En proceso de entrega',
                          ]);
 
         $response->assertStatus(404);
@@ -455,7 +458,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     public function test_commission_log_is_created_when_status_updated()
     {
         $initialLogCount = CommissionLog::count();
-        
+
         $response = $this->actingAs($this->cadete)
                          ->putJson("/api/cadete/deliveries/{$this->commission->id}", [
                              'status' => 'Entregado',
@@ -464,7 +467,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
                              'receiver_phone' => '+1234567890',
                              'notes' => 'Entregado en recepción',
                              'signature_image' => 'iVBORw0KGgoAAAANSUhEUgAA...',
-                             'delivery_timestamp' => '2025-08-22T15:30:00.000Z'
+                             'delivery_timestamp' => '2025-08-22T15:30:00.000Z',
                          ]);
 
         $response->assertStatus(200);
@@ -472,7 +475,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
         // Verificar que se crearon registros en commission_logs
         // Se crean múltiples logs: ENTREGADO -> PENDIENTE_PAGO -> PAGO_VALIDACION
         $this->assertGreaterThanOrEqual($initialLogCount + 3, CommissionLog::count());
-        
+
         // Verificar el log final (PAGO_VALIDACION)
         $commissionLog = CommissionLog::where('commission_id', $this->commission->id)
                                      ->where('new_status', CommissionStatus::PAGO_VALIDACION->value)
@@ -488,17 +491,17 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     public function test_commission_log_is_created_without_observation()
     {
         $initialLogCount = CommissionLog::count();
-        
+
         $response = $this->actingAs($this->cadete)
                          ->putJson("/api/cadete/deliveries/{$this->commission->id}", [
-                             'status' => 'En proceso de entrega'
+                             'status' => 'En proceso de entrega',
                          ]);
 
         $response->assertStatus(200);
 
         // Verificar que se creó un registro en commission_logs
         $this->assertEquals($initialLogCount + 1, CommissionLog::count());
-        
+
         $commissionLog = CommissionLog::latest()->first();
         $this->assertEquals($this->commission->id, $commissionLog->commission_id);
         $this->assertEquals($this->cadete->id, $commissionLog->user_id);
@@ -515,26 +518,26 @@ class CadeteUpdateShipmentStatusTest extends TestCase
             'En proceso de entrega',
             'Intento de entrega fallido',
             'Reprogramando entrega',
-            'Entregado'
+            'Entregado',
         ];
 
         $expectedPreviousStatuses = [
             CommissionStatus::EN_TRANSITO_DESTINO->value,
             CommissionStatus::EN_PROCESO_ENTREGA->value,
             CommissionStatus::INTENTO_ENTREGA_FALLIDO->value,
-            CommissionStatus::REPROGRAMANDO_ENTREGA->value
+            CommissionStatus::REPROGRAMANDO_ENTREGA->value,
         ];
 
         $expectedNewStatuses = [
             CommissionStatus::EN_PROCESO_ENTREGA->value,
             CommissionStatus::INTENTO_ENTREGA_FALLIDO->value,
             CommissionStatus::REPROGRAMANDO_ENTREGA->value,
-            CommissionStatus::ENTREGADO->value
+            CommissionStatus::ENTREGADO->value,
         ];
 
         foreach ($statuses as $index => $status) {
             $requestData = ['status' => $status];
-            
+
             // Si es "Entregado", agregar campos de firma
             if ($status === 'Entregado') {
                 $requestData = array_merge($requestData, [
@@ -542,7 +545,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
                     'receiver_phone' => '+1234567890',
                     'notes' => 'Entregado en recepción',
                     'signature_image' => 'iVBORw0KGgoAAAANSUhEUgAA...',
-                    'delivery_timestamp' => '2025-08-22T15:30:00.000Z'
+                    'delivery_timestamp' => '2025-08-22T15:30:00.000Z',
                 ]);
                 // Para "Entregado" con comisión ORDINARIA, el estado final será PAGO_VALIDACION
                 $expectedNewStatuses[$index] = CommissionStatus::PAGO_VALIDACION->value;
@@ -574,7 +577,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     public function test_delivery_signature_is_created_when_marked_as_delivered()
     {
         $initialSignatureCount = DeliverySignature::count();
-        
+
         $response = $this->actingAs($this->cadete)
                          ->putJson("/api/cadete/deliveries/{$this->commission->id}", [
                              'status' => 'Entregado',
@@ -582,14 +585,14 @@ class CadeteUpdateShipmentStatusTest extends TestCase
                              'receiver_phone' => '+1234567890',
                              'notes' => 'Entregado en recepción',
                              'signature_image' => 'iVBORw0KGgoAAAANSUhEUgAA...', // Base64 PNG mock
-                             'delivery_timestamp' => '2025-08-22T15:30:00.000000Z'
+                             'delivery_timestamp' => '2025-08-22T15:30:00.000000Z',
                          ]);
 
         $response->assertStatus(200);
 
         // Verificar que se creó la firma
         $this->assertEquals($initialSignatureCount + 1, DeliverySignature::count());
-        
+
         $signature = DeliverySignature::latest()->first();
         $this->assertEquals($this->commission->id, $signature->commission_id);
         $this->assertEquals($this->cadete->id, $signature->cadete_id);
@@ -607,13 +610,13 @@ class CadeteUpdateShipmentStatusTest extends TestCase
         // El endpoint permite marcar como entregado sin firma, pero luego ejecuta el flujo de PENDIENTE_PAGO -> PAGO_VALIDACION
         $response = $this->actingAs($this->cadete)
                          ->putJson("/api/cadete/deliveries/{$this->commission->id}", [
-                             'status' => 'Entregado'
+                             'status' => 'Entregado',
                              // Faltan campos requeridos, pero el endpoint los hace opcionales
                          ]);
 
         // El endpoint acepta la solicitud sin firma (200) y ejecuta el flujo normal
         $response->assertStatus(200);
-        
+
         // Verificar que se ejecutó el flujo correctamente
         $this->commission->refresh();
         $this->assertEquals(CommissionStatus::PAGO_VALIDACION, $this->commission->status);
@@ -623,7 +626,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
     {
         $response = $this->actingAs($this->cadete)
                          ->putJson("/api/cadete/deliveries/{$this->commission->id}", [
-                             'status' => 'En proceso de entrega'
+                             'status' => 'En proceso de entrega',
                              // No se requieren campos de firma
                          ]);
 
@@ -643,7 +646,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
                               'receiver_phone' => '+1234567890',
                               'notes' => 'Primera entrega',
                               'signature_image' => 'iVBORw0KGgoAAAANSUhEUgAA...',
-                              'delivery_timestamp' => '2025-08-22T15:30:00.000000Z'
+                              'delivery_timestamp' => '2025-08-22T15:30:00.000000Z',
                           ]);
 
         $response1->assertStatus(200);
@@ -661,7 +664,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
                               'receiver_phone' => '+0987654321',
                               'notes' => 'Segunda entrega',
                               'signature_image' => 'iVBORw0KGgoAAAANSUhEUgAA...',
-                              'delivery_timestamp' => '2025-08-22T16:00:00.000000Z'
+                              'delivery_timestamp' => '2025-08-22T16:00:00.000000Z',
                           ]);
 
         // El segundo intento puede fallar con 400, 404 o 500 dependiendo de la validación
@@ -696,7 +699,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
                  'receiver_phone' => '+1234567890',
                  'notes' => 'Entregado en recepción',
                  'signature_image' => self::TEST_SIGNATURE_IMAGE,
-                 'delivery_timestamp' => '2025-08-22T15:30:00.000000Z'
+                 'delivery_timestamp' => '2025-08-22T15:30:00.000000Z',
              ]);
 
         $response->assertStatus(200);
@@ -749,7 +752,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
                              'receiver_phone' => '+1234567890',
                              'notes' => 'Entregado en recepción',
                              'signature_image' => 'iVBORw0KGgoAAAANSUhEUgAA...',
-                             'delivery_timestamp' => '2025-08-22T15:30:00.000Z'
+                             'delivery_timestamp' => '2025-08-22T15:30:00.000Z',
                          ]);
 
         $response->assertStatus(200);
@@ -784,7 +787,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
 
         // Verificar que se creó el movimiento en cuenta corriente
         $this->assertEquals($initialCurrentAccountCount + 1, CurrentAccount::count());
-        
+
         $currentAccount = CurrentAccount::where('reference', "COM-{$commission->id}")->first();
         $this->assertNotNull($currentAccount);
         $this->assertEquals($this->client->id, $currentAccount->customer_id);
@@ -820,7 +823,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
                              'receiver_phone' => '+1234567890',
                              'notes' => 'Entregado en recepción',
                              'signature_image' => 'iVBORw0KGgoAAAANSUhEUgAA...',
-                             'delivery_timestamp' => '2025-08-22T15:30:00.000Z'
+                             'delivery_timestamp' => '2025-08-22T15:30:00.000Z',
                          ]);
 
         $response->assertStatus(200);
@@ -852,7 +855,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
 
         // Verificar que NO se creó movimiento en cuenta corriente
         $this->assertEquals($initialCurrentAccountCount, CurrentAccount::count());
-        
+
         $currentAccount = CurrentAccount::where('reference', "COM-{$commission->id}")->first();
         $this->assertNull($currentAccount);
     }

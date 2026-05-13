@@ -112,6 +112,7 @@ class UserController extends Controller
     public function show(int $id): JsonResponse
     {
         $user = $this->repository->findById($id);
+
         return response()->json($user);
     }
 }

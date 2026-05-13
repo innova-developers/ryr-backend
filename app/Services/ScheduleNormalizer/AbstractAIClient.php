@@ -61,5 +61,3 @@ abstract class AbstractAIClient implements AIClientInterface
         return ['ranges' => [], 'confidence' => 'low'];
     }
 }
-
-

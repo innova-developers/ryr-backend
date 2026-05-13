@@ -108,5 +108,3 @@ class ScheduleNormalizerServiceTest extends TestCase
         $this->assertArrayHasKey('normalized_at', $result);
     }
 }
-
-

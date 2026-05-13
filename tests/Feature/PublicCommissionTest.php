@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Commission;
 use App\Shared\Models\Customer;
 use App\Shared\Models\Destination;
 use App\Shared\Models\Location;
-use App\Shared\Enums\CommissionStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

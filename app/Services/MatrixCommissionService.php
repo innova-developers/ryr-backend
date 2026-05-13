@@ -10,12 +10,12 @@ class MatrixCommissionService
 {
     public function createReceivableForCommission(Commission $commission): ?MatrixReceivable
     {
-        if (!$commission->franchise_id) {
+        if (! $commission->franchise_id) {
             return null;
         }
 
         $franchise = Franchise::find($commission->franchise_id);
-        if (!$franchise || $franchise->commission_percentage_to_matrix <= 0) {
+        if (! $franchise || $franchise->commission_percentage_to_matrix <= 0) {
             return null;
         }
 
@@ -40,6 +40,7 @@ class MatrixCommissionService
     public function bulkMarkAsPaid(array $ids, ?string $paymentReference = null): int
     {
         $now = now();
+
         return MatrixReceivable::whereIn('id', $ids)
             ->where('status', 'pending')
             ->update([

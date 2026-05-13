@@ -87,9 +87,9 @@ class ValidateIdentifierController
                 \Log::warning('No se pudo enviar código de verificación por email', [
                     'identifier' => $identifier,
                     'type' => $type,
-                    'code' => $code
+                    'code' => $code,
                 ]);
-                
+
                 return response()->json([
                     'success' => true,
                     'exists' => true,
@@ -116,7 +116,7 @@ class ValidateIdentifierController
             \Log::error('Error en validateIdentifier: ' . $e->getMessage(), [
                 'identifier' => $identifier ?? 'unknown',
                 'type' => $type ?? 'unknown',
-                'exception' => $e->getTraceAsString()
+                'exception' => $e->getTraceAsString(),
             ]);
 
             return response()->json([

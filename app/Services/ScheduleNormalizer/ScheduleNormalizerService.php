@@ -112,6 +112,7 @@ class ScheduleNormalizerService
                     foreach ($usedPositions as $used) {
                         if ($startPos >= $used['start'] && $startPos < $used['end']) {
                             $isOverlapping = true;
+
                             break;
                         }
                     }
@@ -172,6 +173,7 @@ class ScheduleNormalizerService
             if ($hour >= 1 && $hour <= 12) {
                 return ($hour + 12) . ':00';
             }
+
             return $matches[0];
         }, $normalized);
 
@@ -181,6 +183,7 @@ class ScheduleNormalizerService
             if ($hour >= 1 && $hour <= 12) {
                 return ($hour + 12) . ':00';
             }
+
             return $matches[0];
         }, $normalized);
 
@@ -330,7 +333,7 @@ class ScheduleNormalizerService
         $unique = [];
         foreach ($ranges as $range) {
             $key = $range['start'] . '-' . $range['end'];
-            if (!isset($unique[$key])) {
+            if (! isset($unique[$key])) {
                 $unique[$key] = $range;
             }
         }
@@ -366,7 +369,7 @@ class ScheduleNormalizerService
             $result = $this->aiClient->parseSchedule($schedule);
 
             // Validar y normalizar la respuesta de la IA
-            if (!isset($result['ranges']) || !is_array($result['ranges'])) {
+            if (! isset($result['ranges']) || ! is_array($result['ranges'])) {
                 Log::warning('Respuesta de IA inválida', [
                     'schedule' => $schedule,
                     'result' => $result,
@@ -487,7 +490,7 @@ class ScheduleNormalizerService
             // Solo si el threshold cruza medianoche
             if ($endTimeToday->isBefore($now) && $threshold->isTomorrow()) {
                 $endTimeTomorrow = $endTimeToday->copy()->addDay();
-                
+
                 // Si el cierre de mañana está dentro del threshold, retornar true
                 if ($endTimeTomorrow->lte($threshold)) {
                     return true;
@@ -507,14 +510,14 @@ class ScheduleNormalizerService
      */
     private function parseTimeToCarbon(string $timeString, Carbon $reference): ?Carbon
     {
-        if (!preg_match('/^(\d{2}):(\d{2})$/', $timeString, $matches)) {
+        if (! preg_match('/^(\d{2}):(\d{2})$/', $timeString, $matches)) {
             return null;
         }
 
         $hour = (int) $matches[1];
         $min = (int) $matches[2];
 
-        if (!$this->isValidTime($hour, $min)) {
+        if (! $this->isValidTime($hour, $min)) {
             return null;
         }
 
@@ -528,4 +531,3 @@ class ScheduleNormalizerService
         return $time;
     }
 }
-

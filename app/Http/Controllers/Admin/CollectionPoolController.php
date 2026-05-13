@@ -12,7 +12,6 @@ use App\Shared\Models\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class CollectionPoolController
@@ -25,10 +24,10 @@ class CollectionPoolController
     {
         try {
             $user = Auth::user();
-            
+
             // Verificar que el usuario tenga uno de los roles permitidos
             $allowedRoles = [UserRole::ADMINISTRADOR, UserRole::COBRADOR, UserRole::MOSTRADOR];
-            if (!in_array($user->role, $allowedRoles)) {
+            if (! in_array($user->role, $allowedRoles)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No tienes permisos para acceder a este recurso',
@@ -57,18 +56,18 @@ class CollectionPoolController
             // Solo considerar transacciones con estado OK para el cálculo del saldo
             // Verificar si la columna status existe antes de filtrar
             $hasStatusColumn = \Schema::hasColumn('current_accounts', 'status');
-            
+
             $customersWithBalance = Customer::select('customers.*')
                 ->selectSub(function ($query) use ($hasStatusColumn) {
                     $subquery = $query->select('balance')
                         ->from('current_accounts')
                         ->whereColumn('current_accounts.customer_id', 'customers.id');
-                    
+
                     // Solo filtrar por status si la columna existe
                     if ($hasStatusColumn) {
                         $subquery->where('status', CurrentAccountStatus::OK->value);
                     }
-                    
+
                     $subquery->orderBy('transaction_date', 'desc')
                         ->orderBy('id', 'desc')
                         ->limit(1);
@@ -162,14 +161,17 @@ class CollectionPoolController
                 case 'name':
                     $query->orderBy('name', $sortDirection)
                           ->orderBy('last_name', $sortDirection);
+
                     break;
                 case 'city':
                     $query->orderBy('city', $sortDirection);
+
                     break;
                 case 'assigned':
                     // Ordenar por asignación: primero los asignados, luego los no asignados
                     $query->orderByRaw('CASE WHEN internal_user_id IS NULL THEN 1 ELSE 0 END ' . ($sortDirection === 'asc' ? 'ASC' : 'DESC'))
                           ->orderBy('name', 'asc');
+
                     break;
                 case 'balance':
                 default:
@@ -178,9 +180,10 @@ class CollectionPoolController
                         ->sortBy('current_balance', SORT_REGULAR, $sortDirection === 'desc')
                         ->pluck('id')
                         ->toArray();
-                    if (!empty($sortedIds)) {
+                    if (! empty($sortedIds)) {
                         $query->orderByRaw('FIELD(id, ' . implode(',', $sortedIds) . ')');
                     }
+
                     break;
             }
 
@@ -194,7 +197,7 @@ class CollectionPoolController
             $allCustomersWithBalance = Customer::whereIn('id', $customerIds)
                 ->select('id', 'internal_user_id')
                 ->get();
-            
+
             $totalAssigned = $allCustomersWithBalance->whereNotNull('internal_user_id')->count();
             $totalUnassigned = $allCustomersWithBalance->whereNull('internal_user_id')->count();
             $totalDebtAmount = $customersWithBalance->sum(function ($customer) {
@@ -203,11 +206,11 @@ class CollectionPoolController
 
             // Verificar si la columna type existe en la tabla commissions
             $hasTypeColumn = Schema::hasColumn('commissions', 'type');
-            
+
             // Cargar comisiones históricas para cada cliente
             $customers->getCollection()->transform(function ($customer) use ($balanceMap, $hasStatusColumn, $hasTypeColumn) {
                 $balance = $balanceMap->get($customer->id)?->current_balance ?? 0;
-                
+
                 // Calcular total de movimientos pendientes de confirmar
                 $pendingAmount = 0;
                 if ($hasStatusColumn) {
@@ -217,7 +220,7 @@ class CollectionPoolController
                         ->sum('amount');
                     $pendingAmount = (float) $pendingTransactions;
                 }
-                
+
                 // Obtener solo comisiones ORDINARIAS o EXTRAORDINARIAS con total > 0 y estado PAGO_VALIDACION
                 $commissionsQuery = Commission::with([
                     'items:id,commission_id,type,size,quantity,detail,unit_price,subtotal',
@@ -229,12 +232,12 @@ class CollectionPoolController
                 ->where('client_id', $customer->id)
                 ->where('status', CommissionStatus::PAGO_VALIDACION->value)
                 ->where('total', '>', 0);
-                
+
                 // Solo filtrar por tipo si la columna existe
                 if ($hasTypeColumn) {
                     $commissionsQuery->whereIn('type', [CommissionType::ORDINARIA->value, CommissionType::EXTRAORDINARIA->value]);
                 }
-                
+
                 $commissions = $commissionsQuery
                 ->orderBy('date', 'desc')
                 ->orderBy('created_at', 'desc')
@@ -306,7 +309,7 @@ class CollectionPoolController
                         'name' => $customer->branch->name,
                     ] : null,
                     'internal_user_id' => $customer->internal_user_id,
-                    'is_assigned' => !is_null($customer->internal_user_id), // Indica si tiene usuario interno asignado
+                    'is_assigned' => ! is_null($customer->internal_user_id), // Indica si tiene usuario interno asignado
                     'internal_user' => $customer->internalUser ? [
                         'id' => $customer->internalUser->id,
                         'name' => $customer->internalUser->name,
@@ -337,8 +340,8 @@ class CollectionPoolController
                     'assigned_customers' => $totalAssigned,
                     'unassigned_customers' => $totalUnassigned,
                     'total_debt_amount' => (float) $totalDebtAmount,
-                    'assigned_percentage' => count($customerIds) > 0 
-                        ? round(($totalAssigned / count($customerIds)) * 100, 2) 
+                    'assigned_percentage' => count($customerIds) > 0
+                        ? round(($totalAssigned / count($customerIds)) * 100, 2)
                         : 0,
                 ],
             ], 200);
@@ -360,10 +363,10 @@ class CollectionPoolController
     {
         try {
             $user = Auth::user();
-            
+
             // Verificar que el usuario tenga uno de los roles permitidos
             $allowedRoles = [UserRole::ADMINISTRADOR, UserRole::COBRADOR, UserRole::MOSTRADOR];
-            if (!in_array($user->role, $allowedRoles)) {
+            if (! in_array($user->role, $allowedRoles)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No tienes permisos para acceder a este recurso',
@@ -372,19 +375,19 @@ class CollectionPoolController
 
             // Verificar si la columna status existe antes de filtrar
             $hasStatusColumn = \Schema::hasColumn('current_accounts', 'status');
-            
+
             // Obtener el cliente y calcular su saldo
             $customerWithBalance = Customer::select('customers.*')
                 ->selectSub(function ($query) use ($hasStatusColumn) {
                     $subquery = $query->select('balance')
                         ->from('current_accounts')
                         ->whereColumn('current_accounts.customer_id', 'customers.id');
-                    
+
                     // Solo filtrar por status si la columna existe
                     if ($hasStatusColumn) {
                         $subquery->where('status', CurrentAccountStatus::OK->value);
                     }
-                    
+
                     $subquery->orderBy('transaction_date', 'desc')
                         ->orderBy('id', 'desc')
                         ->limit(1);
@@ -392,7 +395,7 @@ class CollectionPoolController
                 ->where('customers.id', $id)
                 ->first();
 
-            if (!$customerWithBalance) {
+            if (! $customerWithBalance) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Cliente no encontrado',
@@ -406,7 +409,7 @@ class CollectionPoolController
             $customer = Customer::with(['branch:id,name', 'internalUser:id,name,email'])
                 ->find($id);
 
-            if (!$customer) {
+            if (! $customer) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Cliente no encontrado',
@@ -425,7 +428,7 @@ class CollectionPoolController
 
             // Verificar si la columna type existe en la tabla commissions
             $hasTypeColumn = Schema::hasColumn('commissions', 'type');
-            
+
             // Obtener solo comisiones ORDINARIAS o EXTRAORDINARIAS con total > 0 y estado PAGO_VALIDACION
             $commissionsQuery = Commission::with([
                 'items:id,commission_id,type,size,quantity,detail,unit_price,subtotal',
@@ -437,12 +440,12 @@ class CollectionPoolController
             ->where('client_id', $customer->id)
             ->where('status', CommissionStatus::PAGO_VALIDACION->value)
             ->where('total', '>', 0);
-            
+
             // Solo filtrar por tipo si la columna existe
             if ($hasTypeColumn) {
                 $commissionsQuery->whereIn('type', [CommissionType::ORDINARIA->value, CommissionType::EXTRAORDINARIA->value]);
             }
-            
+
             $commissions = $commissionsQuery
                 ->orderBy('date', 'desc')
                 ->orderBy('created_at', 'desc')
@@ -515,7 +518,7 @@ class CollectionPoolController
                     'name' => $customer->branch->name,
                 ] : null,
                 'internal_user_id' => $customer->internal_user_id,
-                'is_assigned' => !is_null($customer->internal_user_id),
+                'is_assigned' => ! is_null($customer->internal_user_id),
                 'internal_user' => $customer->internalUser ? [
                     'id' => $customer->internalUser->id,
                     'name' => $customer->internalUser->name,
@@ -551,10 +554,10 @@ class CollectionPoolController
     {
         try {
             $user = Auth::user();
-            
+
             // Verificar que el usuario tenga uno de los roles permitidos
             $allowedRoles = [UserRole::ADMINISTRADOR, UserRole::COBRADOR, UserRole::MOSTRADOR];
-            if (!in_array($user->role, $allowedRoles)) {
+            if (! in_array($user->role, $allowedRoles)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No tienes permisos para acceder a este recurso',
@@ -562,21 +565,21 @@ class CollectionPoolController
             }
 
             $internalUserId = $request->input('internal_user_id');
-            
+
             // Obtener clientes con deuda asignados (mismo filtro que el index)
             $hasStatusColumn = \Schema::hasColumn('current_accounts', 'status');
-            
+
             // Construir query base para clientes con deuda asignados
             $query = Customer::select('customers.*')
                 ->selectSub(function ($subquery) use ($hasStatusColumn) {
                     $subquery = $subquery->select('balance')
                         ->from('current_accounts')
                         ->whereColumn('current_accounts.customer_id', 'customers.id');
-                    
+
                     if ($hasStatusColumn) {
                         $subquery->where('status', CurrentAccountStatus::OK->value);
                     }
-                    
+
                     $subquery->orderBy('transaction_date', 'desc')
                         ->orderBy('id', 'desc')
                         ->limit(1);
@@ -587,7 +590,7 @@ class CollectionPoolController
             // Aplicar filtro de usuario si está especificado
             if ($internalUserId) {
                 $query->where('internal_user_id', $internalUserId);
-            } else if (!in_array($user->role, [UserRole::ADMINISTRADOR])) {
+            } elseif (! in_array($user->role, [UserRole::ADMINISTRADOR])) {
                 // Si no es admin y no hay filtro, usar el userId del usuario logueado
                 $query->where('internal_user_id', $user->id);
             }
@@ -612,8 +615,8 @@ class CollectionPoolController
                     return [
                         'id' => $transaction->id,
                         'customer_id' => $transaction->customer_id,
-                        'customer_name' => $transaction->customer ? 
-                            trim(($transaction->customer->name ?? '') . ' ' . ($transaction->customer->last_name ?? '')) : 
+                        'customer_name' => $transaction->customer ?
+                            trim(($transaction->customer->name ?? '') . ' ' . ($transaction->customer->last_name ?? '')) :
                             'N/A',
                         'customer_dni' => $transaction->customer->dni ?? null,
                         'type' => $transaction->type,
@@ -641,4 +644,3 @@ class CollectionPoolController
         }
     }
 }
-

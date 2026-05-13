@@ -74,10 +74,10 @@ class CommissionController extends Controller
         try {
             // Obtener la comisión existente
             $existingCommission = $this->repository->findById($id);
-            
+
             // Obtener datos validados del request
             $validatedData = $request->validated();
-            
+
             // Combinar datos existentes con los nuevos datos
             $data = [
                 'id' => $id,
@@ -94,7 +94,7 @@ class CommissionController extends Controller
                 'a_cuenta' => $validatedData['a_cuenta'] ?? false,
                 'type' => $validatedData['type'] ?? $existingCommission->type->value,
             ];
-            
+
             $dto = UpdateCommissionDTO::fromArray($data);
             $useCase = new UpdateCommissionUseCase(
                 $this->repository,
@@ -284,7 +284,7 @@ class CommissionController extends Controller
             ]);
 
             $commission = $this->repository->findById($id);
-            if (!$commission) {
+            if (! $commission) {
                 return response()->json([
                     'message' => 'Comisión no encontrada',
                 ], 404);
@@ -293,7 +293,7 @@ class CommissionController extends Controller
             $oldBranchId = $commission->branch_id;
             $commission->branch_id = $validated['branch_id'];
             $commission->save();
-            
+
             // Obtener nombre de la sucursal para el log
             $branch = \App\Shared\Models\Branch::find($validated['branch_id']);
             $branchName = $branch ? $branch->name : "ID {$validated['branch_id']}";

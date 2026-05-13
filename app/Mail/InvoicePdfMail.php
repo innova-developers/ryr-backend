@@ -20,7 +20,8 @@ class InvoicePdfMail extends Mailable
         public string $invoiceNumber,
         public string $customerName,
         public string $emisorName,
-    ) {}
+    ) {
+    }
 
     public function envelope(): Envelope
     {

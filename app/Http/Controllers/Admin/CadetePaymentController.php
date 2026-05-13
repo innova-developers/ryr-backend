@@ -3,17 +3,17 @@
 namespace App\Http\Controllers\Admin;
 
 use App\CadetePayment;
-use App\Shared\Models\User;
+use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\UserRole;
 use App\Shared\Models\Commission;
-use App\Shared\Enums\CommissionStatus;
+use App\Shared\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use Carbon\Carbon;
 
 class CadetePaymentController extends Controller
 {
@@ -87,7 +87,7 @@ class CadetePaymentController extends Controller
                 'payment_types' => CadetePayment::getPaymentTypes(),
                 'payment_methods' => CadetePayment::getPaymentMethods(),
                 'statuses' => CadetePayment::getStatuses(),
-            ]
+            ],
         ]);
     }
 
@@ -116,16 +116,16 @@ class CadetePaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error de validación',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
         // Verificar que el usuario sea un cadete
         $cadete = User::find($request->cadete_id);
-        if (!in_array($cadete->role->value, [UserRole::CADETE->value, UserRole::CADETE_EXTERNO->value])) {
+        if (! in_array($cadete->role->value, [UserRole::CADETE->value, UserRole::CADETE_EXTERNO->value])) {
             return response()->json([
                 'success' => false,
-                'message' => 'El usuario especificado no es un cadete'
+                'message' => 'El usuario especificado no es un cadete',
             ], 400);
         }
 
@@ -141,7 +141,7 @@ class CadetePaymentController extends Controller
         if ($existingPayment) {
             return response()->json([
                 'success' => false,
-                'message' => 'Ya existe un pago para este cadete en el período especificado'
+                'message' => 'Ya existe un pago para este cadete en el período especificado',
             ], 400);
         }
 
@@ -178,7 +178,7 @@ class CadetePaymentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Pago creado exitosamente',
-            'data' => $payment
+            'data' => $payment,
         ], 201);
     }
 
@@ -190,10 +190,10 @@ class CadetePaymentController extends Controller
         // Buscar el pago manualmente
         $payment = CadetePayment::find($id);
 
-        if (!$payment) {
+        if (! $payment) {
             return response()->json([
                 'success' => false,
-                'message' => 'Pago no encontrado'
+                'message' => 'Pago no encontrado',
             ], 404);
         }
 
@@ -234,7 +234,7 @@ class CadetePaymentController extends Controller
                 'admin' => $payment->admin,
                 'created_at' => $payment->created_at,
                 'updated_at' => $payment->updated_at,
-            ]
+            ],
         ]);
     }
 
@@ -246,10 +246,10 @@ class CadetePaymentController extends Controller
         // Buscar el pago manualmente
         $payment = CadetePayment::find($id);
 
-        if (!$payment) {
+        if (! $payment) {
             return response()->json([
                 'success' => false,
-                'message' => 'Pago no encontrado'
+                'message' => 'Pago no encontrado',
             ], 404);
         }
 
@@ -272,7 +272,7 @@ class CadetePaymentController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error de validación',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -280,7 +280,7 @@ class CadetePaymentController extends Controller
         if ($payment->isPaid()) {
             return response()->json([
                 'success' => false,
-                'message' => 'No se puede editar un pago que ya ha sido pagado'
+                'message' => 'No se puede editar un pago que ya ha sido pagado',
             ], 400);
         }
 
@@ -288,7 +288,7 @@ class CadetePaymentController extends Controller
         $payment->update($request->only([
             'payment_type', 'payment_method', 'base_salary', 'bonus_amount',
             'deduction_amount', 'payment_date', 'period_start', 'period_end',
-            'description', 'notes', 'reference_number', 'transaction_id'
+            'description', 'notes', 'reference_number', 'transaction_id',
         ]));
 
         // Cargar relaciones
@@ -297,7 +297,7 @@ class CadetePaymentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Pago actualizado exitosamente',
-            'data' => $payment
+            'data' => $payment,
         ]);
     }
 
@@ -309,10 +309,10 @@ class CadetePaymentController extends Controller
         // Buscar el pago manualmente
         $payment = CadetePayment::find($id);
 
-        if (!$payment) {
+        if (! $payment) {
             return response()->json([
                 'success' => false,
-                'message' => 'Pago no encontrado'
+                'message' => 'Pago no encontrado',
             ], 404);
         }
 
@@ -320,7 +320,7 @@ class CadetePaymentController extends Controller
         if ($payment->isPaid()) {
             return response()->json([
                 'success' => false,
-                'message' => 'No se puede eliminar un pago que ya ha sido pagado'
+                'message' => 'No se puede eliminar un pago que ya ha sido pagado',
             ], 400);
         }
 
@@ -328,7 +328,7 @@ class CadetePaymentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Pago eliminado exitosamente'
+            'message' => 'Pago eliminado exitosamente',
         ]);
     }
 
@@ -347,17 +347,17 @@ class CadetePaymentController extends Controller
         // Buscar el pago manualmente
         $payment = CadetePayment::find($id);
 
-        if (!$payment) {
+        if (! $payment) {
             return response()->json([
                 'success' => false,
-                'message' => 'Pago no encontrado'
+                'message' => 'Pago no encontrado',
             ], 404);
         }
 
         if ($payment->isPaid()) {
             return response()->json([
                 'success' => false,
-                'message' => 'El pago ya está marcado como pagado'
+                'message' => 'El pago ya está marcado como pagado',
             ], 400);
         }
 
@@ -365,13 +365,13 @@ class CadetePaymentController extends Controller
         $paymentProofData = null;
         if ($request->hasFile('receipt')) {
             $file = $request->file('receipt');
-            
+
             // Generar nombre único para el archivo
             $filename = time() . '_' . $file->getClientOriginalName();
-            
+
             // Guardar el archivo en storage/app/public/payment_proofs
             $path = $file->storeAs('payment_proofs', $filename, 'public');
-            
+
             $paymentProofData = [
                 'payment_proof_filename' => $file->getClientOriginalName(),
                 'payment_proof_path' => $path,
@@ -395,9 +395,9 @@ class CadetePaymentController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Pago marcado como pagado exitosamente' . 
+            'message' => 'Pago marcado como pagado exitosamente' .
                          ($paymentProofData ? ' con comprobante adjunto' : ''),
-            'data' => $payment->fresh(['cadete:id,name,email', 'admin:id,name,email'])
+            'data' => $payment->fresh(['cadete:id,name,email', 'admin:id,name,email']),
         ]);
     }
 
@@ -409,24 +409,24 @@ class CadetePaymentController extends Controller
         // Buscar el pago manualmente
         $payment = CadetePayment::find($id);
 
-        if (!$payment) {
+        if (! $payment) {
             return response()->json([
                 'success' => false,
-                'message' => 'Pago no encontrado'
+                'message' => 'Pago no encontrado',
             ], 404);
         }
 
         if ($payment->isCancelled()) {
             return response()->json([
                 'success' => false,
-                'message' => 'El pago ya está cancelado'
+                'message' => 'El pago ya está cancelado',
             ], 400);
         }
 
         if ($payment->isPaid()) {
             return response()->json([
                 'success' => false,
-                'message' => 'No se puede cancelar un pago que ya ha sido pagado'
+                'message' => 'No se puede cancelar un pago que ya ha sido pagado',
             ], 400);
         }
 
@@ -435,7 +435,7 @@ class CadetePaymentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Pago cancelado exitosamente',
-            'data' => $payment->fresh(['cadete:id,name,email', 'admin:id,name,email'])
+            'data' => $payment->fresh(['cadete:id,name,email', 'admin:id,name,email']),
         ]);
     }
 
@@ -455,10 +455,10 @@ class CadetePaymentController extends Controller
 
         // Verificar que el usuario sea un cadete
         $cadete = User::find($cadeteId);
-        if (!$cadete || !in_array($cadete->role->value, [UserRole::CADETE->value, UserRole::CADETE_EXTERNO->value])) {
+        if (! $cadete || ! in_array($cadete->role->value, [UserRole::CADETE->value, UserRole::CADETE_EXTERNO->value])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Cadete no encontrado'
+                'message' => 'Cadete no encontrado',
             ], 404);
         }
 
@@ -502,7 +502,7 @@ class CadetePaymentController extends Controller
                 'name' => $cadete->name,
                 'email' => $cadete->email,
                 'commission_percentage' => $cadete->commission_percentage,
-            ]
+            ],
         ]);
     }
 
@@ -542,7 +542,7 @@ class CadetePaymentController extends Controller
                 return [$item->payment_type => [
                     'count' => $item->count,
                     'total_amount' => $item->total_amount,
-                    'label' => CadetePayment::getPaymentTypes()[$item->payment_type] ?? $item->payment_type
+                    'label' => CadetePayment::getPaymentTypes()[$item->payment_type] ?? $item->payment_type,
                 ]];
             });
 
@@ -551,7 +551,7 @@ class CadetePaymentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Resumen de pagos obtenido correctamente',
-            'data' => $summary
+            'data' => $summary,
         ]);
     }
 
@@ -564,16 +564,16 @@ class CadetePaymentController extends Controller
             ->whereBetween('date', [$startDate, $endDate])
             ->whereIn('status', [
                 CommissionStatus::ENTREGADO,
-                CommissionStatus::RETIRADO_SUCURSAL
+                CommissionStatus::RETIRADO_SUCURSAL,
             ])
             ->get();
 
         $totalCommissionAmount = $commissions->sum('total');
-        
+
         // Obtener el porcentaje de comisión del cadete
         $cadete = User::find($cadeteId);
         $commissionPercentage = $cadete->commission_percentage ?? 0;
-        
+
         return $totalCommissionAmount * ($commissionPercentage / 100);
     }
 
@@ -583,7 +583,7 @@ class CadetePaymentController extends Controller
     public function calculate(Request $request): JsonResponse
     {
         \Log::info('Calculate endpoint called with data:', $request->all());
-        
+
         try {
             $request->validate([
                 'cadete_id' => 'required|integer|exists:users,id',
@@ -593,26 +593,27 @@ class CadetePaymentController extends Controller
                 'commission_percentage' => 'nullable|numeric|min:0|max:100',
                 'income_percentage' => 'nullable|numeric|min:0|max:100',
             ]);
-            
+
             \Log::info('Validation passed');
         } catch (\Exception $e) {
             \Log::error('Validation failed:', ['error' => $e->getMessage()]);
+
             throw $e;
         }
 
         // Verificar que el usuario sea un cadete
         $cadete = User::find($request->cadete_id);
         \Log::info('Cadete found:', ['cadete' => $cadete ? $cadete->toArray() : null]);
-        
+
         \Log::info('Role debug:', [
             'role' => $cadete->role,
             'role_type' => gettype($cadete->role),
             'role_class' => is_object($cadete->role) ? get_class($cadete->role) : 'not_object',
             'cadete_role_value' => UserRole::CADETE->value,
             'cadete_externo_role_value' => UserRole::CADETE_EXTERNO->value,
-            'comparison_result' => in_array($cadete->role, [UserRole::CADETE->value, UserRole::CADETE_EXTERNO->value])
+            'comparison_result' => in_array($cadete->role, [UserRole::CADETE->value, UserRole::CADETE_EXTERNO->value]),
         ]);
-        
+
         // Verificar que el usuario sea un cadete
         // El rol puede ser un objeto enum o un string, así que comparamos ambos casos
         $isCadete = false;
@@ -623,12 +624,13 @@ class CadetePaymentController extends Controller
             // Si es un string, comparamos con los valores
             $isCadete = in_array($cadete->role, [UserRole::CADETE->value, UserRole::CADETE_EXTERNO->value]);
         }
-        
-        if (!$isCadete) {
+
+        if (! $isCadete) {
             \Log::warning('User is not a cadete:', ['role' => $cadete->role, 'expected_values' => [UserRole::CADETE->value, UserRole::CADETE_EXTERNO->value]]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'El usuario especificado no es un cadete'
+                'message' => 'El usuario especificado no es un cadete',
             ], 400);
         }
 
@@ -645,7 +647,7 @@ class CadetePaymentController extends Controller
         \Log::info('Period info:', [
             'start_date' => $startDate->format('Y-m-d'),
             'end_date' => $endDate->format('Y-m-d'),
-            'days_count' => $daysCount
+            'days_count' => $daysCount,
         ]);
 
         // Buscar comisiones del período
@@ -658,26 +660,26 @@ class CadetePaymentController extends Controller
             'count' => $commissions->count(),
             'cadete_id' => $request->cadete_id,
             'period_start' => $request->period_start,
-            'period_end' => $request->period_end
+            'period_end' => $request->period_end,
         ]);
 
         $totalCommissions = $commissions->count();
         $deliveredCommissions = $commissions->whereIn('status', [
             CommissionStatus::ENTREGADO,
-            CommissionStatus::RETIRADO_SUCURSAL
+            CommissionStatus::RETIRADO_SUCURSAL,
         ])->count();
         $pendingCommissions = $totalCommissions - $deliveredCommissions;
 
         // Calcular valor total de comisiones
         $totalCommissionValue = $commissions->sum('total');
-        
+
         // Calcular monto de comisión
         $commissionAmount = $totalCommissionValue * ($commissionPercentage / 100);
 
         // Calcular montos totales según el tipo de contratación
         $grossTotal = 0;
         $netAmount = 0;
-        
+
         if ($cadete->contract_type === 'fixed_salary') {
             // Para salario fijo: base_salary + commission_amount
             $grossTotal = $baseSalary + $commissionAmount;
@@ -688,7 +690,7 @@ class CadetePaymentController extends Controller
             // Fallback: usar la lógica anterior
             $grossTotal = $baseSalary + $commissionAmount;
         }
-        
+
         $netAmount = $grossTotal;
 
         \Log::info('Calculation completed successfully');
@@ -716,7 +718,7 @@ class CadetePaymentController extends Controller
             'calculated_amounts' => [
                 'gross_total' => $grossTotal,
                 'net_amount' => $netAmount,
-            ]
+            ],
         ];
 
         // Agregar campos según el tipo de contratación
@@ -741,7 +743,7 @@ class CadetePaymentController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Cálculo de pago realizado correctamente',
-            'data' => $responseData
+            'data' => $responseData,
         ]);
     }
 
@@ -765,26 +767,26 @@ class CadetePaymentController extends Controller
         // Buscar el pago manualmente
         $payment = CadetePayment::find($id);
 
-        if (!$payment) {
+        if (! $payment) {
             return response()->json([
                 'success' => false,
-                'message' => 'Pago no encontrado'
+                'message' => 'Pago no encontrado',
             ], 404);
         }
 
-        if (!$payment->hasPaymentProof()) {
+        if (! $payment->hasPaymentProof()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Este pago no tiene comprobante de pago'
+                'message' => 'Este pago no tiene comprobante de pago',
             ], 404);
         }
 
         $filePath = storage_path('app/public/' . $payment->payment_proof_path);
-        
-        if (!file_exists($filePath)) {
+
+        if (! file_exists($filePath)) {
             return response()->json([
                 'success' => false,
-                'message' => 'El archivo del comprobante no se encuentra'
+                'message' => 'El archivo del comprobante no se encuentra',
             ], 404);
         }
 

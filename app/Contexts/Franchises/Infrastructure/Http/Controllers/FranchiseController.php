@@ -35,6 +35,7 @@ class FranchiseController extends Controller
 
         if ($user->role === UserRole::ADMIN_FRANQUICIA) {
             $franchise = $this->repository->findById($user->franchise_id);
+
             return response()->json(['data' => [$franchise], 'pagination' => ['total' => 1]]);
         }
 
@@ -47,7 +48,7 @@ class FranchiseController extends Controller
     public function store(CreateFranchiseRequest $request): JsonResponse
     {
         $user = $request->user();
-        if (!$user->role->isMatrixAdmin()) {
+        if (! $user->role->isMatrixAdmin()) {
             return response()->json(['message' => 'Solo administradores de matriz pueden crear franquicias'], 403);
         }
 
@@ -67,7 +68,7 @@ class FranchiseController extends Controller
         $useCase = new GetFranchiseUseCase($this->repository);
         $franchise = $useCase($id);
 
-        if (!$franchise) {
+        if (! $franchise) {
             return response()->json(['message' => 'Franquicia no encontrada'], 404);
         }
 
@@ -77,7 +78,7 @@ class FranchiseController extends Controller
     public function update(UpdateFranchiseRequest $request, int $id): JsonResponse
     {
         $user = $request->user();
-        if (!$user->role->isMatrixAdmin()) {
+        if (! $user->role->isMatrixAdmin()) {
             return response()->json(['message' => 'Solo administradores de matriz pueden editar franquicias'], 403);
         }
 
@@ -90,7 +91,7 @@ class FranchiseController extends Controller
     public function destroy(int $id, Request $request): JsonResponse
     {
         $user = $request->user();
-        if (!$user->role->isMatrixAdmin()) {
+        if (! $user->role->isMatrixAdmin()) {
             return response()->json(['message' => 'Solo administradores de matriz pueden eliminar franquicias'], 403);
         }
 

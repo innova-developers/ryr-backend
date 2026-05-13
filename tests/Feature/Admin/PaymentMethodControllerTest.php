@@ -24,11 +24,11 @@ class PaymentMethodControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->admin = User::factory()->create([
             'role' => UserRole::ADMINISTRADOR,
         ]);
-        
+
         $this->cadete = User::factory()->create([
             'role' => UserRole::CADETE,
         ]);
@@ -50,13 +50,13 @@ class PaymentMethodControllerTest extends TestCase
             ->assertJsonStructure([
                 'success',
                 'data' => [
-                    '*' => ['value', 'label']
-                ]
+                    '*' => ['value', 'label'],
+                ],
             ]);
 
         $data = $response->json('data');
         $this->assertCount(4, $data);
-        
+
         $expectedMethods = [
             'EFECTIVO' => 'Efectivo',
             'CHEQUE' => 'Cheque',
@@ -98,7 +98,7 @@ class PaymentMethodControllerTest extends TestCase
                     'commission_id' => $commission->id,
                     'payment_method' => PaymentMethod::EFECTIVO->value,
                     'payment_method_label' => 'Efectivo',
-                ]
+                ],
             ]);
 
         $this->assertDatabaseHas('commissions', [
@@ -152,7 +152,7 @@ class PaymentMethodControllerTest extends TestCase
             'destination_location_id' => $this->destinationLocation->id,
             'payment_method' => PaymentMethod::EFECTIVO,
         ]);
-        
+
         Commission::factory()->count(2)->create([
             'client_id' => $this->customer->id,
             'destination_id' => $this->destination->id,
@@ -162,7 +162,7 @@ class PaymentMethodControllerTest extends TestCase
             'destination_location_id' => $this->destinationLocation->id,
             'payment_method' => PaymentMethod::TRANSFERENCIA,
         ]);
-        
+
         Commission::factory()->count(1)->create([
             'client_id' => $this->customer->id,
             'destination_id' => $this->destination->id,
@@ -184,21 +184,21 @@ class PaymentMethodControllerTest extends TestCase
                     'total_with_method',
                     'total_without_method',
                     'total_commissions',
-                ]
+                ],
             ]);
 
         $data = $response->json('data');
-        
+
         $this->assertEquals(5, $data['total_with_method']);
         $this->assertEquals(1, $data['total_without_method']);
         $this->assertEquals(6, $data['total_commissions']);
-        
+
         $this->assertCount(2, $data['summary']);
-        
+
         // Verificar que el resumen incluya los métodos correctos
         $efectivoSummary = collect($data['summary'])->firstWhere('payment_method', PaymentMethod::EFECTIVO->value);
         $transferenciaSummary = collect($data['summary'])->firstWhere('payment_method', PaymentMethod::TRANSFERENCIA->value);
-        
+
         $this->assertEquals(3, $efectivoSummary['count']);
         $this->assertEquals(2, $transferenciaSummary['count']);
     }

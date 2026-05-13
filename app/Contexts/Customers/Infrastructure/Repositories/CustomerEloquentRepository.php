@@ -12,7 +12,6 @@ use App\Shared\Models\Customer;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class CustomerEloquentRepository implements CustomerRepository
 {
@@ -46,7 +45,7 @@ class CustomerEloquentRepository implements CustomerRepository
             // Construir parámetros para la subconsulta
             $dateConditions = '';
             $bindings = [CurrentAccountStatus::OK->value];
-            
+
             if ($filters->dateFrom) {
                 $dateConditions .= ' AND ca2.transaction_date >= ?';
                 $bindings[] = $filters->dateFrom;
@@ -55,14 +54,14 @@ class CustomerEloquentRepository implements CustomerRepository
                 $dateConditions .= ' AND ca2.transaction_date <= ?';
                 $bindings[] = $filters->dateTo;
             }
-            
+
             // Filtrar clientes que tengan un balance != 0 en el último registro del rango de fechas
             $query->whereIn('customers.id', function ($subquery) use ($filters, $dateConditions, $bindings) {
                 $subquery->select('ca1.customer_id')
                     ->from('current_accounts as ca1')
                     ->where('ca1.status', CurrentAccountStatus::OK->value)
                     ->where('ca1.balance', '!=', 0);
-                
+
                 // Aplicar filtro de rango de fechas si se proporciona
                 if ($filters->dateFrom) {
                     $subquery->where('ca1.transaction_date', '>=', $filters->dateFrom);
@@ -70,7 +69,7 @@ class CustomerEloquentRepository implements CustomerRepository
                 if ($filters->dateTo) {
                     $subquery->where('ca1.transaction_date', '<=', $filters->dateTo);
                 }
-                
+
                 // Filtrar solo el último registro por cliente en el rango de fechas
                 $subquery->whereRaw("ca1.id = (
                     SELECT ca2.id 
@@ -197,10 +196,10 @@ class CustomerEloquentRepository implements CustomerRepository
     {
         try {
             $customer = Customer::findOrFail($dto->id);
-            
+
             // Guardar el email anterior para comparar
             $oldEmail = $customer->email;
-            
+
             $customer->dni = $dto->dni;
             $customer->cuit = $dto->cuit;
             $customer->name = $dto->name;
@@ -240,8 +239,10 @@ class CustomerEloquentRepository implements CustomerRepository
                 if (str_contains($exception->getMessage(), 'customers_email_unique')) {
                     throw new \RuntimeException('El email ingresado ya está registrado en otro cliente.');
                 }
+
                 throw new \RuntimeException('Ya existe un cliente con esos datos.');
             }
+
             throw new \RuntimeException('Error al actualizar Cliente: ' . $exception->getMessage());
         } catch (\Exception $exception) {
             throw new \RuntimeException('Error al actualizar Cliente: ' . $exception->getMessage());
@@ -271,12 +272,12 @@ class CustomerEloquentRepository implements CustomerRepository
         }
 
         return $searchQuery->where(function ($q) use ($query) {
-                $q->where('name', 'like', "%{$query}%")
-                    ->orWhere('last_name', 'like', "%{$query}%")
-                    ->orWhere('email', 'like', "%{$query}%")
-                    ->orWhere('dni', 'like', "%{$query}%")
-                    ->orWhere('cuit', 'like', "%{$query}%");
-            })
+            $q->where('name', 'like', "%{$query}%")
+                ->orWhere('last_name', 'like', "%{$query}%")
+                ->orWhere('email', 'like', "%{$query}%")
+                ->orWhere('dni', 'like', "%{$query}%")
+                ->orWhere('cuit', 'like', "%{$query}%");
+        })
             ->get()
             ->map(function (Customer $customer) {
                 return [

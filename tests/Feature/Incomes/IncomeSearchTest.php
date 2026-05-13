@@ -47,7 +47,7 @@ class IncomeSearchTest extends TestCase
 
         $response->assertStatus(200);
         $incomes = $response->json();
-        
+
         $this->assertCount(1, $incomes);
         $this->assertEquals('TEST_Venta de productos', $incomes[0]['detail']);
     }
@@ -74,7 +74,7 @@ class IncomeSearchTest extends TestCase
 
         $response->assertStatus(200);
         $incomes = $response->json();
-        
+
         $this->assertCount(1, $incomes);
         $this->assertEquals(1500, $incomes[0]['amount']);
     }
@@ -105,7 +105,7 @@ class IncomeSearchTest extends TestCase
 
         $response->assertStatus(200);
         $incomes = $response->json();
-        
+
         $this->assertCount(1, $incomes);
         $this->assertEquals('TEST_Ventas', $incomes[0]['category']['name']);
     }
@@ -134,7 +134,7 @@ class IncomeSearchTest extends TestCase
 
         $response->assertStatus(200);
         $incomes = $response->json();
-        
+
         $this->assertCount(1, $incomes);
         $this->assertEquals('TEST_María García', $incomes[0]['user']['name']);
     }
@@ -202,7 +202,7 @@ class IncomeSearchTest extends TestCase
 
         $response->assertStatus(200);
         $incomes = $response->json();
-        
+
         $this->assertCount(1, $incomes);
         $this->assertEquals('Venta de productos', $incomes[0]['detail']);
     }
@@ -235,10 +235,10 @@ class IncomeSearchTest extends TestCase
 
         $response->assertStatus(200);
         $incomes = $response->json();
-        
+
         $this->assertCount(2, $incomes);
         $this->assertTrue(
-            collect($incomes)->every(fn($income) => str_contains(strtolower($income['detail']), 'venta'))
+            collect($incomes)->every(fn ($income) => str_contains(strtolower($income['detail']), 'venta'))
         );
     }
 }

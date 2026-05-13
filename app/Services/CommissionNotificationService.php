@@ -23,7 +23,7 @@ class CommissionNotificationService
         CommissionStatus::SOLICITUD_RECIBIDA,
         CommissionStatus::ENCOMIENDA_RETIRADA,
         CommissionStatus::RETIRADO_SUCURSAL,
-        CommissionStatus::ENTREGADO
+        CommissionStatus::ENTREGADO,
     ];
 
     /**

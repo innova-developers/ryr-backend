@@ -13,7 +13,9 @@ use Illuminate\Support\Facades\DB;
 
 class InvoiceService
 {
-    public function __construct(private ArcaService $arcaService) {}
+    public function __construct(private ArcaService $arcaService)
+    {
+    }
 
     public function emitirFactura(array $datos, User $user): Invoice
     {
@@ -40,7 +42,7 @@ class InvoiceService
                 'concepto' => $datos['concepto'] ?? 2,
             ]);
 
-            if (!($resultado['success'] ?? false)) {
+            if (! ($resultado['success'] ?? false)) {
                 throw new \RuntimeException($resultado['error'] ?? 'Error emitiendo comprobante en ARCA');
             }
 
@@ -105,6 +107,7 @@ class InvoiceService
     public function anularFactura(Invoice $invoice): Invoice
     {
         $invoice->update(['status' => InvoiceStatus::ANULADA->value]);
+
         return $invoice->fresh();
     }
 
@@ -114,10 +117,10 @@ class InvoiceService
             ->with(['commission', 'currentAccount', 'user'])
             ->orderByDesc('fecha_emision');
 
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
-        if (!empty($filters['tipo_comprobante'])) {
+        if (! empty($filters['tipo_comprobante'])) {
             $query->where('tipo_comprobante', $filters['tipo_comprobante']);
         }
 
@@ -132,22 +135,22 @@ class InvoiceService
         if ($franchiseId) {
             $query->where('franchise_id', $franchiseId);
         }
-        if (!empty($filters['customer_id'])) {
+        if (! empty($filters['customer_id'])) {
             $query->where('customer_id', $filters['customer_id']);
         }
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
-        if (!empty($filters['tipo_comprobante'])) {
+        if (! empty($filters['tipo_comprobante'])) {
             $query->where('tipo_comprobante', $filters['tipo_comprobante']);
         }
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->where('fecha_emision', '>=', $filters['date_from']);
         }
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->where('fecha_emision', '<=', $filters['date_to']);
         }
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $s = $filters['search'];
             $query->where(function ($q) use ($s) {
                 $q->where('razon_social', 'like', "%{$s}%")
@@ -207,7 +210,9 @@ class InvoiceService
     private function resolveDocTipo(Customer $customer, int $tipoComprobante): int
     {
         $invoiceType = InvoiceType::tryFrom($tipoComprobante);
-        if (!$invoiceType) return 99;
+        if (! $invoiceType) {
+            return 99;
+        }
 
         if ($invoiceType->letter() === 'A') {
             return 80; // CUIT
@@ -228,6 +233,7 @@ class InvoiceService
     private function resolveCondicionIva(Customer $customer): string
     {
         $ivaStatus = $customer->iva_status ?? 'auto';
+
         return match ($ivaStatus) {
             'always' => 'IVA Responsable Inscripto',
             'exempt' => 'IVA Exento',

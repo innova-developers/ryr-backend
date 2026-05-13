@@ -3,8 +3,8 @@
 namespace App\Contexts\Commissions\Application\DTOs;
 
 use App\Shared\Enums\CommissionStatus;
-use App\Shared\Enums\PaymentMethod;
 use App\Shared\Enums\CommissionType;
+use App\Shared\Enums\PaymentMethod;
 use DateTime;
 
 class UpdateCommissionDTO
@@ -39,7 +39,7 @@ class UpdateCommissionDTO
             origin: $data['origin'],
             destination: $data['destination'],
             status: CommissionStatus::from($data['status']),
-            items: isset($data['items']) && !empty($data['items']) ? array_map(fn ($item) => CommissionItemDTO::fromArray($item), $data['items']) : null,
+            items: isset($data['items']) && ! empty($data['items']) ? array_map(fn ($item) => CommissionItemDTO::fromArray($item), $data['items']) : null,
             total: $data['total'],
             originLocationId: $data['origin_location_id'],
             destinationLocationId: $data['destination_location_id'],

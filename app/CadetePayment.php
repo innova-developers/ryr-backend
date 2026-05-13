@@ -10,7 +10,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CadetePayment extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
+    use SoftDeletes;
 
     protected $fillable = [
         'cadete_id',
@@ -55,23 +56,23 @@ class CadetePayment extends Model
     ];
 
     // Constantes para tipos de pago
-    const PAYMENT_TYPE_MONTHLY = 'monthly';
-    const PAYMENT_TYPE_BIWEEKLY = 'biweekly';
-    const PAYMENT_TYPE_WEEKLY = 'weekly';
-    const PAYMENT_TYPE_BONUS = 'bonus';
-    const PAYMENT_TYPE_ADVANCE = 'advance';
-    const PAYMENT_TYPE_OTHER = 'other';
+    public const PAYMENT_TYPE_MONTHLY = 'monthly';
+    public const PAYMENT_TYPE_BIWEEKLY = 'biweekly';
+    public const PAYMENT_TYPE_WEEKLY = 'weekly';
+    public const PAYMENT_TYPE_BONUS = 'bonus';
+    public const PAYMENT_TYPE_ADVANCE = 'advance';
+    public const PAYMENT_TYPE_OTHER = 'other';
 
     // Constantes para métodos de pago
-    const PAYMENT_METHOD_CASH = 'cash';
-    const PAYMENT_METHOD_BANK_TRANSFER = 'bank_transfer';
-    const PAYMENT_METHOD_CHECK = 'check';
-    const PAYMENT_METHOD_OTHER = 'other';
+    public const PAYMENT_METHOD_CASH = 'cash';
+    public const PAYMENT_METHOD_BANK_TRANSFER = 'bank_transfer';
+    public const PAYMENT_METHOD_CHECK = 'check';
+    public const PAYMENT_METHOD_OTHER = 'other';
 
     // Constantes para estados
-    const STATUS_PENDING = 'pending';
-    const STATUS_PAID = 'paid';
-    const STATUS_CANCELLED = 'cancelled';
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_PAID = 'paid';
+    public const STATUS_CANCELLED = 'cancelled';
 
     /**
      * Obtener tipos de pago disponibles
@@ -160,7 +161,7 @@ class CadetePayment extends Model
     {
         return $query->whereBetween('payment_date', [
             \Carbon\Carbon::parse($startDate)->startOfDay(),
-            \Carbon\Carbon::parse($endDate)->endOfDay()
+            \Carbon\Carbon::parse($endDate)->endOfDay(),
         ]);
     }
 
@@ -250,7 +251,7 @@ class CadetePayment extends Model
      */
     public function hasPaymentProof(): bool
     {
-        return !empty($this->payment_proof_path);
+        return ! empty($this->payment_proof_path);
     }
 
     /**
@@ -261,6 +262,7 @@ class CadetePayment extends Model
         if ($this->hasPaymentProof()) {
             return asset('storage/' . $this->payment_proof_path);
         }
+
         return null;
     }
 
@@ -269,7 +271,7 @@ class CadetePayment extends Model
      */
     public function getPaymentProofSizeFormattedAttribute(): ?string
     {
-        if (!$this->payment_proof_size) {
+        if (! $this->payment_proof_size) {
             return null;
         }
 

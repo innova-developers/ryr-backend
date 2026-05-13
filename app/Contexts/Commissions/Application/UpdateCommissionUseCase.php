@@ -2,19 +2,19 @@
 
 namespace App\Contexts\Commissions\Application;
 
-use App\Contexts\Commissions\Application\DTOs\UpdateCommissionDTO;
-use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
 use App\Contexts\Commissions\Application\DTOs\CommissionItemDTO;
-use App\Contexts\Commissions\Infrastructure\Mappers\CommissionMapper;
+use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
+use App\Contexts\Commissions\Application\DTOs\UpdateCommissionDTO;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
+use App\Contexts\Commissions\Infrastructure\Mappers\CommissionMapper;
 use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Application\DTO\UpdateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
+use App\Shared\Enums\CommissionItemSize;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\CommissionType;
-use App\Shared\Enums\CommissionItemSize;
 use App\Shared\Models\CurrentAccount;
 use App\Shared\Models\Location;
 use Illuminate\Support\Facades\Auth;
@@ -39,7 +39,7 @@ readonly class UpdateCommissionUseCase
         return DB::transaction(function () use ($dto) {
             // Verificar que la comisión existe
             $existingCommission = $this->commissionRepository->findById($dto->id);
-            
+
             $this->validateCustomer($dto->clientId);
             $destination = $this->validateDestination($dto->origin, $dto->destination);
             if ($dto->items !== null) {
@@ -52,7 +52,7 @@ readonly class UpdateCommissionUseCase
 
             // Recalcular el total: fixed_price de destination + suma de subtotales de items
             $itemsTotal = 0.0;
-            if ($recalculatedItems !== null && !empty($recalculatedItems)) {
+            if ($recalculatedItems !== null && ! empty($recalculatedItems)) {
                 foreach ($recalculatedItems as $item) {
                     $itemsTotal += $item->subtotal;
                 }
@@ -78,10 +78,10 @@ readonly class UpdateCommissionUseCase
 
             // Actualizar la comisión con el total recalculado
             $this->commissionRepository->update($updatedDto, $destination->id);
-            
+
             // Eliminar items existentes y agregar los nuevos (con precios recalculados)
             $this->commissionRepository->deleteItems($dto->id);
-            if ($recalculatedItems !== null && !empty($recalculatedItems)) {
+            if ($recalculatedItems !== null && ! empty($recalculatedItems)) {
                 $this->commissionRepository->addItems($dto->id, $recalculatedItems);
             }
 
@@ -107,7 +107,7 @@ readonly class UpdateCommissionUseCase
                 if ($commissionType === CommissionType::ORDINARIA) {
                     // Actualizar estado a PAGO_VALIDACION
                     $this->commissionRepository->updateStatus($dto->id, CommissionStatus::PAGO_VALIDACION);
-                    
+
                     // Crear log del cambio automático a PAGO_VALIDACION
                     $logDtoAuto = new CreateCommissionLogDTO(
                         commissionId: $dto->id,
@@ -126,14 +126,14 @@ readonly class UpdateCommissionUseCase
                 // Si es EXTRAORDINARIA: solo queda en PENDIENTE_PAGO (sin crear movimiento)
             } else {
                 // Para otros estados, crear log normal
-            $logDto = new CreateCommissionLogDTO(
-                commissionId: $dto->id,
-                userId: Auth::id(),
-                previousStatus: $existingCommission->status->value,
-                newStatus: $dto->status->value,
-                details: 'Comisión actualizada'
-            );
-            $this->commissionRepository->createLog($logDto);
+                $logDto = new CreateCommissionLogDTO(
+                    commissionId: $dto->id,
+                    userId: Auth::id(),
+                    previousStatus: $existingCommission->status->value,
+                    newStatus: $dto->status->value,
+                    details: 'Comisión actualizada'
+                );
+                $this->commissionRepository->createLog($logDto);
             }
 
             return CommissionMapper::fromEntityToArray($this->commissionRepository->findById($dto->id));
@@ -196,11 +196,12 @@ readonly class UpdateCommissionUseCase
                 'commission_id' => $dto->id,
                 'reference' => $reference,
             ]);
+
             return;
         }
 
         // Asegurar que la relación destination esté cargada
-        if (!$commission->relationLoaded('destination')) {
+        if (! $commission->relationLoaded('destination')) {
             $commission->load('destination');
         }
 

@@ -8,7 +8,8 @@ class LoginDTO
         public readonly string $email,
         public readonly string $password,
         public readonly string $scope
-    ) {}
+    ) {
+    }
 
     /**
      * @param array<string, mixed> $data

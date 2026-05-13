@@ -20,7 +20,7 @@ class CustomerAutoCalculateIvaTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->branch = Branch::factory()->create(['name' => 'Sucursal Test']);
         $this->user = User::factory()->create([
             'branch_id' => $this->branch->id,
@@ -30,7 +30,7 @@ class CustomerAutoCalculateIvaTest extends TestCase
             'branch_id' => $this->branch->id,
             'auto_calculate_iva' => true,
         ]);
-        
+
         Sanctum::actingAs($this->user);
     }
 
@@ -39,7 +39,7 @@ class CustomerAutoCalculateIvaTest extends TestCase
         $response = $this->getJson("/api/customers/{$this->customer->id}");
 
         $response->assertStatus(200);
-        
+
         // Debug: ver qué está devolviendo la respuesta
         $responseData = $response->json();
         $this->assertArrayHasKey('auto_calculate_iva', $responseData);
@@ -74,13 +74,13 @@ class CustomerAutoCalculateIvaTest extends TestCase
                         'branch',
                         'balance',
                         'created_at',
-                    ]
-                ]
+                    ],
+                ],
             ]);
 
         $data = $response->json('data');
         $this->assertCount(2, $data);
-        
+
         // Verificar que ambas comisiones incluyen el campo auto_calculate_iva
         foreach ($data as $customer) {
             $this->assertArrayHasKey('auto_calculate_iva', $customer);
@@ -101,7 +101,7 @@ class CustomerAutoCalculateIvaTest extends TestCase
                     'name' => $this->customer->name,
                     'last_name' => $this->customer->last_name,
                     'auto_calculate_iva' => false,
-                ]
+                ],
             ]);
 
         $this->assertDatabaseHas('customers', [
@@ -126,7 +126,7 @@ class CustomerAutoCalculateIvaTest extends TestCase
                 'customer' => [
                     'id' => $this->customer->id,
                     'auto_calculate_iva' => true,
-                ]
+                ],
             ]);
 
         $this->assertDatabaseHas('customers', [

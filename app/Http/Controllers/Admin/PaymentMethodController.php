@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
-use Illuminate\Routing\Controller;
+use App\Services\IvaCalculationService;
 use App\Shared\Enums\PaymentMethod;
 use App\Shared\Models\Commission;
-use App\Services\IvaCalculationService;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Validator;
 
 class PaymentMethodController extends Controller
@@ -54,8 +53,8 @@ class PaymentMethodController extends Controller
         }
 
         $commission = Commission::find($request->commission_id);
-        
-        if (!$commission) {
+
+        if (! $commission) {
             return response()->json([
                 'success' => false,
                 'message' => 'Commission not found',
@@ -64,10 +63,10 @@ class PaymentMethodController extends Controller
 
         $newPaymentMethod = PaymentMethod::from($request->payment_method);
         $customer = $commission->client;
-        
+
         // Actualizar método de pago y recalcular IVA
         $commission = $this->ivaCalculationService->updateIvaForPaymentMethodChange($commission, $newPaymentMethod);
-        
+
         // Agregar nota sobre IVA si se aplicó
         if ($commission->iva_applied && $commission->iva_amount > 0) {
             $ivaNote = $this->ivaCalculationService->generateIvaNote($commission->iva_amount, true);

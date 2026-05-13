@@ -434,5 +434,3 @@ class ScheduleNormalizerComprehensiveTest extends TestCase
         $this->assertArrayHasKey('normalized_at', $decoded);
     }
 }
-
-

@@ -12,7 +12,6 @@ use App\Shared\Models\FeedbackSurvey;
 use App\Shared\Models\Franchise;
 use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class FeedbackTest extends TestCase

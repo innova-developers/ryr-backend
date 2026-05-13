@@ -57,7 +57,7 @@ class MatrixReceivableController extends Controller
     public function bulkMarkAsPaid(Request $request): JsonResponse
     {
         $user = $request->user();
-        if (!$user->role->isMatrixAdmin()) {
+        if (! $user->role->isMatrixAdmin()) {
             return response()->json(['message' => 'Solo administradores de matriz pueden marcar como pagado'], 403);
         }
 
@@ -78,7 +78,7 @@ class MatrixReceivableController extends Controller
     public function markAsPaid(int $id, Request $request): JsonResponse
     {
         $user = $request->user();
-        if (!$user->role->isMatrixAdmin()) {
+        if (! $user->role->isMatrixAdmin()) {
             return response()->json(['message' => 'Solo administradores de matriz pueden marcar como pagado'], 403);
         }
 
@@ -90,7 +90,7 @@ class MatrixReceivableController extends Controller
     public function markAsCancelled(int $id, Request $request): JsonResponse
     {
         $user = $request->user();
-        if (!$user->role->isMatrixAdmin()) {
+        if (! $user->role->isMatrixAdmin()) {
             return response()->json(['message' => 'Solo administradores de matriz pueden cancelar'], 403);
         }
 

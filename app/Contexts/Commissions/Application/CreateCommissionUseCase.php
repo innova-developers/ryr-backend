@@ -46,7 +46,7 @@ readonly class CreateCommissionUseCase
             $this->validateLocations($dto->originLocationId, $dto->destinationLocationId);
 
             $commission = $this->commissionRepository->create($dto, $destination->id);
-            if ($dto->items !== null && !empty($dto->items)) {
+            if ($dto->items !== null && ! empty($dto->items)) {
                 $this->commissionRepository->addItems($commission->id, $dto->items);
             }
 
@@ -136,6 +136,7 @@ readonly class CreateCommissionUseCase
                 'commission_id' => $commissionId,
                 'reference' => $reference,
             ]);
+
             return;
         }
 
@@ -161,10 +162,10 @@ readonly class CreateCommissionUseCase
     {
         try {
             // Cargar relaciones necesarias si no están cargadas
-            if (!$commission->relationLoaded('originLocation')) {
+            if (! $commission->relationLoaded('originLocation')) {
                 $commission->load('originLocation');
             }
-            if (!$commission->relationLoaded('destinationLocation')) {
+            if (! $commission->relationLoaded('destinationLocation')) {
                 $commission->load('destinationLocation');
             }
 
@@ -212,42 +213,45 @@ readonly class CreateCommissionUseCase
         try {
             // Obtener la comisión con todas las relaciones necesarias
             $commission = $this->commissionRepository->findById($commissionId);
-            
-            if (!$commission) {
+
+            if (! $commission) {
                 Log::warning('No se pudo enviar WhatsApp de creación: comisión no encontrada', [
                     'commission_id' => $commissionId,
                 ]);
+
                 return;
             }
 
             // Cargar relaciones necesarias
-            if (!$commission->relationLoaded('client')) {
+            if (! $commission->relationLoaded('client')) {
                 $commission->load('client');
             }
-            if (!$commission->relationLoaded('originLocation')) {
+            if (! $commission->relationLoaded('originLocation')) {
                 $commission->load('originLocation');
             }
-            if (!$commission->relationLoaded('destinationLocation')) {
+            if (! $commission->relationLoaded('destinationLocation')) {
                 $commission->load('destinationLocation');
             }
 
             $customer = $commission->client;
-            
-            if (!$customer) {
+
+            if (! $customer) {
                 Log::warning('No se pudo enviar WhatsApp de creación: cliente no encontrado', [
                     'commission_id' => $commissionId,
                 ]);
+
                 return;
             }
 
             // Obtener teléfono del cliente
             $phone = $customer->mobile ?: $customer->phone;
-            
-            if (!$phone) {
+
+            if (! $phone) {
                 Log::info('No se envió WhatsApp de creación: cliente sin teléfono', [
                     'commission_id' => $commissionId,
                     'customer_id' => $customer->id,
                 ]);
+
                 return;
             }
 

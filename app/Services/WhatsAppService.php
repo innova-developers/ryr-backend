@@ -33,9 +33,10 @@ class WhatsAppService
                 $this->lastError = 'Credenciales WhatsApp no configuradas';
                 Log::error('WhatsApp credentials not configured', [
                     'phone' => $phone,
-                    'instance_id_set' => !empty($this->instanceId),
-                    'token_set' => !empty($this->token),
+                    'instance_id_set' => ! empty($this->instanceId),
+                    'token_set' => ! empty($this->token),
                 ]);
+
                 return false;
             }
 
@@ -102,6 +103,7 @@ class WhatsAppService
         try {
             if (empty($this->instanceId) || empty($this->token)) {
                 $this->lastError = 'Credenciales WhatsApp no configuradas';
+
                 return false;
             }
 
@@ -122,15 +124,18 @@ class WhatsAppService
 
             if ($response->successful()) {
                 Log::info('WhatsApp file sent via GreenAPI', ['phone' => $cleanPhone, 'file' => $fileUrl]);
+
                 return true;
             }
 
             $this->lastError = "HTTP {$response->status()}: " . ($response->json()['message'] ?? $response->body());
             Log::error('Failed to send WhatsApp file', ['phone' => $cleanPhone, 'response' => $response->json()]);
+
             return false;
         } catch (\Exception $e) {
             $this->lastError = $e->getMessage();
             Log::error('Exception sending WhatsApp file', ['phone' => $phone, 'error' => $e->getMessage()]);
+
             return false;
         }
     }
@@ -142,6 +147,7 @@ class WhatsAppService
         try {
             if (empty($this->instanceId) || empty($this->token)) {
                 $this->lastError = 'Credenciales WhatsApp no configuradas';
+
                 return false;
             }
 
@@ -158,15 +164,18 @@ class WhatsAppService
 
             if ($response->successful()) {
                 Log::info('WhatsApp file uploaded via GreenAPI', ['phone' => $cleanPhone, 'file' => $fileName]);
+
                 return true;
             }
 
             $this->lastError = "HTTP {$response->status()}: " . ($response->json()['message'] ?? $response->body());
             Log::error('Failed to upload WhatsApp file', ['phone' => $cleanPhone, 'response' => $response->json()]);
+
             return false;
         } catch (\Exception $e) {
             $this->lastError = $e->getMessage();
             Log::error('Exception uploading WhatsApp file', ['phone' => $phone, 'error' => $e->getMessage()]);
+
             return false;
         }
     }
@@ -174,17 +183,17 @@ class WhatsAppService
     private function cleanPhoneNumber(string $phone): string
     {
         $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
-        
+
         // Si ya tiene el formato completo 549XXXXXXXXX, devolverlo tal como está
         if (str_starts_with($cleanPhone, '549')) {
             return $cleanPhone;
         }
-        
+
         // Si tiene formato 54XXXXXXXXX, agregar el 9 después del 54
         if (str_starts_with($cleanPhone, '54')) {
             return '54' . '9' . substr($cleanPhone, 2);
         }
-        
+
         // Si no tiene código de país, agregar 549 al principio
         return '549' . $cleanPhone;
     }
@@ -248,7 +257,7 @@ class WhatsAppService
         $message .= "📋 *Envío #{$commissionId}*\n\n";
 
         // Agregar notas si existen
-        if ($commission && isset($commission->notes) && !empty(trim($commission->notes))) {
+        if ($commission && isset($commission->notes) && ! empty(trim($commission->notes))) {
             $message .= "📝 *Mensaje:*\n";
             $message .= trim($commission->notes) . "\n\n";
         }

@@ -28,7 +28,7 @@ class PaymentMethodControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->branch = Branch::factory()->create(['name' => 'Sucursal Test']);
         $this->user = User::factory()->create([
             'branch_id' => $this->branch->id,
@@ -41,7 +41,7 @@ class PaymentMethodControllerTest extends TestCase
         $this->destination = Destination::factory()->create();
         $this->originLocation = Location::factory()->create();
         $this->destinationLocation = Location::factory()->create();
-        
+
         $this->commission = Commission::factory()->create([
             'client_id' => $this->customer->id,
             'destination_id' => $this->destination->id,
@@ -54,7 +54,7 @@ class PaymentMethodControllerTest extends TestCase
             'iva_amount' => 0.00,
             'iva_applied' => false,
         ]);
-        
+
         Sanctum::actingAs($this->user);
     }
 
@@ -69,8 +69,8 @@ class PaymentMethodControllerTest extends TestCase
                     '*' => [
                         'value',
                         'label',
-                    ]
-                ]
+                    ],
+                ],
             ]);
 
         $data = $response->json('data');
@@ -95,7 +95,7 @@ class PaymentMethodControllerTest extends TestCase
                     'iva_applied' => false,
                     'iva_amount' => '0.00',
                     'total_with_iva' => '1000.00',
-                ]
+                ],
             ]);
 
         // Verificar que se actualizó en la base de datos
@@ -232,7 +232,7 @@ class PaymentMethodControllerTest extends TestCase
                     'total_with_method',
                     'total_without_method',
                     'total_commissions',
-                ]
+                ],
             ]);
     }
 }

@@ -25,16 +25,16 @@ class CadeteHomeTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Crear sucursal
         $this->branch = Branch::factory()->create();
-        
+
         // Crear cadete
         $this->cadete = User::factory()->create([
             'role' => UserRole::CADETE,
             'branch_id' => $this->branch->id,
         ]);
-        
+
         // Crear transporte asignado al cadete
         $this->transport = Transport::factory()->create([
             'cadete_id' => $this->cadete->id,
@@ -56,8 +56,8 @@ class CadeteHomeTest extends TestCase
                         'performance',
                         'stats',
                         'quick_actions',
-                        'notifications'
-                    ]
+                        'notifications',
+                    ],
                 ]);
     }
 
@@ -75,16 +75,16 @@ class CadeteHomeTest extends TestCase
                             'total_deliveries' => 0,
                             'completed_deliveries' => 0,
                             'pending_deliveries' => 0,
-                            'cancelled_deliveries' => 0
+                            'cancelled_deliveries' => 0,
                         ],
                         'earnings' => [
                             'today_total' => 0,
                             'today_cash' => 0,
                             'today_card' => 0,
                             'currency' => 'ARS',
-                            'formatted_total' => '$0'
-                        ]
-                    ]
+                            'formatted_total' => '$0',
+                        ],
+                    ],
                 ]);
     }
 
@@ -92,17 +92,17 @@ class CadeteHomeTest extends TestCase
     {
         // Crear cliente
         $client = Customer::factory()->create();
-        
+
         // Crear ubicaciones
         $originLocation = Location::factory()->create();
         $destinationLocation = Location::factory()->create();
-        
+
         // Crear destino
         $destination = Destination::factory()->create();
-        
+
         // Crear comisiones para hoy
         $today = now()->format('Y-m-d');
-        
+
         // Comisión completada
         Commission::factory()->create([
             'client_id' => $client->id,
@@ -116,7 +116,7 @@ class CadeteHomeTest extends TestCase
             'total' => 25000,
             'cadete_id' => $this->cadete->id,
         ]);
-        
+
         // Comisión pendiente
         Commission::factory()->create([
             'client_id' => $client->id,
@@ -130,7 +130,7 @@ class CadeteHomeTest extends TestCase
             'total' => 30000,
             'cadete_id' => $this->cadete->id,
         ]);
-        
+
         // Comisión cancelada
         Commission::factory()->create([
             'client_id' => $client->id,
@@ -156,19 +156,19 @@ class CadeteHomeTest extends TestCase
                             'total_deliveries' => 3,
                             'completed_deliveries' => 1,
                             'pending_deliveries' => 1,
-                            'cancelled_deliveries' => 1
+                            'cancelled_deliveries' => 1,
                         ],
                         'earnings' => [
                             'today_total' => 70000,
                             'today_cash' => 25000,
                             'today_card' => 0,
                             'currency' => 'ARS',
-                            'formatted_total' => '$70.000'
+                            'formatted_total' => '$70.000',
                         ],
                         'performance' => [
-                            'delivery_success_rate' => 33.3
-                        ]
-                    ]
+                            'delivery_success_rate' => 33.3,
+                        ],
+                    ],
                 ]);
     }
 
@@ -176,17 +176,17 @@ class CadeteHomeTest extends TestCase
     {
         // Crear cliente
         $client = Customer::factory()->create();
-        
+
         // Crear ubicaciones
         $originLocation = Location::factory()->create();
         $destinationLocation = Location::factory()->create();
-        
+
         // Crear destino
         $destination = Destination::factory()->create();
-        
+
         // Crear comisión para fecha específica
         $specificDate = now()->format('Y-m-d');
-        
+
         Commission::factory()->create([
             'client_id' => $client->id,
             'transport_id' => $this->transport->id,
@@ -211,13 +211,13 @@ class CadeteHomeTest extends TestCase
                             'total_deliveries' => 1,
                             'completed_deliveries' => 1,
                             'pending_deliveries' => 0,
-                            'cancelled_deliveries' => 0
+                            'cancelled_deliveries' => 0,
                         ],
                         'earnings' => [
                             'today_total' => 50000,
-                            'formatted_total' => '$50.000'
-                        ]
-                    ]
+                            'formatted_total' => '$50.000',
+                        ],
+                    ],
                 ]);
     }
 
@@ -241,16 +241,16 @@ class CadeteHomeTest extends TestCase
                             'total_deliveries' => 0,
                             'completed_deliveries' => 0,
                             'pending_deliveries' => 0,
-                            'cancelled_deliveries' => 0
+                            'cancelled_deliveries' => 0,
                         ],
                         'earnings' => [
                             'today_total' => 0,
                             'today_cash' => 0,
                             'today_card' => 0,
                             'currency' => 'ARS',
-                            'formatted_total' => '$0'
-                        ]
-                    ]
+                            'formatted_total' => '$0',
+                        ],
+                    ],
                 ]);
     }
 
@@ -263,10 +263,10 @@ class CadeteHomeTest extends TestCase
     public function test_home_dashboard_requires_cadete_role()
     {
         $admin = User::factory()->create(['role' => UserRole::ADMINISTRADOR]);
-        
+
         $response = $this->actingAs($admin)
                          ->getJson('/api/cadete/home');
-        
+
         $response->assertStatus(403);
     }
 }

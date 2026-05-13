@@ -389,10 +389,10 @@ class CommissionTest extends TestCase
                     'subtotal' => 3000000,
                     'detail' => null,
                     'created_at' => '2025-08-29T14:15:08.000000Z',
-                    'updated_at' => '2025-08-29T14:15:08.000000Z'
-                ]
+                    'updated_at' => '2025-08-29T14:15:08.000000Z',
+                ],
             ],
-            'total' => 3000000
+            'total' => 3000000,
         ];
 
         $response = $this->putJson("/api/commissions/{$commission->id}", $updateData);
@@ -500,11 +500,11 @@ class CommissionTest extends TestCase
         $response = $this->getJson("/api/commissions/{$commission->id}");
 
         $response->assertStatus(200);
-        
+
         // Debug: ver qué está devolviendo la respuesta
         $responseData = $response->json();
         $this->assertArrayHasKey('data', $responseData);
-        
+
         $commissionData = $responseData['data'];
         $this->assertArrayHasKey('id', $commissionData);
         $this->assertArrayHasKey('total', $commissionData);
@@ -512,7 +512,7 @@ class CommissionTest extends TestCase
         $this->assertArrayHasKey('iva_applied', $commissionData);
         $this->assertArrayHasKey('payment_method', $commissionData);
         $this->assertArrayHasKey('payment_method_label', $commissionData);
-        
+
         $this->assertEquals($commission->id, $commissionData['id']);
         $this->assertEquals(1210.00, $commissionData['total']);
         $this->assertEquals(210.00, $commissionData['iva_amount']);
@@ -577,13 +577,13 @@ class CommissionTest extends TestCase
                         'destination',
                         'origin_location',
                         'destination_location',
-                    ]
-                ]
+                    ],
+                ],
             ]);
 
         $data = $response->json('data');
         $this->assertCount(2, $data);
-        
+
         // Verificar que ambas comisiones incluyen los campos de IVA
         foreach ($data as $commission) {
             $this->assertArrayHasKey('iva_amount', $commission);

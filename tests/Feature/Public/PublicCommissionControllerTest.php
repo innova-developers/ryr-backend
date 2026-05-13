@@ -5,8 +5,6 @@ namespace Tests\Feature\Public;
 use App\Shared\Enums\CommissionItemSize;
 use App\Shared\Enums\CommissionItemType;
 use App\Shared\Enums\CommissionStatus;
-use App\Shared\Models\Branch;
-use App\Shared\Models\Commission;
 use App\Shared\Models\Customer;
 use App\Shared\Models\Destination;
 use App\Shared\Models\Location;
@@ -54,7 +52,7 @@ class PublicCommissionControllerTest extends TestCase
                     'quantity' => 1,
                     'unit_price' => 1500,
                     'subtotal' => 1500,
-                ]
+                ],
             ],
             'total' => 1500,
             'notes' => 'Comisión con notas desde FormData',

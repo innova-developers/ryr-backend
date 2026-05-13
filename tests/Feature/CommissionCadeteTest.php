@@ -2,13 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Shared\Models\Commission;
-use App\Shared\Models\User;
-use App\Shared\Models\Customer;
+use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Branch;
+use App\Shared\Models\Commission;
+use App\Shared\Models\Customer;
 use App\Shared\Models\Destination;
 use App\Shared\Models\Location;
-use App\Shared\Enums\CommissionStatus;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -34,24 +34,24 @@ class CommissionCadeteTest extends TestCase
         // Crear admin
         $this->admin = User::factory()->create([
             'role' => 'administrador',
-            'email' => 'admin@test.com'
+            'email' => 'admin@test.com',
         ]);
 
         // Crear cadete
         $this->cadete = User::factory()->create([
             'role' => 'cadete',
-            'email' => 'cadete@test.com'
+            'email' => 'cadete@test.com',
         ]);
 
         // Crear cadete externo
         $this->cadeteExterno = User::factory()->create([
             'role' => 'cadete_externo',
-            'email' => 'cadeteexterno@test.com'
+            'email' => 'cadeteexterno@test.com',
         ]);
 
         // Crear customer
         $this->customer = Customer::factory()->create([
-            'email' => 'customer@test.com'
+            'email' => 'customer@test.com',
         ]);
 
         // Crear branch
@@ -81,7 +81,7 @@ class CommissionCadeteTest extends TestCase
     public function test_admin_can_assign_cadete_to_commission(): void
     {
         $response = $this->postJson("/api/commissions/{$this->commission->id}/assign-cadete", [
-            'cadete_id' => $this->cadete->id
+            'cadete_id' => $this->cadete->id,
         ]);
 
         $response->assertStatus(200)
@@ -90,21 +90,21 @@ class CommissionCadeteTest extends TestCase
                 'commission' => [
                     'id' => $this->commission->id,
                     'cadete_id' => $this->cadete->id,
-                    'status' => CommissionStatus::CADETE_ASIGNADO->value
-                ]
+                    'status' => CommissionStatus::CADETE_ASIGNADO->value,
+                ],
             ]);
 
         $this->assertDatabaseHas('commissions', [
             'id' => $this->commission->id,
             'cadete_id' => $this->cadete->id,
-            'status' => CommissionStatus::CADETE_ASIGNADO->value
+            'status' => CommissionStatus::CADETE_ASIGNADO->value,
         ]);
     }
 
     public function test_admin_can_assign_cadete_externo_to_commission(): void
     {
         $response = $this->postJson("/api/commissions/{$this->commission->id}/assign-cadete", [
-            'cadete_id' => $this->cadeteExterno->id
+            'cadete_id' => $this->cadeteExterno->id,
         ]);
 
         $response->assertStatus(200)
@@ -113,8 +113,8 @@ class CommissionCadeteTest extends TestCase
                 'commission' => [
                     'id' => $this->commission->id,
                     'cadete_id' => $this->cadeteExterno->id,
-                    'status' => CommissionStatus::CADETE_ASIGNADO->value
-                ]
+                    'status' => CommissionStatus::CADETE_ASIGNADO->value,
+                ],
             ]);
     }
 
@@ -123,7 +123,7 @@ class CommissionCadeteTest extends TestCase
         $nonCadeteUser = User::factory()->create(['role' => 'cliente']);
 
         $response = $this->postJson("/api/commissions/{$this->commission->id}/assign-cadete", [
-            'cadete_id' => $nonCadeteUser->id
+            'cadete_id' => $nonCadeteUser->id,
         ]);
 
         $response->assertStatus(422)
@@ -136,7 +136,7 @@ class CommissionCadeteTest extends TestCase
         $this->commission->update(['status' => CommissionStatus::ENTREGADO]);
 
         $response = $this->postJson("/api/commissions/{$this->commission->id}/assign-cadete", [
-            'cadete_id' => $this->cadete->id
+            'cadete_id' => $this->cadete->id,
         ]);
 
         $response->assertStatus(200)
@@ -145,14 +145,14 @@ class CommissionCadeteTest extends TestCase
                 'commission' => [
                     'id' => $this->commission->id,
                     'cadete_id' => $this->cadete->id,
-                    'status' => CommissionStatus::CADETE_ASIGNADO->value
-                ]
+                    'status' => CommissionStatus::CADETE_ASIGNADO->value,
+                ],
             ]);
 
         $this->assertDatabaseHas('commissions', [
             'id' => $this->commission->id,
             'cadete_id' => $this->cadete->id,
-            'status' => CommissionStatus::CADETE_ASIGNADO->value
+            'status' => CommissionStatus::CADETE_ASIGNADO->value,
         ]);
     }
 
@@ -162,12 +162,12 @@ class CommissionCadeteTest extends TestCase
         $this->commission->update(['cadete_id' => $this->cadete->id]);
 
         $response = $this->postJson("/api/commissions/{$this->commission->id}/assign-cadete", [
-            'cadete_id' => $this->cadete->id
+            'cadete_id' => $this->cadete->id,
         ]);
 
         $response->assertStatus(400)
             ->assertJson([
-                'message' => 'Este cadete ya está asignado a la comisión'
+                'message' => 'Este cadete ya está asignado a la comisión',
             ]);
     }
 
@@ -184,14 +184,14 @@ class CommissionCadeteTest extends TestCase
                 'commission' => [
                     'id' => $this->commission->id,
                     'cadete_id' => null,
-                    'status' => CommissionStatus::BUSCANDO_CADETE->value
-                ]
+                    'status' => CommissionStatus::BUSCANDO_CADETE->value,
+                ],
             ]);
 
         $this->assertDatabaseHas('commissions', [
             'id' => $this->commission->id,
             'cadete_id' => null,
-            'status' => CommissionStatus::BUSCANDO_CADETE->value
+            'status' => CommissionStatus::BUSCANDO_CADETE->value,
         ]);
     }
 
@@ -201,7 +201,7 @@ class CommissionCadeteTest extends TestCase
 
         $response->assertStatus(400)
             ->assertJson([
-                'message' => 'Esta comisión no tiene un cadete asignado'
+                'message' => 'Esta comisión no tiene un cadete asignado',
             ]);
     }
 
@@ -210,7 +210,7 @@ class CommissionCadeteTest extends TestCase
         // Asignar un cadete y cambiar a un estado que antes no permitía desasignación
         $this->commission->update([
             'cadete_id' => $this->cadete->id,
-            'status' => CommissionStatus::ENTREGADO
+            'status' => CommissionStatus::ENTREGADO,
         ]);
 
         $response = $this->deleteJson("/api/commissions/{$this->commission->id}/unassign-cadete");
@@ -221,14 +221,14 @@ class CommissionCadeteTest extends TestCase
                 'commission' => [
                     'id' => $this->commission->id,
                     'cadete_id' => null,
-                    'status' => CommissionStatus::BUSCANDO_CADETE->value
-                ]
+                    'status' => CommissionStatus::BUSCANDO_CADETE->value,
+                ],
             ]);
 
         $this->assertDatabaseHas('commissions', [
             'id' => $this->commission->id,
             'cadete_id' => null,
-            'status' => CommissionStatus::BUSCANDO_CADETE->value
+            'status' => CommissionStatus::BUSCANDO_CADETE->value,
         ]);
     }
 
@@ -238,7 +238,7 @@ class CommissionCadeteTest extends TestCase
         $this->commission->update(['cadete_id' => $this->cadete->id]);
 
         $response = $this->patchJson("/api/commissions/{$this->commission->id}/change-cadete", [
-            'cadete_id' => $this->cadeteExterno->id
+            'cadete_id' => $this->cadeteExterno->id,
         ]);
 
         $response->assertStatus(200)
@@ -247,14 +247,14 @@ class CommissionCadeteTest extends TestCase
                 'commission' => [
                     'id' => $this->commission->id,
                     'cadete_id' => $this->cadeteExterno->id,
-                    'status' => CommissionStatus::CADETE_ASIGNADO->value
+                    'status' => CommissionStatus::CADETE_ASIGNADO->value,
                 ],
-                'previous_cadete_id' => $this->cadete->id
+                'previous_cadete_id' => $this->cadete->id,
             ]);
 
         $this->assertDatabaseHas('commissions', [
             'id' => $this->commission->id,
-            'cadete_id' => $this->cadeteExterno->id
+            'cadete_id' => $this->cadeteExterno->id,
         ]);
     }
 
@@ -264,12 +264,12 @@ class CommissionCadeteTest extends TestCase
         $this->commission->update(['cadete_id' => $this->cadete->id]);
 
         $response = $this->patchJson("/api/commissions/{$this->commission->id}/change-cadete", [
-            'cadete_id' => $this->cadete->id
+            'cadete_id' => $this->cadete->id,
         ]);
 
         $response->assertStatus(400)
             ->assertJson([
-                'message' => 'La comisión ya tiene asignado este cadete'
+                'message' => 'La comisión ya tiene asignado este cadete',
             ]);
     }
 
@@ -278,11 +278,11 @@ class CommissionCadeteTest extends TestCase
         // Asignar un cadete y cambiar a un estado que antes no permitía cambio
         $this->commission->update([
             'cadete_id' => $this->cadete->id,
-            'status' => CommissionStatus::ENTREGADO
+            'status' => CommissionStatus::ENTREGADO,
         ]);
 
         $response = $this->patchJson("/api/commissions/{$this->commission->id}/change-cadete", [
-            'cadete_id' => $this->cadeteExterno->id
+            'cadete_id' => $this->cadeteExterno->id,
         ]);
 
         $response->assertStatus(200)
@@ -291,14 +291,14 @@ class CommissionCadeteTest extends TestCase
                 'commission' => [
                     'id' => $this->commission->id,
                     'cadete_id' => $this->cadeteExterno->id,
-                    'status' => CommissionStatus::CADETE_ASIGNADO->value
-                ]
+                    'status' => CommissionStatus::CADETE_ASIGNADO->value,
+                ],
             ]);
 
         $this->assertDatabaseHas('commissions', [
             'id' => $this->commission->id,
             'cadete_id' => $this->cadeteExterno->id,
-            'status' => CommissionStatus::CADETE_ASIGNADO->value
+            'status' => CommissionStatus::CADETE_ASIGNADO->value,
         ]);
     }
 
@@ -313,8 +313,8 @@ class CommissionCadeteTest extends TestCase
             ->assertJson([
                 'cadete' => [
                     'id' => $this->cadete->id,
-                    'email' => $this->cadete->email
-                ]
+                    'email' => $this->cadete->email,
+                ],
             ]);
     }
 
@@ -325,7 +325,7 @@ class CommissionCadeteTest extends TestCase
         $response->assertStatus(200)
             ->assertJson([
                 'message' => 'Esta comisión no tiene un cadete asignado',
-                'cadete' => null
+                'cadete' => null,
             ]);
     }
 
@@ -358,9 +358,9 @@ class CommissionCadeteTest extends TestCase
             ->assertJson([
                 'cadete' => [
                     'id' => $this->cadete->id,
-                    'email' => $this->cadete->email
+                    'email' => $this->cadete->email,
                 ],
-                'total' => 2
+                'total' => 2,
             ])
             ->assertJsonCount(2, 'commissions');
     }
@@ -373,7 +373,7 @@ class CommissionCadeteTest extends TestCase
 
         $response->assertStatus(400)
             ->assertJson([
-                'message' => 'El usuario especificado no es un cadete'
+                'message' => 'El usuario especificado no es un cadete',
             ]);
     }
 
@@ -383,7 +383,7 @@ class CommissionCadeteTest extends TestCase
         $this->app['auth']->forgetGuards();
 
         $response = $this->postJson("/api/commissions/{$this->commission->id}/assign-cadete", [
-            'cadete_id' => $this->cadete->id
+            'cadete_id' => $this->cadete->id,
         ]);
 
         $response->assertStatus(401);
@@ -394,7 +394,7 @@ class CommissionCadeteTest extends TestCase
         Sanctum::actingAs($this->cadete);
 
         $response = $this->postJson("/api/commissions/{$this->commission->id}/assign-cadete", [
-            'cadete_id' => $this->cadeteExterno->id
+            'cadete_id' => $this->cadeteExterno->id,
         ]);
 
         $response->assertStatus(403);

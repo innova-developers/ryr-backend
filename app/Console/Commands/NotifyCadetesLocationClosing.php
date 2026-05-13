@@ -79,22 +79,22 @@ class NotifyCadetesLocationClosing extends Command
         foreach ($commissions as $commission) {
             try {
                 $this->line("Procesando comisión #{$commission->id}...");
-                
+
                 $originClosesSoon = false;
                 $destinationClosesSoon = false;
                 $originName = null;
                 $destinationName = null;
 
                 // Verificar horario de origen
-                if ($commission->originLocation && !empty($commission->originLocation->schedule)) {
+                if ($commission->originLocation && ! empty($commission->originLocation->schedule)) {
                     $this->line("  Verificando horario de origen: {$commission->originLocation->schedule}");
                     $normalizedOrigin = $this->scheduleNormalizer->normalize($commission->originLocation->schedule);
-                    
+
                     if (isset($normalizedOrigin['normalized_string'])) {
                         $this->line("  String normalizado (origen): {$normalizedOrigin['normalized_string']}");
                     }
 
-                    if (!empty($normalizedOrigin['ranges'])) {
+                    if (! empty($normalizedOrigin['ranges'])) {
                         $originClosesSoon = $this->scheduleNormalizer->closesSoon($normalizedOrigin['ranges'], $minutes);
 
                         if ($originClosesSoon) {
@@ -111,15 +111,15 @@ class NotifyCadetesLocationClosing extends Command
                 }
 
                 // Verificar horario de destino (siempre verificar, independientemente del origen)
-                if ($commission->destinationLocation && !empty($commission->destinationLocation->schedule)) {
+                if ($commission->destinationLocation && ! empty($commission->destinationLocation->schedule)) {
                     $this->line("  Verificando horario de destino: {$commission->destinationLocation->schedule}");
                     $normalizedDestination = $this->scheduleNormalizer->normalize($commission->destinationLocation->schedule);
-                    
+
                     if (isset($normalizedDestination['normalized_string'])) {
                         $this->line("  String normalizado (destino): {$normalizedDestination['normalized_string']}");
                     }
 
-                    if (!empty($normalizedDestination['ranges'])) {
+                    if (! empty($normalizedDestination['ranges'])) {
                         $destinationClosesSoon = $this->scheduleNormalizer->closesSoon($normalizedDestination['ranges'], $minutes);
 
                         if ($destinationClosesSoon) {
@@ -132,13 +132,14 @@ class NotifyCadetesLocationClosing extends Command
                         $this->line("  - No se pudieron parsear rangos del destino");
                     }
                 } else {
-                        $this->line("  - Destino sin horario");
-                    }
+                    $this->line("  - Destino sin horario");
+                }
 
                 // Enviar notificaciones si es necesario
-                if (!$commission->cadete) {
+                if (! $commission->cadete) {
                     $this->line("  - Comisión sin cadete asignado");
                     $notificationsSkipped++;
+
                     continue;
                 }
 
@@ -158,8 +159,8 @@ class NotifyCadetesLocationClosing extends Command
                     $hasNotifications = true;
                 }
 
-                if (!$hasNotifications) {
-                        $this->line("  - No se requiere notificación");
+                if (! $hasNotifications) {
+                    $this->line("  - No se requiere notificación");
                     $notificationsSkipped++;
                 }
             } catch (\Exception $e) {
@@ -198,7 +199,7 @@ class NotifyCadetesLocationClosing extends Command
         try {
             $cadeteId = $commission->cadete_id;
 
-            if (!$cadeteId) {
+            if (! $cadeteId) {
                 return;
             }
 
@@ -252,4 +253,3 @@ class NotifyCadetesLocationClosing extends Command
         }
     }
 }
-

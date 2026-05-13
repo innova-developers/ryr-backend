@@ -112,7 +112,7 @@ class PublicCommissionController
                 ]);
 
                 // Crear los items de la comisión si existen
-                if (isset($commissionData['items']) && !empty($commissionData['items'])) {
+                if (isset($commissionData['items']) && ! empty($commissionData['items'])) {
                     foreach ($commissionData['items'] as $itemData) {
                         CommissionItem::create([
                             'commission_id' => $commission->id,

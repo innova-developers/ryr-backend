@@ -29,6 +29,7 @@ class ExpensesController extends Controller
             if ($request->has('transport_id')) {
                 $useCase = new GetExpensesByTransportUseCase($this->repository);
                 $expenses = $useCase($request->integer('transport_id'));
+
                 return response()->json($expenses);
             } else {
                 // Construir el DTO de filtros con paginación
@@ -42,7 +43,7 @@ class ExpensesController extends Controller
                     $request->get('per_page', 15)
                 );
                 $expenses = $this->repository->findAll($filterDTO);
-                
+
                 // Retornar en formato paginado estándar de Laravel
                 return response()->json([
                     'data' => $expenses->items(),

@@ -11,7 +11,9 @@ use Illuminate\Routing\Controller;
 
 class FeedbackController extends Controller
 {
-    public function __construct(private FeedbackService $feedbackService) {}
+    public function __construct(private FeedbackService $feedbackService)
+    {
+    }
 
     public function dashboard(Request $request): JsonResponse
     {
@@ -97,7 +99,7 @@ class FeedbackController extends Controller
             $validated['comment'] ?? null
         );
 
-        if (!$survey) {
+        if (! $survey) {
             return response()->json(['message' => 'Encuesta no encontrada o ya respondida'], 404);
         }
 
@@ -113,7 +115,7 @@ class FeedbackController extends Controller
             ->with('customer:id,name,last_name')
             ->first();
 
-        if (!$survey) {
+        if (! $survey) {
             return response()->json(['message' => 'Encuesta no encontrada'], 404);
         }
 

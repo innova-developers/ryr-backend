@@ -25,16 +25,16 @@ class CadeteProfileTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Crear sucursal
         $this->branch = Branch::factory()->create([
             'name' => 'Sucursal Centro',
             'address' => 'Av. Principal 123',
             'phone' => '011-1234-5678',
             'secondary_phone' => '011-1234-5679',
-            'schedule' => 'Lun-Vie 8:00-18:00'
+            'schedule' => 'Lun-Vie 8:00-18:00',
         ]);
-        
+
         // Crear cadete con información completa
         $this->cadete = User::factory()->create([
             'role' => UserRole::CADETE,
@@ -44,7 +44,7 @@ class CadeteProfileTest extends TestCase
             'commission_percentage' => 15.50,
             'income_percentage' => 80.00,
         ]);
-        
+
         // Crear transporte asignado al cadete
         $this->transport = Transport::factory()->create([
             'cadete_id' => $this->cadete->id,
@@ -52,7 +52,7 @@ class CadeteProfileTest extends TestCase
             'description' => 'Moto Honda CG 150',
             'phone' => '011-9876-5432',
             'insurance' => 'Seguros XYZ',
-            'usage' => 'Carga general'
+            'usage' => 'Carga general',
         ]);
     }
 
@@ -79,8 +79,8 @@ class CadeteProfileTest extends TestCase
                         'transport',
                         'stats',
                         'created_at',
-                        'last_login'
-                    ]
+                        'last_login',
+                    ],
                 ]);
     }
 
@@ -103,7 +103,7 @@ class CadeteProfileTest extends TestCase
                         'base_salary' => '150000.00',
                         'commission_percentage' => '15.50',
                         'income_percentage' => '80.00',
-                    ]
+                    ],
                 ]);
     }
 
@@ -122,9 +122,9 @@ class CadeteProfileTest extends TestCase
                             'address' => 'Av. Principal 123',
                             'phone' => '011-1234-5678',
                             'secondary_phone' => '011-1234-5679',
-                            'schedule' => 'Lun-Vie 8:00-18:00'
-                        ]
-                    ]
+                            'schedule' => 'Lun-Vie 8:00-18:00',
+                        ],
+                    ],
                 ]);
     }
 
@@ -143,9 +143,9 @@ class CadeteProfileTest extends TestCase
                             'description' => 'Moto Honda CG 150',
                             'phone' => '011-9876-5432',
                             'insurance' => 'Seguros XYZ',
-                            'usage' => 'Carga general'
-                        ]
-                    ]
+                            'usage' => 'Carga general',
+                        ],
+                    ],
                 ]);
     }
 
@@ -156,7 +156,7 @@ class CadeteProfileTest extends TestCase
         $originLocation = Location::factory()->create();
         $destinationLocation = Location::factory()->create();
         $destination = Destination::factory()->create();
-        
+
         // Crear comisiones para el cadete
         Commission::factory()->create([
             'client_id' => $client->id,
@@ -167,7 +167,7 @@ class CadeteProfileTest extends TestCase
             'destination_location_id' => $destinationLocation->id,
             'status' => CommissionStatus::ENTREGADO,
         ]);
-        
+
         Commission::factory()->create([
             'client_id' => $client->id,
             'cadete_id' => $this->cadete->id,
@@ -188,9 +188,9 @@ class CadeteProfileTest extends TestCase
                         'stats' => [
                             'total_commissions' => 2,
                             'completed_commissions' => 1,
-                            'success_rate' => 50.0
-                        ]
-                    ]
+                            'success_rate' => 50.0,
+                        ],
+                    ],
                 ]);
     }
 
@@ -206,9 +206,9 @@ class CadeteProfileTest extends TestCase
                         'stats' => [
                             'total_commissions' => 0,
                             'completed_commissions' => 0,
-                            'success_rate' => 0
-                        ]
-                    ]
+                            'success_rate' => 0,
+                        ],
+                    ],
                 ]);
     }
 
@@ -221,10 +221,10 @@ class CadeteProfileTest extends TestCase
     public function test_profile_requires_cadete_role()
     {
         $admin = User::factory()->create(['role' => UserRole::ADMINISTRADOR]);
-        
+
         $response = $this->actingAs($admin)
                          ->getJson('/api/cadete/profile');
-        
+
         $response->assertStatus(403);
     }
 
@@ -243,8 +243,8 @@ class CadeteProfileTest extends TestCase
                 ->assertJson([
                     'success' => true,
                     'cadete' => [
-                        'transport' => null
-                    ]
+                        'transport' => null,
+                    ],
                 ]);
     }
 
@@ -263,8 +263,8 @@ class CadeteProfileTest extends TestCase
                 ->assertJson([
                     'success' => true,
                     'cadete' => [
-                        'branch' => null
-                    ]
+                        'branch' => null,
+                    ],
                 ]);
     }
 
@@ -273,7 +273,7 @@ class CadeteProfileTest extends TestCase
         $response = $this->actingAs($this->cadete)
                          ->putJson('/api/cadete/profile', [
                              'name' => 'Nuevo Nombre',
-                             'email' => 'nuevo@email.com'
+                             'email' => 'nuevo@email.com',
                          ]);
 
         $response->assertStatus(200)
@@ -282,18 +282,18 @@ class CadeteProfileTest extends TestCase
                     'message' => 'Perfil actualizado exitosamente',
                     'cadete' => [
                         'name' => 'Nuevo Nombre',
-                        'email' => 'nuevo@email.com'
-                    ]
+                        'email' => 'nuevo@email.com',
+                    ],
                 ]);
     }
 
     public function test_cadete_can_update_only_name()
     {
         $originalEmail = $this->cadete->email;
-        
+
         $response = $this->actingAs($this->cadete)
                          ->putJson('/api/cadete/profile', [
-                             'name' => 'Solo Nombre Cambiado'
+                             'name' => 'Solo Nombre Cambiado',
                          ]);
 
         $response->assertStatus(200)
@@ -302,18 +302,18 @@ class CadeteProfileTest extends TestCase
                     'message' => 'Perfil actualizado exitosamente',
                     'cadete' => [
                         'name' => 'Solo Nombre Cambiado',
-                        'email' => $originalEmail
-                    ]
+                        'email' => $originalEmail,
+                    ],
                 ]);
     }
 
     public function test_cadete_can_update_only_email()
     {
         $originalName = $this->cadete->name;
-        
+
         $response = $this->actingAs($this->cadete)
                          ->putJson('/api/cadete/profile', [
-                             'email' => 'soloemail@cambiado.com'
+                             'email' => 'soloemail@cambiado.com',
                          ]);
 
         $response->assertStatus(200)
@@ -322,8 +322,8 @@ class CadeteProfileTest extends TestCase
                     'message' => 'Perfil actualizado exitosamente',
                     'cadete' => [
                         'name' => $originalName,
-                        'email' => 'soloemail@cambiado.com'
-                    ]
+                        'email' => 'soloemail@cambiado.com',
+                    ],
                 ]);
     }
 
@@ -331,7 +331,7 @@ class CadeteProfileTest extends TestCase
     {
         $response = $this->actingAs($this->cadete)
                          ->putJson('/api/cadete/profile', [
-                             'email' => 'email-invalido'
+                             'email' => 'email-invalido',
                          ]);
 
         $response->assertStatus(422)
@@ -343,12 +343,12 @@ class CadeteProfileTest extends TestCase
         // Crear otro usuario con email diferente
         $otherUser = User::factory()->create([
             'email' => 'otro@email.com',
-            'role' => UserRole::CADETE
+            'role' => UserRole::CADETE,
         ]);
 
         $response = $this->actingAs($this->cadete)
                          ->putJson('/api/cadete/profile', [
-                             'email' => 'otro@email.com'
+                             'email' => 'otro@email.com',
                          ]);
 
         $response->assertStatus(422)
@@ -358,26 +358,26 @@ class CadeteProfileTest extends TestCase
     public function test_profile_update_allows_same_email_for_same_user()
     {
         $originalEmail = $this->cadete->email;
-        
+
         $response = $this->actingAs($this->cadete)
                          ->putJson('/api/cadete/profile', [
-                             'email' => $originalEmail
+                             'email' => $originalEmail,
                          ]);
 
         $response->assertStatus(200)
                 ->assertJson([
                     'success' => true,
-                    'message' => 'Perfil actualizado exitosamente'
+                    'message' => 'Perfil actualizado exitosamente',
                 ]);
     }
 
     public function test_profile_update_validates_name_length()
     {
         $longName = str_repeat('a', 256); // Más de 255 caracteres
-        
+
         $response = $this->actingAs($this->cadete)
                          ->putJson('/api/cadete/profile', [
-                             'name' => $longName
+                             'name' => $longName,
                          ]);
 
         $response->assertStatus(422)
@@ -387,21 +387,21 @@ class CadeteProfileTest extends TestCase
     public function test_profile_update_requires_authentication()
     {
         $response = $this->putJson('/api/cadete/profile', [
-            'name' => 'Nuevo Nombre'
+            'name' => 'Nuevo Nombre',
         ]);
-        
+
         $response->assertStatus(401);
     }
 
     public function test_profile_update_requires_cadete_role()
     {
         $admin = User::factory()->create(['role' => UserRole::ADMINISTRADOR]);
-        
+
         $response = $this->actingAs($admin)
                          ->putJson('/api/cadete/profile', [
-                             'name' => 'Nuevo Nombre'
+                             'name' => 'Nuevo Nombre',
                          ]);
-        
+
         $response->assertStatus(403);
     }
 }

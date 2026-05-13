@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class NominatimService
@@ -12,7 +12,7 @@ class NominatimService
 
     /**
      * Obtiene las coordenadas de una dirección usando Nominatim (OpenStreetMap)
-     * 
+     *
      * IMPORTANTE: Nominatim requiere un User-Agent identificando tu aplicación.
      * Sin esto, pueden bloquear tus requests.
      */
@@ -20,29 +20,29 @@ class NominatimService
     {
         // Construir dirección completa normalizada
         $fullAddress = $this->buildFullAddress($address, $city);
-        
+
         // Verificar cache primero
         $cacheKey = 'geocode_nominatim_' . md5($fullAddress);
         $cached = Cache::get($cacheKey);
-        
+
         if ($cached) {
             return $cached;
         }
 
         // Intentar búsqueda con dirección normalizada
         $coordinates = $this->searchNominatim($fullAddress, $cacheKey);
-        
+
         // Si no se encontraron resultados, intentar con versión simplificada
-        if (!$coordinates && $address) {
+        if (! $coordinates && $address) {
             $simplifiedAddress = $this->simplifyAddress($address, $city);
             if ($simplifiedAddress !== $fullAddress) {
                 $simplifiedCacheKey = 'geocode_nominatim_' . md5($simplifiedAddress);
                 $cachedSimplified = Cache::get($simplifiedCacheKey);
-                
+
                 if ($cachedSimplified) {
                     return $cachedSimplified;
                 }
-                
+
                 $coordinates = $this->searchNominatim($simplifiedAddress, $simplifiedCacheKey);
             }
         }
@@ -61,7 +61,7 @@ class NominatimService
             $response = Http::timeout(10)
                 ->withHeaders([
                     'User-Agent' => config('app.name', 'RYR Backend') . ' Geocoding Service',
-                    'Accept-Language' => 'es-AR,es,en'
+                    'Accept-Language' => 'es-AR,es,en',
                 ])
                 ->get($this->baseUrl, [
                     'q' => $fullAddress,
@@ -73,39 +73,39 @@ class NominatimService
 
             if ($response->successful()) {
                 $data = $response->json();
-                
-                if (is_array($data) && !empty($data) && isset($data[0]['lat']) && isset($data[0]['lon'])) {
+
+                if (is_array($data) && ! empty($data) && isset($data[0]['lat']) && isset($data[0]['lon'])) {
                     $coordinates = [
                         'latitude' => (float) $data[0]['lat'],
-                        'longitude' => (float) $data[0]['lon']
+                        'longitude' => (float) $data[0]['lon'],
                     ];
-                    
+
                     // Cachear por 30 días (Nominatim permite cachear resultados)
                     Cache::put($cacheKey, $coordinates, now()->addDays(30));
-                    
+
                     Log::info('Coordenadas obtenidas de Nominatim', [
                         'address' => $fullAddress,
                         'latitude' => $coordinates['latitude'],
-                        'longitude' => $coordinates['longitude']
+                        'longitude' => $coordinates['longitude'],
                     ]);
-                    
+
                     return $coordinates;
                 } else {
                     Log::warning('Nominatim no encontró resultados', [
                         'address' => $fullAddress,
-                        'response' => $data
+                        'response' => $data,
                     ]);
                 }
             } else {
                 Log::error('Error en request a Nominatim', [
                     'status' => $response->status(),
-                    'body' => $response->body()
+                    'body' => $response->body(),
                 ]);
             }
         } catch (\Exception $e) {
             Log::error('Excepción al obtener coordenadas de Nominatim', [
                 'address' => $fullAddress,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
 
@@ -119,12 +119,13 @@ class NominatimService
     {
         // Remover prefijos comunes y dejar solo el nombre de la calle
         $simplified = preg_replace('/^(BV|BVD|BLVD|BLV|BV\.|AV|AVE|AVDA|AV\.|C|CALLE|C\.|PJE|PJE\.|R|RTA|R\.)\s+/i', '', $address);
-        
+
         // Limpiar espacios múltiples
         $simplified = preg_replace('/\s+/', ' ', trim($simplified));
-        
+
         // Construir dirección simplificada
         $parts = array_filter([$simplified, $city]);
+
         return implode(', ', $parts) . ', Argentina';
     }
 
@@ -136,6 +137,7 @@ class NominatimService
         // Normalizar la dirección antes de construir la dirección completa
         $normalizedAddress = $this->normalizeAddress($address);
         $parts = array_filter([$normalizedAddress, $city]);
+
         return implode(', ', $parts) . ', Argentina';
     }
 
@@ -152,27 +154,27 @@ class NominatimService
             '/\bBLVD\s+/i' => 'Boulevard ',
             '/\bBLV\s+/i' => 'Boulevard ',
             '/\bBV\.\s*/i' => 'Boulevard ',
-            
+
             // Avenida
             '/\bAV\s+/i' => 'Avenida ',
             '/\bAVE\s+/i' => 'Avenida ',
             '/\bAVDA\s+/i' => 'Avenida ',
             '/\bAV\.\s*/i' => 'Avenida ',
-            
+
             // Calle
             '/\bC\s+/i' => 'Calle ',
             '/\bCALLE\s+/i' => 'Calle ',
             '/\bC\.\s*/i' => 'Calle ',
-            
+
             // Pasaje
             '/\bPJE\s+/i' => 'Pasaje ',
             '/\bPJE\.\s*/i' => 'Pasaje ',
-            
+
             // Ruta
             '/\bR\s+/i' => 'Ruta ',
             '/\bRTA\s+/i' => 'Ruta ',
             '/\bR\.\s*/i' => 'Ruta ',
-            
+
             // Números romanos comunes
             '/\bXXVII\b/i' => '27',
             '/\bXXVI\b/i' => '26',
@@ -221,21 +223,20 @@ class NominatimService
     public function getMultipleCoordinates(array $addresses): array
     {
         $results = [];
-        
+
         foreach ($addresses as $key => $addressData) {
             $address = $addressData['address'] ?? '';
             $city = $addressData['city'] ?? null;
-            
+
             $coordinates = $this->getCoordinates($address, $city);
             $results[$key] = $coordinates;
-            
+
             // Rate limiting: esperar 1 segundo entre requests
             if ($key < count($addresses) - 1) {
                 sleep(1);
             }
         }
-        
+
         return $results;
     }
 }
-

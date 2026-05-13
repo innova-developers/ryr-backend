@@ -29,28 +29,28 @@ class CadeteDeliveriesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Crear sucursal
         $this->branch = Branch::factory()->create([
             'name' => 'Sucursal Centro',
             'address' => 'Av. Principal 123',
             'phone' => '011-1234-5678',
         ]);
-        
+
         // Crear cadete con porcentaje de comisión
         $this->cadete = User::factory()->create([
             'role' => UserRole::CADETE,
             'branch_id' => $this->branch->id,
             'commission_percentage' => 25.0, // 25% de comisión
         ]);
-        
+
         // Crear transporte asignado al cadete
         $this->transport = Transport::factory()->create([
             'cadete_id' => $this->cadete->id,
             'plate' => 'ABC123',
             'description' => 'Moto Honda CG 150',
         ]);
-        
+
         // Crear cliente
         $this->client = Customer::factory()->create([
             'name' => 'Juan Pérez',
@@ -58,20 +58,20 @@ class CadeteDeliveriesTest extends TestCase
             'phone' => '+1234567890',
             'address' => 'Av. Principal 123, Ciudad',
         ]);
-        
+
         // Crear ubicaciones
         $this->originLocation = Location::factory()->create([
             'name' => 'Almacén Central',
             'address' => 'Zona Industrial',
             'phone' => '+1234567891',
         ]);
-        
+
         $this->destinationLocation = Location::factory()->create([
             'name' => 'Oficina Cliente',
             'address' => 'Centro Comercial',
             'phone' => '+1234567892',
         ]);
-        
+
         $this->destination = Destination::factory()->create();
     }
 
@@ -87,8 +87,8 @@ class CadeteDeliveriesTest extends TestCase
                     'data' => [
                         'deliveries',
                         'pagination',
-                        'summary'
-                    ]
+                        'summary',
+                    ],
                 ]);
     }
 
@@ -114,9 +114,9 @@ class CadeteDeliveriesTest extends TestCase
                             'in_progress' => 0,
                             'completed' => 0,
                             'cancelled' => 0,
-                            'total_earnings' => 0
-                        ]
-                    ]
+                            'total_earnings' => 0,
+                        ],
+                    ],
                 ]);
     }
 
@@ -154,9 +154,9 @@ class CadeteDeliveriesTest extends TestCase
                                 'pickup_phone' => '+1234567891',
                                 'status' => 'En tránsito a destino',
                                 'commission_amount' => '25.50',
-                            ]
-                        ]
-                    ]
+                            ],
+                        ],
+                    ],
                 ]);
     }
 
@@ -189,7 +189,7 @@ class CadeteDeliveriesTest extends TestCase
                          ->getJson('/api/cadete/deliveries?status=EN_TRANSITO_DESTINO');
 
         $response->assertStatus(200);
-        
+
         $deliveries = $response->json('data.deliveries');
         $this->assertCount(1, $deliveries);
         $this->assertEquals('En tránsito a destino', $deliveries[0]['status']);
@@ -199,7 +199,7 @@ class CadeteDeliveriesTest extends TestCase
     {
         $today = now();
         $yesterday = now()->subDay();
-        
+
         // Comisión de hoy
         Commission::factory()->create([
             'client_id' => $this->client->id,
@@ -228,7 +228,7 @@ class CadeteDeliveriesTest extends TestCase
                          ->getJson('/api/cadete/deliveries?date_from=' . $today->format('Y-m-d'));
 
         $response->assertStatus(200);
-        
+
         $deliveries = $response->json('data.deliveries');
         $this->assertCount(1, $deliveries);
     }
@@ -249,7 +249,7 @@ class CadeteDeliveriesTest extends TestCase
                          ->getJson('/api/cadete/deliveries?search=Juan');
 
         $response->assertStatus(200);
-        
+
         $deliveries = $response->json('data.deliveries');
         $this->assertCount(1, $deliveries);
         $this->assertStringContainsString('Juan', $deliveries[0]['customer_name']);
@@ -281,8 +281,8 @@ class CadeteDeliveriesTest extends TestCase
                             'per_page' => 10,
                             'total' => 25,
                             'last_page' => 3,
-                        ]
-                    ]
+                        ],
+                    ],
                 ]);
     }
 
@@ -315,7 +315,7 @@ class CadeteDeliveriesTest extends TestCase
                          ->getJson('/api/cadete/deliveries?sort_by=commission_amount&sort_order=desc');
 
         $response->assertStatus(200);
-        
+
         $deliveries = $response->json('data.deliveries');
         $this->assertCount(2, $deliveries);
         $this->assertEquals(100.00, $deliveries[0]['commission_amount']);
@@ -364,7 +364,7 @@ class CadeteDeliveriesTest extends TestCase
                          ->getJson('/api/cadete/deliveries');
 
         $response->assertStatus(200);
-        
+
         $data = $response->json('data.summary');
         $this->assertEquals(3, $data['total_deliveries']);
         $this->assertEquals(1, $data['completed']);
@@ -373,7 +373,7 @@ class CadeteDeliveriesTest extends TestCase
         $this->assertGreaterThan(0, $data['total_earnings']);
         $this->assertArrayHasKey('total_commission_amount', $data);
         $this->assertArrayHasKey('commission_percentage', $data);
-        
+
         // Verificar que los valores calculados son consistentes
         $this->assertEquals(100.00, $data['total_commission_amount']); // 100 + 50 + 25 = 175, pero solo se cuenta el entregado
         $this->assertGreaterThan(0, $data['commission_percentage']);
@@ -388,10 +388,10 @@ class CadeteDeliveriesTest extends TestCase
     public function test_deliveries_requires_cadete_role()
     {
         $admin = User::factory()->create(['role' => UserRole::ADMINISTRADOR]);
-        
+
         $response = $this->actingAs($admin)
                          ->getJson('/api/cadete/deliveries');
-        
+
         $response->assertStatus(403);
     }
 
@@ -415,7 +415,7 @@ class CadeteDeliveriesTest extends TestCase
                          ->getJson('/api/cadete/deliveries?status=ENTREGADO&date_from=' . now()->format('Y-m-d') . '&page=1&per_page=10&search=Juan');
 
         $response->assertStatus(200);
-        
+
         $deliveries = $response->json('data.deliveries');
         $this->assertCount(1, $deliveries);
         $this->assertEquals('Entregado', $deliveries[0]['status']);

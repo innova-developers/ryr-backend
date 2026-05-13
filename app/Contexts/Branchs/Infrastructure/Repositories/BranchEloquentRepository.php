@@ -6,7 +6,6 @@ use App\Contexts\Branchs\Application\DTO\CreateBranchDTO;
 use App\Contexts\Branchs\Application\DTO\GetBranchesFiltersDTO;
 use App\Contexts\Branchs\Application\DTO\UpdateBranchDTO;
 use App\Contexts\Branchs\Domain\Repositories\BranchRepository;
-use App\Shared\Enums\UserRole;
 use App\Shared\Models\Branch;
 use Exception;
 use Illuminate\Database\QueryException;

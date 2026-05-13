@@ -47,7 +47,7 @@ class UpdateCommissionStatusUseCase
                 if ($status === CommissionStatus::PENDIENTE_PAGO) {
                     // Actualizar estado a PENDIENTE_PAGO
                     $this->commissionsRepository->updateStatus($id, CommissionStatus::PENDIENTE_PAGO);
-                    
+
                     // Crear log de cambio a PENDIENTE_PAGO
                     $logDto = new CreateCommissionLogDTO(
                         commissionId: $id,
@@ -62,10 +62,10 @@ class UpdateCommissionStatusUseCase
                     if ($commissionType === CommissionType::ORDINARIA) {
                         // Actualizar estado a PAGO_VALIDACION
                         $this->commissionsRepository->updateStatus($id, CommissionStatus::PAGO_VALIDACION);
-                        
+
                         // Refrescar la comisión para obtener datos actualizados
                         $commission->refresh();
-                        
+
                         // Crear log del cambio automático a PAGO_VALIDACION
                         $logDtoAuto = new CreateCommissionLogDTO(
                             commissionId: $id,
@@ -82,7 +82,7 @@ class UpdateCommissionStatusUseCase
                     // Si es EXTRAORDINARIA: solo queda en PENDIENTE_PAGO (sin crear movimiento)
                 } else {
                     // Para otros estados (incluyendo PAGO_VALIDACION)
-                $this->commissionsRepository->updateStatus($id, $status);
+                    $this->commissionsRepository->updateStatus($id, $status);
 
                     // Crear transacción en cuenta corriente cuando el estado es PAGO_VALIDACION
                     // (por default solo llegamos a este caso si la comisión es extraordinaria,
@@ -90,18 +90,18 @@ class UpdateCommissionStatusUseCase
                     if ($status === CommissionStatus::PAGO_VALIDACION) {
                         // Refrescar la comisión para obtener datos actualizados
                         $commission->refresh();
-                    $this->createCurrentAccountTransaction($commission);
-                }
+                        $this->createCurrentAccountTransaction($commission);
+                    }
 
                     // Crear log del cambio de estado
-                $dto = new CreateCommissionLogDTO(
-                    commissionId: $id,
+                    $dto = new CreateCommissionLogDTO(
+                        commissionId: $id,
                         userId: Auth::id() ?? 1,
-                    previousStatus: $previousStatus->value,
-                    newStatus: $status->value,
-                    details: $details
-                );
-                $this->commissionsRepository->createLog($dto);
+                        previousStatus: $previousStatus->value,
+                        newStatus: $status->value,
+                        details: $details
+                    );
+                    $this->commissionsRepository->createLog($dto);
                 }
 
                 // Refrescar la comisión para asegurar que tenemos el estado final correcto
@@ -169,11 +169,12 @@ class UpdateCommissionStatusUseCase
                 'commission_id' => $commission->id,
                 'reference' => $reference,
             ]);
+
             return;
         }
 
         // Asegurar que la relación destination esté cargada
-        if (!$commission->relationLoaded('destination')) {
+        if (! $commission->relationLoaded('destination')) {
             $commission->load('destination');
         }
 

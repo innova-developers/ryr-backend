@@ -33,7 +33,7 @@ class ListCommissionsFiltersDTO
     {
         // Normalizar método de pago a mayúsculas para asegurar compatibilidad con el enum
         $method = null;
-        if (isset($data['method']) && !empty($data['method'])) {
+        if (isset($data['method']) && ! empty($data['method'])) {
             try {
                 $methodValue = strtoupper(trim($data['method']));
                 $method = PaymentMethod::from($methodValue);
@@ -43,13 +43,14 @@ class ListCommissionsFiltersDTO
                 foreach (PaymentMethod::cases() as $case) {
                     if ($case->value === $methodValue) {
                         $method = $case;
+
                         break;
                     }
                 }
                 // Si aún no se encuentra, dejar como null
             }
         }
-        
+
         return new self(
             commissionId: $data['commissionId'] ?? null,
             clientId: $data['client_id'] ?? null,

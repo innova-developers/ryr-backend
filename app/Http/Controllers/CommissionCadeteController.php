@@ -4,16 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Services\FcmNotificationService;
 use App\Services\NotificationService;
-use App\Shared\Models\Commission;
-use App\Shared\Models\User;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\UserRole;
-use Illuminate\Http\Request;
+use App\Shared\Models\Commission;
+use App\Shared\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-use Illuminate\Routing\Controller;
 
 class CommissionCadeteController extends Controller
 {
@@ -32,14 +32,14 @@ class CommissionCadeteController extends Controller
                 'required',
                 'integer',
                 'exists:users,id',
-                Rule::in(User::whereIn('role', [UserRole::CADETE, UserRole::CADETE_EXTERNO])->pluck('id'))
+                Rule::in(User::whereIn('role', [UserRole::CADETE, UserRole::CADETE_EXTERNO])->pluck('id')),
             ],
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'Error de validación',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -48,13 +48,13 @@ class CommissionCadeteController extends Controller
         // Verificar que el cadete no esté ya asignado
         if ($commission->cadete_id === (int) $request->cadete_id) {
             return response()->json([
-                'message' => 'Este cadete ya está asignado a la comisión'
+                'message' => 'Este cadete ya está asignado a la comisión',
             ], 400);
         }
 
         // Actualizar solo el cadete, mantener el estado actual de la comisión
         $commission->update([
-            'cadete_id' => $request->cadete_id
+            'cadete_id' => $request->cadete_id,
         ]);
 
         // Crear notificación para el cadete
@@ -63,7 +63,7 @@ class CommissionCadeteController extends Controller
         return response()->json([
             'message' => 'Cadete asignado exitosamente',
             'commission' => $commission->fresh(['cadete']),
-            'cadete' => $commission->cadete
+            'cadete' => $commission->cadete,
         ], 200);
     }
 
@@ -75,9 +75,9 @@ class CommissionCadeteController extends Controller
         $currentUser = $request->user();
 
         // Verificar que la comisión tenga un cadete asignado
-        if (!$commission->cadete_id) {
+        if (! $commission->cadete_id) {
             return response()->json([
-                'message' => 'Esta comisión no tiene un cadete asignado'
+                'message' => 'Esta comisión no tiene un cadete asignado',
             ], 400);
         }
 
@@ -85,7 +85,7 @@ class CommissionCadeteController extends Controller
         if ($currentUser && in_array($currentUser->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO])) {
             if ($commission->cadete_id !== $currentUser->id) {
                 return response()->json([
-                    'message' => 'No autorizado. Solo puedes desasignarte de tus propias comisiones.'
+                    'message' => 'No autorizado. Solo puedes desasignarte de tus propias comisiones.',
                 ], 403);
             }
         }
@@ -99,13 +99,13 @@ class CommissionCadeteController extends Controller
             CommissionStatus::BUSCANDO_CADETE,
             CommissionStatus::CADETE_ASIGNADO,
             CommissionStatus::CADETE_EN_CAMINO_ORIGEN,
-            CommissionStatus::EN_PUNTO_RETIRO
+            CommissionStatus::EN_PUNTO_RETIRO,
         ];
 
         // Actualizar la comisión
         $commission->update([
             'cadete_id' => null,
-            'status' => in_array($commission->status, $initialStatus) ? CommissionStatus::BUSCANDO_CADETE->value : $commission->status
+            'status' => in_array($commission->status, $initialStatus) ? CommissionStatus::BUSCANDO_CADETE->value : $commission->status,
         ]);
 
         // Notificar a todos los cadetes que hay una nueva comisión disponible
@@ -114,7 +114,7 @@ class CommissionCadeteController extends Controller
         return response()->json([
             'message' => 'Cadete desasignado exitosamente',
             'commission' => $commission->fresh(),
-            'previous_cadete_id' => $previousCadeteId
+            'previous_cadete_id' => $previousCadeteId,
         ], 200);
     }
 
@@ -170,14 +170,14 @@ class CommissionCadeteController extends Controller
                 'required',
                 'integer',
                 'exists:users,id',
-                Rule::in(User::whereIn('role', [UserRole::CADETE, UserRole::CADETE_EXTERNO])->pluck('id'))
+                Rule::in(User::whereIn('role', [UserRole::CADETE, UserRole::CADETE_EXTERNO])->pluck('id')),
             ],
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'Error de validación',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -186,7 +186,7 @@ class CommissionCadeteController extends Controller
         // Verificar que no sea el mismo cadete
         if ($commission->cadete_id === (int) $request->cadete_id) {
             return response()->json([
-                'message' => 'La comisión ya tiene asignado este cadete'
+                'message' => 'La comisión ya tiene asignado este cadete',
             ], 400);
         }
 
@@ -194,7 +194,7 @@ class CommissionCadeteController extends Controller
 
         // Actualizar la comisión
         $commission->update([
-            'cadete_id' => $request->cadete_id
+            'cadete_id' => $request->cadete_id,
         ]);
 
         // Crear notificación para el nuevo cadete
@@ -204,7 +204,7 @@ class CommissionCadeteController extends Controller
             'message' => 'Cadete cambiado exitosamente',
             'commission' => $commission->fresh(['cadete']),
             'previous_cadete_id' => $previousCadeteId,
-            'new_cadete' => $commission->cadete
+            'new_cadete' => $commission->cadete,
         ], 200);
     }
 
@@ -213,16 +213,16 @@ class CommissionCadeteController extends Controller
      */
     public function getAssignedCadete(Commission $commission): JsonResponse
     {
-        if (!$commission->cadete_id) {
+        if (! $commission->cadete_id) {
             return response()->json([
                 'message' => 'Esta comisión no tiene un cadete asignado',
-                'cadete' => null
+                'cadete' => null,
             ], 200);
         }
 
         return response()->json([
             'cadete' => $commission->cadete,
-            'assigned_at' => $commission->updated_at
+            'assigned_at' => $commission->updated_at,
         ], 200);
     }
 
@@ -232,12 +232,12 @@ class CommissionCadeteController extends Controller
     public function getCommissionsByCadete(Request $request, User $cadete): JsonResponse
     {
         $currentUser = $request->user();
-        
+
         // Verificar que el usuario sea un cadete
-        if (!in_array($cadete->role->value, ['cadete', 'cadete_externo'])) {
+        if (! in_array($cadete->role->value, ['cadete', 'cadete_externo'])) {
             return response()->json([
                 'message' => 'El usuario especificado no es un cadete',
-                'user_role' => $cadete->role->value
+                'user_role' => $cadete->role->value,
             ], 400);
         }
 
@@ -258,7 +258,7 @@ class CommissionCadeteController extends Controller
         return response()->json([
             'cadete' => $cadete,
             'commissions' => $commissions,
-            'total' => $commissions->count()
+            'total' => $commissions->count(),
         ], 200);
     }
 
@@ -270,11 +270,11 @@ class CommissionCadeteController extends Controller
         try {
             // Obtener el usuario autenticado
             $currentUser = $request->user();
-            
-            if (!$currentUser || !$currentUser->branch_id) {
+
+            if (! $currentUser || ! $currentUser->branch_id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Usuario no autenticado o sin sucursal asignada'
+                    'message' => 'Usuario no autenticado o sin sucursal asignada',
                 ], 401);
             }
 
@@ -330,7 +330,7 @@ class CommissionCadeteController extends Controller
                 'originLocation',
                 'destinationLocation',
                 'items',
-                'user'
+                'user',
             ])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
@@ -405,7 +405,7 @@ class CommissionCadeteController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Error al obtener comisiones disponibles',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -419,10 +419,10 @@ class CommissionCadeteController extends Controller
             $currentUser = $request->user();
 
             // Verificar que el usuario autenticado sea un cadete
-            if (!$currentUser || !in_array($currentUser->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO])) {
+            if (! $currentUser || ! in_array($currentUser->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Solo los cadetes pueden autoasignarse comisiones'
+                    'message' => 'Solo los cadetes pueden autoasignarse comisiones',
                 ], 403);
             }
 
@@ -431,7 +431,7 @@ class CommissionCadeteController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'Esta comisión ya tiene un cadete asignado',
-                    'assigned_cadete_id' => $commission->cadete_id
+                    'assigned_cadete_id' => $commission->cadete_id,
                 ], 400);
             }
 
@@ -439,12 +439,12 @@ class CommissionCadeteController extends Controller
             if (in_array($commission->status, [
                 CommissionStatus::CANCELADO,
                 CommissionStatus::ENTREGADO,
-                CommissionStatus::DEVUELTO_REMITENTE
+                CommissionStatus::DEVUELTO_REMITENTE,
             ])) {
                 return response()->json([
                     'success' => false,
                     'message' => 'No se puede asignar una comisión en estado final',
-                    'status' => $commission->status->value
+                    'status' => $commission->status->value,
                 ], 400);
             }
 
@@ -453,13 +453,13 @@ class CommissionCadeteController extends Controller
                 CommissionStatus::SOLICITUD_RECIBIDA,
                 CommissionStatus::CADETE_ASIGNADO,
                 CommissionStatus::CADETE_EN_CAMINO_ORIGEN,
-                CommissionStatus::EN_PUNTO_RETIRO
+                CommissionStatus::EN_PUNTO_RETIRO,
             ];
 
             // Asignar la comisión al cadete autenticado, mantener el estado actual
             $commission->update([
                 'cadete_id' => $currentUser->id,
-                'status' => in_array($commission->status, $initialStatus) ? CommissionStatus::CADETE_ASIGNADO->value : $commission->status
+                'status' => in_array($commission->status, $initialStatus) ? CommissionStatus::CADETE_ASIGNADO->value : $commission->status,
             ]);
 
             // Crear notificación para el cadete
@@ -490,14 +490,14 @@ class CommissionCadeteController extends Controller
                         'name' => $commission->destinationLocation->name,
                         'address' => $commission->destinationLocation->address,
                     ] : null,
-                ]
+                ],
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error al autoasignar la comisión',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
