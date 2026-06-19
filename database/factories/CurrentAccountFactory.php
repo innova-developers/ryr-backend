@@ -29,6 +29,9 @@ class CurrentAccountFactory extends Factory
             'customer_id' => Customer::factory(),
             'type' => $type,
             'amount' => $amount,
+            // Por defecto las transacciones sembradas están confirmadas (OK), así
+            // cuentan para el cálculo de saldo (getCustomerBalance solo suma OK).
+            'status' => \App\Shared\Enums\CurrentAccountStatus::OK->value,
             'description' => $this->faker->sentence(3),
             'reference' => $this->faker->optional()->bothify('REF-####-????'),
             'transaction_date' => $transactionDate,

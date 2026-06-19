@@ -5,6 +5,7 @@ namespace Tests\Feature\Customers;
 use App\Shared\Models\Customer;
 use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class CustomerBalanceTest extends TestCase
@@ -19,8 +20,11 @@ class CustomerBalanceTest extends TestCase
     {
         parent::setUp();
 
-        $this->user = User::factory()->create(['role' => 'administrador']);
+        $this->user = User::factory()->create(['role' => 'administrador', 'branch_id' => null]);
         $this->token = $this->user->createToken('test-token')->plainTextToken;
+        // Autenticar también el contexto del contenedor: las llamadas directas al
+        // repositorio (confirmTransaction/recalc) usan Auth::user().
+        Sanctum::actingAs($this->user);
         $this->customer = Customer::factory()->create([
             'user_id' => $this->user->id,
         ]);
@@ -43,7 +47,8 @@ class CustomerBalanceTest extends TestCase
             observations: 'Test',
             userId: $this->user->id,
         );
-        $currentAccountRepo->create($createDTO);
+        $creditTx = $currentAccountRepo->create($createDTO);
+        $currentAccountRepo->confirmTransaction($creditTx->id); // crédito PENDIENTE -> confirmar para que cuente
 
         $createDTO2 = new \App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO(
             customerId: $this->customer->id,
@@ -94,7 +99,8 @@ class CustomerBalanceTest extends TestCase
             observations: 'Test',
             userId: $this->user->id,
         );
-        $currentAccountRepo->create($createDTO);
+        $creditTx = $currentAccountRepo->create($createDTO);
+        $currentAccountRepo->confirmTransaction($creditTx->id); // crédito PENDIENTE -> confirmar para que cuente
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->token,
@@ -166,7 +172,8 @@ class CustomerBalanceTest extends TestCase
             observations: 'Test',
             userId: $this->user->id,
         );
-        $currentAccountRepo->create($createDTO1);
+        $creditTx1 = $currentAccountRepo->create($createDTO1);
+        $currentAccountRepo->confirmTransaction($creditTx1->id);
 
         $createDTO2 = new \App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO(
             customerId: $this->customer->id,
@@ -193,7 +200,8 @@ class CustomerBalanceTest extends TestCase
             observations: 'Test',
             userId: $this->user->id,
         );
-        $currentAccountRepo->create($createDTO3);
+        $creditTx3 = $currentAccountRepo->create($createDTO3);
+        $currentAccountRepo->confirmTransaction($creditTx3->id);
 
         $response = $this->withHeaders([
             'Authorization' => 'Bearer ' . $this->token,

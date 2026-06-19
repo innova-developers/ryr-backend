@@ -17,9 +17,13 @@ class CreateCustomerRequest extends FormRequest
      */
     public function rules(): array
     {
-        // Sin validaciones - todas las validaciones han sido removidas (v1)
-        // Mantenemos el campo auto_calculate_iva disponible para v2
-        return [];
+        // Validación mínima: identificación y nombre obligatorios, email único.
+        // Evita que un body vacío o un email duplicado revienten en 500.
+        return [
+            'dni' => ['required'],
+            'name' => ['required', 'string'],
+            'email' => ['nullable', 'email', 'unique:customers,email'],
+        ];
     }
 
     protected function failedValidation(Validator $validator)

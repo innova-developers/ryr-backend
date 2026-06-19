@@ -20,7 +20,7 @@ class ExpensesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->user = User::factory()->create(['role' => 'administrador']);
+        $this->user = User::factory()->create(['role' => 'administrador', 'branch_id' => null]);
         $this->transport = Transport::factory()->create();
         $this->category = ExpenseCategory::factory()->create();
         $this->actingAs($this->user, 'sanctum');
@@ -187,20 +187,24 @@ class ExpensesTest extends TestCase
         // Assert
         $response->assertStatus(200)
             ->assertJsonStructure([
-                '*' => [
-                    'id',
-                    'transport_id',
-                    'expense_category_id',
-                    'user_id',
-                    'date',
-                    'detail',
-                    'amount',
-                    'created_at',
-                    'updated_at',
+                'data' => [
+                    '*' => [
+                        'id',
+                        'transport_id',
+                        'expense_category_id',
+                        'user_id',
+                        'date',
+                        'detail',
+                        'amount',
+                        'created_at',
+                        'updated_at',
+                    ],
                 ],
+                'total',
+                'per_page',
             ]);
 
-        $this->assertCount(3, $response->json());
+        $this->assertCount(3, $response->json('data'));
     }
 
     public function test_can_get_expenses_by_transport_id_parameter(): void

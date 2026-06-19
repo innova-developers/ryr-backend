@@ -6,6 +6,7 @@ use App\Shared\Models\CurrentAccount;
 use App\Shared\Models\Customer;
 use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class CurrentAccountTest extends TestCase
@@ -20,8 +21,9 @@ class CurrentAccountTest extends TestCase
     {
         parent::setUp();
 
-        $this->user = User::factory()->create(['role' => 'administrador']);
+        $this->user = User::factory()->create(['role' => 'administrador', 'branch_id' => null]);
         $this->token = $this->user->createToken('test-token')->plainTextToken;
+        Sanctum::actingAs($this->user);
         $this->customer = Customer::factory()->create([
             'user_id' => $this->user->id,
         ]);
@@ -59,22 +61,28 @@ class CurrentAccountTest extends TestCase
             'updated_at',
         ]);
 
+        // Un crédito entra como PENDIENTE: no impacta el saldo hasta confirmarse,
+        // por eso el balance del registro recién creado es 0.
         $this->assertDatabaseHas('current_accounts', [
             'customer_id' => $this->customer->id,
             'type' => 'credit',
             'amount' => 1000.50,
-            'balance' => 1000.50,
+            'status' => 'PENDIENTE',
+            'balance' => 0,
         ]);
     }
 
     public function test_can_create_debit_transaction(): void
     {
-        // Primero crear un crédito
+        // Primero crear un crédito confirmado (OK) con fecha anterior al débito,
+        // para que el recálculo por transaction_date arroje el saldo esperado.
         CurrentAccount::factory()->create([
             'customer_id' => $this->customer->id,
             'type' => 'credit',
             'amount' => 2000,
             'balance' => 2000,
+            'status' => 'OK',
+            'transaction_date' => '2024-01-10',
         ]);
 
         $data = [
@@ -208,7 +216,9 @@ class CurrentAccountTest extends TestCase
             observations: 'Test',
             userId: $this->user->id,
         );
-        $currentAccountRepo->create($createDTO1);
+        $credit1 = $currentAccountRepo->create($createDTO1);
+        // El crédito entra PENDIENTE; confirmarlo para que impacte el saldo.
+        $currentAccountRepo->confirmTransaction($credit1->id);
 
         $createDTO2 = new \App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO(
             customerId: $this->customer->id,

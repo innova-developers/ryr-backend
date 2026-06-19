@@ -18,11 +18,12 @@ class LoginTest extends TestCase
     public static function webScopeCredentialsProvider(): array
     {
         return [
+            // Scope web permite admin, mostrador y cadetes; solo cliente queda excluido.
             'Administrador' => [UserRole::ADMINISTRADOR, true],
-            'Cadete' => [UserRole::CADETE, false],
-            'Mostrador' => [UserRole::MOSTRADOR, false],
+            'Cadete' => [UserRole::CADETE, true],
+            'Mostrador' => [UserRole::MOSTRADOR, true],
             'Cliente' => [UserRole::CLIENTE, false],
-            'Cadete Externo' => [UserRole::CADETE_EXTERNO, false],
+            'Cadete Externo' => [UserRole::CADETE_EXTERNO, true],
         ];
     }
 
@@ -60,7 +61,7 @@ class LoginTest extends TestCase
                     'error' => 'scope_validation_failed',
                 ])
                 ->assertJsonFragment([
-                    'message' => "El usuario con rol '{$role->value}' no tiene permisos para acceder a la aplicación web. Solo administradores pueden acceder.",
+                    'message' => "El usuario con rol '{$role->value}' no tiene permisos para acceder a la aplicación web. Solo administradores, mostradores y cadetes pueden acceder.",
                 ]);
         }
     }

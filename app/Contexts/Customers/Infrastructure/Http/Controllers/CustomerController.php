@@ -190,8 +190,9 @@ class CustomerController extends Controller
             }
 
             $validated = $request->validate([
-                'auto_calculate_iva' => 'sometimes|boolean',
-                'iva_status' => 'sometimes|in:auto,always,exempt',
+                // Debe enviarse al menos uno de los dos campos (body vacío -> 422).
+                'auto_calculate_iva' => 'required_without:iva_status|boolean',
+                'iva_status' => 'required_without:auto_calculate_iva|in:auto,always,exempt',
             ]);
 
             $customer = $this->repository->findById($id);

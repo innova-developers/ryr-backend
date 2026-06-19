@@ -277,7 +277,8 @@ class PublicCommissionTest extends TestCase
             ->assertJson([
                 'success' => true,
                 'commission' => [
-                    'items_count' => 2,
+                    // items_count = suma de cantidades de los ítems (1 + 2 = 3), no nº de filas.
+                    'items_count' => 3,
                 ],
             ]);
 

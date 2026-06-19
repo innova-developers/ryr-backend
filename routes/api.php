@@ -329,8 +329,8 @@ Route::middleware(['auth:sanctum', 'isAdmin', 'franchiseScope'])->prefix('admin/
     Route::post('/{invoice}/send-whatsapp', [App\Http\Controllers\Admin\InvoiceController::class, 'sendWhatsApp']);
 });
 
-// Rutas para métodos de pago de comisiones
-Route::prefix('payment-methods')->group(function () {
+// Rutas para métodos de pago de comisiones (requieren autenticación)
+Route::middleware(['auth:sanctum'])->prefix('payment-methods')->group(function () {
     Route::get('/', [App\Http\Controllers\Admin\PaymentMethodController::class, 'index']);
     Route::post('/associate', [App\Http\Controllers\Admin\PaymentMethodController::class, 'associatePaymentMethod']);
     Route::get('/summary', [App\Http\Controllers\Admin\PaymentMethodController::class, 'getPaymentMethodsSummary']);

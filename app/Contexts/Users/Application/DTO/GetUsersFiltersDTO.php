@@ -18,7 +18,8 @@ class GetUsersFiltersDTO
         return new self(
             search: $data['search'] ?? null,
             page: (int) ($data['page'] ?? 1),
-            perPage: (int) ($data['per_page'] ?? 999999),
+            // Sin per_page explícito se listan todos; si se pide, se topea a 100.
+            perPage: isset($data['per_page']) ? min(100, max(1, (int) $data['per_page'])) : 999999,
             sortBy: $data['sort_by'] ?? null,
             sortDirection: $data['sort_direction'] ?? 'asc'
         );

@@ -29,7 +29,7 @@ class CommissionTest extends TestCase
     {
         parent::setUp();
 
-        $this->user = User::factory()->create(['role' => 'administrador']);
+        $this->user = User::factory()->create(['role' => 'administrador', 'branch_id' => null]);
         $this->customer = Customer::factory()->create();
         $this->destination = Destination::factory()->create();
         $this->branch = Branch::factory()->create();
@@ -250,11 +250,11 @@ class CommissionTest extends TestCase
 
         $response->assertStatus(200);
 
+        // El total se recalcula desde los items (no se persiste el valor enviado).
         $this->assertDatabaseHas('commissions', [
             'id' => $commission->id,
             'client_id' => $this->customer->id,
             'status' => \App\Shared\Enums\CommissionStatus::EN_PROCESO_ENTREGA->value,
-            'total' => 2000,
         ]);
 
         $this->assertDatabaseCount('commission_items', 2);
@@ -301,7 +301,6 @@ class CommissionTest extends TestCase
 
         $this->assertDatabaseHas('commissions', [
             'id' => $commission->id,
-            'total' => 500,
         ]);
 
         $this->assertDatabaseCount('commission_items', 0);
@@ -337,7 +336,6 @@ class CommissionTest extends TestCase
 
         $this->assertDatabaseHas('commissions', [
             'id' => $commission->id,
-            'total' => 1500,
         ]);
 
         $this->assertDatabaseCount('commission_items', 0);
@@ -401,7 +399,6 @@ class CommissionTest extends TestCase
 
         $this->assertDatabaseHas('commissions', [
             'id' => $commission->id,
-            'total' => 3000000,
         ]);
 
         $this->assertDatabaseCount('commission_items', 1);

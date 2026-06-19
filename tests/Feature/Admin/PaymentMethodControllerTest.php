@@ -44,7 +44,7 @@ class PaymentMethodControllerTest extends TestCase
     public function test_admin_can_get_payment_methods()
     {
         $response = $this->actingAs($this->admin)
-            ->getJson('/api/admin/payment-methods');
+            ->getJson('/api/payment-methods');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -85,7 +85,7 @@ class PaymentMethodControllerTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin)
-            ->postJson('/api/admin/payment-methods/associate', [
+            ->postJson('/api/payment-methods/associate', [
                 'commission_id' => $commission->id,
                 'payment_method' => PaymentMethod::EFECTIVO->value,
             ]);
@@ -110,7 +110,7 @@ class PaymentMethodControllerTest extends TestCase
     public function test_admin_cannot_associate_payment_method_with_invalid_commission()
     {
         $response = $this->actingAs($this->admin)
-            ->postJson('/api/admin/payment-methods/associate', [
+            ->postJson('/api/payment-methods/associate', [
                 'commission_id' => 99999,
                 'payment_method' => PaymentMethod::EFECTIVO->value,
             ]);
@@ -131,7 +131,7 @@ class PaymentMethodControllerTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin)
-            ->postJson('/api/admin/payment-methods/associate', [
+            ->postJson('/api/payment-methods/associate', [
                 'commission_id' => $commission->id,
                 'payment_method' => 'INVALID_METHOD',
             ]);
@@ -174,7 +174,7 @@ class PaymentMethodControllerTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin)
-            ->getJson('/api/admin/payment-methods/summary');
+            ->getJson('/api/payment-methods/summary');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -203,7 +203,7 @@ class PaymentMethodControllerTest extends TestCase
         $this->assertEquals(2, $transferenciaSummary['count']);
     }
 
-    public function test_non_admin_cannot_access_payment_methods_endpoints()
+    public function test_unauthenticated_cannot_access_payment_methods_endpoints()
     {
         $commission = Commission::factory()->create([
             'client_id' => $this->customer->id,
@@ -214,29 +214,22 @@ class PaymentMethodControllerTest extends TestCase
             'destination_location_id' => $this->destinationLocation->id,
         ]);
 
-        // Intentar obtener métodos de pago
-        $response = $this->actingAs($this->cadete)
-            ->getJson('/api/admin/payment-methods');
-        $response->assertStatus(403);
+        // Sin autenticación: el grupo payment-methods exige auth:sanctum.
+        // (No es admin-only: mostrador asocia métodos al crear comisiones.)
+        $this->getJson('/api/payment-methods')->assertStatus(401);
 
-        // Intentar asociar método de pago
-        $response = $this->actingAs($this->cadete)
-            ->postJson('/api/admin/payment-methods/associate', [
-                'commission_id' => $commission->id,
-                'payment_method' => PaymentMethod::EFECTIVO->value,
-            ]);
-        $response->assertStatus(403);
+        $this->postJson('/api/payment-methods/associate', [
+            'commission_id' => $commission->id,
+            'payment_method' => PaymentMethod::EFECTIVO->value,
+        ])->assertStatus(401);
 
-        // Intentar obtener resumen
-        $response = $this->actingAs($this->cadete)
-            ->getJson('/api/admin/payment-methods/summary');
-        $response->assertStatus(403);
+        $this->getJson('/api/payment-methods/summary')->assertStatus(401);
     }
 
     public function test_associate_payment_method_validation_requires_commission_id()
     {
         $response = $this->actingAs($this->admin)
-            ->postJson('/api/admin/payment-methods/associate', [
+            ->postJson('/api/payment-methods/associate', [
                 'payment_method' => PaymentMethod::EFECTIVO->value,
             ]);
 
@@ -256,7 +249,7 @@ class PaymentMethodControllerTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->admin)
-            ->postJson('/api/admin/payment-methods/associate', [
+            ->postJson('/api/payment-methods/associate', [
                 'commission_id' => $commission->id,
             ]);
 

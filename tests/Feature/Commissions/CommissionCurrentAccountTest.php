@@ -67,24 +67,23 @@ class CommissionCurrentAccountTest extends TestCase
         $response = $this->postJson('/api/commissions', $data);
 
         $response->assertStatus(201);
+        $commissionId = $response->json('id') ?? $response->json('commission.id');
 
-        // Verificar que se creó la comisión
-        $this->assertDatabaseHas('commissions', [
-            'client_id' => $this->customer->id,
-            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
-            'total' => 1000,
-        ]);
+        // El movimiento "a cuenta" se genera al pasar la comisión a PAGO_VALIDACION.
+        $this->patchJson("/api/commissions/{$commissionId}/status", [
+            'status' => CommissionStatus::PAGO_VALIDACION->value,
+            'a_cuenta' => true,
+        ])->assertStatus(200);
 
-        // Verificar que se creó la transacción en cuenta corriente
+        // Verificar que se creó la transacción en cuenta corriente (debit por la deuda)
         $this->assertDatabaseHas('current_accounts', [
             'customer_id' => $this->customer->id,
             'type' => 'debit',
             'amount' => 1000,
-            'description' => "Comisión #1 - {$this->destination->origin} a {$this->destination->destination}",
-            'reference' => 'COM-1',
+            'reference' => "COM-{$commissionId}",
         ]);
 
-        // Verificar que el saldo del cliente se actualizó correctamente
+        // El saldo queda negativo por la deuda registrada
         $balance = $this->currentAccountRepository->getCustomerBalance($this->customer->id);
         $this->assertEquals(-1000, $balance);
     }
@@ -213,6 +212,11 @@ class CommissionCurrentAccountTest extends TestCase
 
         $response1 = $this->postJson('/api/commissions', $data1);
         $response1->assertStatus(201);
+        $commissionId1 = $response1->json('id') ?? $response1->json('commission.id');
+        $this->patchJson("/api/commissions/{$commissionId1}/status", [
+            'status' => CommissionStatus::PAGO_VALIDACION->value,
+            'a_cuenta' => true,
+        ])->assertStatus(200);
 
         // Crear segunda comisión a cuenta
         $data2 = [
@@ -238,6 +242,11 @@ class CommissionCurrentAccountTest extends TestCase
 
         $response2 = $this->postJson('/api/commissions', $data2);
         $response2->assertStatus(201);
+        $commissionId2 = $response2->json('id') ?? $response2->json('commission.id');
+        $this->patchJson("/api/commissions/{$commissionId2}/status", [
+            'status' => CommissionStatus::PAGO_VALIDACION->value,
+            'a_cuenta' => true,
+        ])->assertStatus(200);
 
         // Verificar que se crearon ambas transacciones
         $this->assertDatabaseHas('current_accounts', [

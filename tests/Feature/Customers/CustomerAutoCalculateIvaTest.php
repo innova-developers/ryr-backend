@@ -95,7 +95,7 @@ class CustomerAutoCalculateIvaTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJson([
-                'message' => 'Campo auto_calculate_iva actualizado exitosamente',
+                'message' => 'Configuración de IVA actualizada exitosamente',
                 'customer' => [
                     'id' => $this->customer->id,
                     'name' => $this->customer->name,
@@ -122,7 +122,7 @@ class CustomerAutoCalculateIvaTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJson([
-                'message' => 'Campo auto_calculate_iva actualizado exitosamente',
+                'message' => 'Configuración de IVA actualizada exitosamente',
                 'customer' => [
                     'id' => $this->customer->id,
                     'auto_calculate_iva' => true,

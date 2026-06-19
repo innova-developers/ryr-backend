@@ -13,7 +13,7 @@ class GetCustomersTest extends TestCase
 
     public function test_can_get_customers_list(): void
     {
-        $user = User::factory()->create(['role' => 'administrador']);
+        $user = User::factory()->create(['role' => 'administrador', 'branch_id' => null]);
         $token = $user->createToken('test-token')->plainTextToken;
         Customer::factory()->count(3)->create();
 

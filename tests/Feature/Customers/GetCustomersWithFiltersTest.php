@@ -21,7 +21,7 @@ class GetCustomersWithFiltersTest extends TestCase
         parent::setUp();
 
         // Crear usuario administrador
-        $this->adminUser = User::factory()->create(['role' => UserRole::ADMINISTRADOR]);
+        $this->adminUser = User::factory()->create(['role' => UserRole::ADMINISTRADOR, 'branch_id' => null]);
         Sanctum::actingAs($this->adminUser);
 
         // Crear sucursal

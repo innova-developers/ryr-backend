@@ -222,13 +222,15 @@ class CadetePaymentControllerTest extends TestCase
             'success',
             'message',
             'data' => [
-                'total_payments', 'total_amount', 'pending_payments', 'pending_amount',
-                'paid_payments', 'paid_amount', 'cancelled_payments', 'cancelled_amount',
-                'by_payment_type',
+                'payments_summary' => [
+                    'total_payments', 'total_amount', 'pending_payments', 'pending_amount',
+                    'paid_payments', 'paid_amount', 'cancelled_payments', 'cancelled_amount',
+                ],
             ],
         ]);
 
-        $data = $response->json('data');
+        // Los totales de pagos están bajo data.payments_summary
+        $data = $response->json('data.payments_summary');
         $this->assertEquals(6, $data['total_payments']);
         $this->assertEquals(2, $data['pending_payments']);
         $this->assertEquals(3, $data['paid_payments']);
@@ -594,7 +596,7 @@ class CadetePaymentControllerTest extends TestCase
 
         $response->assertStatus(200);
 
-        $data = $response->json('data');
+        $data = $response->json('data.payments_summary');
         $this->assertEquals(3, $data['total_payments']); // Solo los pagos recientes
     }
 

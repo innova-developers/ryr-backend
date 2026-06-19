@@ -34,6 +34,7 @@ class CommissionWithCadeteTest extends TestCase
         // Crear admin
         $this->admin = User::factory()->create([
             'role' => UserRole::ADMINISTRADOR,
+            'branch_id' => null,
         ]);
 
         // Crear cadete
@@ -61,7 +62,8 @@ class CommissionWithCadeteTest extends TestCase
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
-            'status' => CommissionStatus::PAGO_CONFIRMADO,
+            // ENTREGADO es visible en el listado por defecto (PAGO_CONFIRMADO se oculta).
+            'status' => CommissionStatus::ENTREGADO,
             'cadete_id' => $this->cadete->id,
             'total' => 5000.00,
         ]);

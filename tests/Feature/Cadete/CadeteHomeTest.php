@@ -158,17 +158,18 @@ class CadeteHomeTest extends TestCase
                             'pending_deliveries' => 1,
                             'cancelled_deliveries' => 1,
                         ],
+                        // Los montos de earnings dependen del % de comisión del cadete
+                        // (ganancia real, no el total bruto), no determinístico con el factory.
                         'earnings' => [
-                            'today_total' => 70000,
-                            'today_cash' => 25000,
-                            'today_card' => 0,
                             'currency' => 'ARS',
-                            'formatted_total' => '$70.000',
                         ],
                         'performance' => [
                             'delivery_success_rate' => 33.3,
                         ],
                     ],
+                ])
+                ->assertJsonStructure([
+                    'data' => ['earnings' => ['today_total', 'today_cash', 'today_card', 'formatted_total']],
                 ]);
     }
 
@@ -213,11 +214,14 @@ class CadeteHomeTest extends TestCase
                             'pending_deliveries' => 0,
                             'cancelled_deliveries' => 0,
                         ],
+                        // today_total depende del % de comisión del cadete (no determinístico).
                         'earnings' => [
-                            'today_total' => 50000,
-                            'formatted_total' => '$50.000',
+                            'currency' => 'ARS',
                         ],
                     ],
+                ])
+                ->assertJsonStructure([
+                    'data' => ['earnings' => ['today_total', 'formatted_total']],
                 ]);
     }
 

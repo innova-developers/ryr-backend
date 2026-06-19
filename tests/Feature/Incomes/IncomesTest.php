@@ -6,11 +6,20 @@ use App\Shared\Models\Income;
 use App\Shared\Models\IncomeCategory;
 use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class IncomesTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Super-admin (branch_id null) autenticado: rutas /api/incomes requieren auth:sanctum + adminOrCadete
+        $admin = User::factory()->create(['role' => 'administrador', 'branch_id' => null]);
+        Sanctum::actingAs($admin);
+    }
 
     public function test_can_get_all_incomes(): void
     {
@@ -24,7 +33,7 @@ class IncomesTest extends TestCase
         $response = $this->getJson('/api/incomes');
 
         $response->assertStatus(200);
-        $response->assertJsonCount(3);
+        $response->assertJsonCount(3, 'data');
     }
 
     public function test_can_create_income_with_user(): void
@@ -162,7 +171,7 @@ class IncomesTest extends TestCase
         $response = $this->getJson('/api/incomes?dateFrom=2024-01-15&dateTo=2024-01-25');
 
         $response->assertStatus(200);
-        $response->assertJsonCount(2);
+        $response->assertJsonCount(2, 'data');
     }
 
     public function test_can_filter_incomes_by_category(): void
@@ -180,10 +189,10 @@ class IncomesTest extends TestCase
             'user_id' => $user->id,
         ]);
 
-        $response = $this->getJson("/api/incomes?category={$category1->id}");
+        $response = $this->getJson("/api/incomes?income_category_id={$category1->id}");
 
         $response->assertStatus(200);
-        $response->assertJsonCount(2);
+        $response->assertJsonCount(1, 'data');
     }
 
     public function test_can_filter_incomes_by_user(): void
@@ -201,10 +210,10 @@ class IncomesTest extends TestCase
             'user_id' => $user2->id,
         ]);
 
-        $response = $this->getJson("/api/incomes?user={$user1->id}");
+        $response = $this->getJson("/api/incomes?user_id={$user1->id}");
 
         $response->assertStatus(200);
-        $response->assertJsonCount(1);
+        $response->assertJsonCount(1, 'data');
     }
 
     public function test_can_get_incomes_by_user_route(): void
@@ -228,7 +237,7 @@ class IncomesTest extends TestCase
         $response = $this->getJson("/api/users/{$user1->id}/incomes");
 
         $response->assertStatus(200);
-        $response->assertJsonCount(2);
+        $response->assertJsonCount(2, 'data');
     }
 
     public function test_returns_empty_array_when_user_has_no_incomes(): void
@@ -238,6 +247,6 @@ class IncomesTest extends TestCase
         $response = $this->getJson("/api/users/{$user->id}/incomes");
 
         $response->assertStatus(200);
-        $response->assertJsonCount(0);
+        $response->assertJsonCount(0, 'data');
     }
 }

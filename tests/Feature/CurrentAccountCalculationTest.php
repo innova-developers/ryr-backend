@@ -43,6 +43,8 @@ class CurrentAccountCalculationTest extends TestCase
     {
         // Crear transacciones de prueba
         CurrentAccount::create([
+            // Sólo las transacciones OK cuentan para el saldo (getCustomerBalance).
+            'status' => \App\Shared\Enums\CurrentAccountStatus::OK->value,
             'customer_id' => $this->customer->id,
             'type' => 'credit',
             'amount' => 10000.00,
@@ -52,6 +54,8 @@ class CurrentAccountCalculationTest extends TestCase
         ]);
 
         CurrentAccount::create([
+            // Sólo las transacciones OK cuentan para el saldo (getCustomerBalance).
+            'status' => \App\Shared\Enums\CurrentAccountStatus::OK->value,
             'customer_id' => $this->customer->id,
             'type' => 'debit',
             'amount' => 3000.00,
@@ -61,6 +65,8 @@ class CurrentAccountCalculationTest extends TestCase
         ]);
 
         CurrentAccount::create([
+            // Sólo las transacciones OK cuentan para el saldo (getCustomerBalance).
+            'status' => \App\Shared\Enums\CurrentAccountStatus::OK->value,
             'customer_id' => $this->customer->id,
             'type' => 'credit',
             'amount' => 5000.00,
@@ -86,6 +92,8 @@ class CurrentAccountCalculationTest extends TestCase
     {
         // Crear transacciones de prueba
         CurrentAccount::create([
+            // Sólo las transacciones OK cuentan para el saldo (getCustomerBalance).
+            'status' => \App\Shared\Enums\CurrentAccountStatus::OK->value,
             'customer_id' => $this->customer->id,
             'type' => 'credit',
             'amount' => 10000.00,
@@ -95,6 +103,8 @@ class CurrentAccountCalculationTest extends TestCase
         ]);
 
         CurrentAccount::create([
+            // Sólo las transacciones OK cuentan para el saldo (getCustomerBalance).
+            'status' => \App\Shared\Enums\CurrentAccountStatus::OK->value,
             'customer_id' => $this->customer->id,
             'type' => 'debit',
             'amount' => 3000.00,

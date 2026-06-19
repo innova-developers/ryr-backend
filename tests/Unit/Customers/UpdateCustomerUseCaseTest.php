@@ -5,6 +5,8 @@ namespace Tests\Unit\Customers;
 use App\Contexts\Customers\Application\DTO\UpdateCustomerDTO;
 use App\Contexts\Customers\Application\UpdateCustomerUseCase;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
+use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
+use App\Contexts\Locations\Domain\Repositories\LocationsRepository;
 use App\Shared\Models\Customer;
 use Mockery;
 use Tests\TestCase;
@@ -14,7 +16,13 @@ class UpdateCustomerUseCaseTest extends TestCase
     public function test_can_update_customer(): void
     {
         $repository = Mockery::mock(CustomerRepository::class);
-        $useCase = new UpdateCustomerUseCase($repository);
+        // El use case ahora requiere también los repositorios de Locations y Destinations
+        $locationsRepository = Mockery::mock(LocationsRepository::class);
+        $destinationRepository = Mockery::mock(DestinationRepository::class);
+        $locationsRepository->shouldReceive('create')->andReturn(Mockery::mock(\App\Shared\Models\Location::class));
+        $destinationRepository->shouldReceive('findByOriginAndDestination')->andReturn(Mockery::mock(\App\Shared\Models\Destination::class));
+        $destinationRepository->shouldReceive('create')->andReturn(Mockery::mock(\App\Shared\Models\Destination::class));
+        $useCase = new UpdateCustomerUseCase($repository, $locationsRepository, $destinationRepository);
 
         $dto = new UpdateCustomerDTO(
             1,
@@ -30,9 +38,10 @@ class UpdateCustomerUseCaseTest extends TestCase
             'https://maps.google.com/updated',
             '10-19',
             'Updated customer',
-            true,
-            1,
-            1
+            true, // is_premium
+            true, // auto_calculate_iva
+            1,    // user_id
+            1     // branch_id
         );
 
         $expectedCustomer = new Customer();

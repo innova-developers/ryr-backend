@@ -6,6 +6,7 @@ use App\Shared\Models\Income;
 use App\Shared\Models\IncomeCategory;
 use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class IncomeSearchTest extends TestCase
@@ -19,6 +20,9 @@ class IncomeSearchTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Super-admin autenticado (branch_id null = ve todo); /api/incomes requiere auth
+        Sanctum::actingAs(User::factory()->create(['role' => 'administrador', 'branch_id' => null]));
 
         $this->user = User::factory()->create(['name' => 'Juan Pérez']);
         $this->category1 = IncomeCategory::factory()->create(['name' => 'Ventas']);
@@ -46,7 +50,7 @@ class IncomeSearchTest extends TestCase
         $response = $this->getJson('/api/incomes?search=TEST_venta');
 
         $response->assertStatus(200);
-        $incomes = $response->json();
+        $incomes = $response->json('data');
 
         $this->assertCount(1, $incomes);
         $this->assertEquals('TEST_Venta de productos', $incomes[0]['detail']);
@@ -73,7 +77,7 @@ class IncomeSearchTest extends TestCase
         $response = $this->getJson('/api/incomes?search=1500');
 
         $response->assertStatus(200);
-        $incomes = $response->json();
+        $incomes = $response->json('data');
 
         $this->assertCount(1, $incomes);
         $this->assertEquals(1500, $incomes[0]['amount']);
@@ -104,7 +108,7 @@ class IncomeSearchTest extends TestCase
         $response = $this->getJson('/api/incomes?search=TEST_ventas');
 
         $response->assertStatus(200);
-        $incomes = $response->json();
+        $incomes = $response->json('data');
 
         $this->assertCount(1, $incomes);
         $this->assertEquals('TEST_Ventas', $incomes[0]['category']['name']);
@@ -112,7 +116,7 @@ class IncomeSearchTest extends TestCase
 
     public function test_can_search_incomes_by_user_name(): void
     {
-        $user2 = User::factory()->create(['name' => 'TEST_María García']);
+        $user2 = User::factory()->create(['name' => 'TEST_Mariana Gomez']);
 
         // Crear ingresos con diferentes usuarios
         Income::factory()->create([
@@ -129,14 +133,15 @@ class IncomeSearchTest extends TestCase
             'income_category_id' => $this->category1->id,
         ]);
 
-        // Buscar por "TEST_maría"
-        $response = $this->getJson('/api/incomes?search=TEST_maría');
+        // Buscar por nombre de usuario (sin acentos: el LIKE de sqlite en tests no es
+        // case-insensitive con acentos; en MySQL prod con utf8_ci sí)
+        $response = $this->getJson('/api/incomes?search=Mariana');
 
         $response->assertStatus(200);
-        $incomes = $response->json();
+        $incomes = $response->json('data');
 
         $this->assertCount(1, $incomes);
-        $this->assertEquals('TEST_María García', $incomes[0]['user']['name']);
+        $this->assertEquals('TEST_Mariana Gomez', $incomes[0]['user']['name']);
     }
 
     public function test_search_is_case_insensitive(): void
@@ -151,12 +156,12 @@ class IncomeSearchTest extends TestCase
         // Buscar con mayúsculas
         $response = $this->getJson('/api/incomes?search=TEST_VENTA');
         $response->assertStatus(200);
-        $this->assertCount(1, $response->json());
+        $this->assertCount(1, $response->json('data'));
 
         // Buscar con minúsculas
         $response = $this->getJson('/api/incomes?search=test_venta');
         $response->assertStatus(200);
-        $this->assertCount(1, $response->json());
+        $this->assertCount(1, $response->json('data'));
     }
 
     public function test_search_returns_empty_when_no_matches(): void
@@ -172,7 +177,7 @@ class IncomeSearchTest extends TestCase
         $response = $this->getJson('/api/incomes?search=TEST_inexistente');
 
         $response->assertStatus(200);
-        $this->assertCount(0, $response->json());
+        $this->assertCount(0, $response->json('data'));
     }
 
     public function test_search_works_with_other_filters(): void
@@ -201,7 +206,7 @@ class IncomeSearchTest extends TestCase
         $response = $this->getJson("/api/incomes?dateFrom={$dateFrom}&dateTo={$dateTo}&search=venta");
 
         $response->assertStatus(200);
-        $incomes = $response->json();
+        $incomes = $response->json('data');
 
         $this->assertCount(1, $incomes);
         $this->assertEquals('Venta de productos', $incomes[0]['detail']);
@@ -227,14 +232,15 @@ class IncomeSearchTest extends TestCase
             'detail' => 'Pago de servicios',
             'amount' => 2000,
             'user_id' => $this->user->id,
-            'income_category_id' => $this->category1->id,
+            // Categoría distinta a "Ventas" para que NO matchee la búsqueda por nombre de categoría
+            'income_category_id' => $this->category2->id,
         ]);
 
         // Buscar por "venta" - debería encontrar ambos ingresos de venta
         $response = $this->getJson('/api/incomes?search=venta');
 
         $response->assertStatus(200);
-        $incomes = $response->json();
+        $incomes = $response->json('data');
 
         $this->assertCount(2, $incomes);
         $this->assertTrue(

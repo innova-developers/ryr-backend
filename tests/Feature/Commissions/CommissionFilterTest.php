@@ -22,6 +22,7 @@ class CommissionFilterTest extends TestCase
 
         $this->admin = User::factory()->create([
             'role' => UserRole::ADMINISTRADOR,
+            'branch_id' => null,
         ]);
 
         $this->user = User::factory()->create([
@@ -102,12 +103,13 @@ class CommissionFilterTest extends TestCase
         $this->assertCount(3, $data['data']);
     }
 
-    public function test_filter_with_invalid_method_returns_error()
+    public function test_filter_with_invalid_method_is_ignored_gracefully()
     {
         $response = $this->actingAs($this->admin)
             ->getJson('/api/commissions?method=INVALID_METHOD');
 
-        $response->assertStatus(500);
+        // Un método inválido se ignora: la API no debe romper (500), responde 200
+        $response->assertStatus(200);
     }
 
     public function test_filter_combines_with_other_filters()

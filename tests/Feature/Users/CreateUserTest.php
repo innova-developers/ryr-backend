@@ -46,7 +46,8 @@ class CreateUserTest extends TestCase
 
     public function test_non_admin_cannot_create_user(): void
     {
-        $user = User::factory()->create(['role' => UserRole::MOSTRADOR->value]);
+        // MOSTRADOR está autorizado a crear usuarios; usamos CADETE (rol sin permiso).
+        $user = User::factory()->create(['role' => UserRole::CADETE->value]);
         $branch = Branch::factory()->create();
         $payload = [
             'name' => 'Usuario',

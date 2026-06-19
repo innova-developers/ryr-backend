@@ -5,6 +5,8 @@ namespace Tests\Unit\Customers;
 use App\Contexts\Customers\Application\CreateCustomerUseCase;
 use App\Contexts\Customers\Application\DTO\CreateCustomerDTO;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
+use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
+use App\Contexts\Locations\Domain\Repositories\LocationsRepository;
 use App\Shared\Models\Customer;
 use Mockery;
 use Tests\TestCase;
@@ -14,7 +16,13 @@ class CreateCustomerUseCaseTest extends TestCase
     public function test_can_create_customer(): void
     {
         $repository = Mockery::mock(CustomerRepository::class);
-        $useCase = new CreateCustomerUseCase($repository);
+        // El use case ahora requiere también los repositorios de Locations y Destinations
+        $locationsRepository = Mockery::mock(LocationsRepository::class);
+        $destinationRepository = Mockery::mock(DestinationRepository::class);
+        $locationsRepository->shouldReceive('create')->andReturn(Mockery::mock(\App\Shared\Models\Location::class));
+        $destinationRepository->shouldReceive('findByOriginAndDestination')->andReturn(Mockery::mock(\App\Shared\Models\Destination::class));
+        $destinationRepository->shouldReceive('create')->andReturn(Mockery::mock(\App\Shared\Models\Destination::class));
+        $useCase = new CreateCustomerUseCase($repository, $locationsRepository, $destinationRepository);
 
         $dto = new CreateCustomerDTO(
             '12345678',
@@ -29,9 +37,10 @@ class CreateCustomerUseCaseTest extends TestCase
             'https://maps.google.com',
             '9-18',
             'Test customer',
-            true,
-            1,
-            1 // branch_id
+            true, // is_premium
+            true, // auto_calculate_iva
+            1,    // user_id
+            1     // branch_id
         );
 
         $expectedCustomer = new Customer();

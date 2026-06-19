@@ -18,7 +18,7 @@ class GetTransportsFiltersDTO
         return new self(
             search: $data['search'] ?? null,
             page: (int) ($data['page'] ?? 1),
-            perPage: (int) ($data['per_page'] ?? 10),
+            perPage: min(100, max(1, (int) ($data['per_page'] ?? 10))),
             sortBy: $data['sort_by'] ?? null,
             sortDirection: $data['sort_direction'] ?? 'asc'
         );

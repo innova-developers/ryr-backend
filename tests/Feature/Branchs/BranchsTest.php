@@ -17,7 +17,7 @@ class BranchsTest extends TestCase
         $branch = Branch::factory()->create();
         $this->admin = User::factory()->create([
             'role' => 'administrador',
-            'branch_id' => $branch->id,
+            'branch_id' => null,
         ]);
         $this->actingAs($this->admin, 'sanctum');
     }

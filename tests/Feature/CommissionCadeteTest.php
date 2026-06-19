@@ -90,14 +90,15 @@ class CommissionCadeteTest extends TestCase
                 'commission' => [
                     'id' => $this->commission->id,
                     'cadete_id' => $this->cadete->id,
-                    'status' => CommissionStatus::CADETE_ASIGNADO->value,
+                    // Asignar cadete no cambia el estado (decoplado del workflow).
+                    'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
                 ],
             ]);
 
         $this->assertDatabaseHas('commissions', [
             'id' => $this->commission->id,
             'cadete_id' => $this->cadete->id,
-            'status' => CommissionStatus::CADETE_ASIGNADO->value,
+            'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
         ]);
     }
 
@@ -113,7 +114,7 @@ class CommissionCadeteTest extends TestCase
                 'commission' => [
                     'id' => $this->commission->id,
                     'cadete_id' => $this->cadeteExterno->id,
-                    'status' => CommissionStatus::CADETE_ASIGNADO->value,
+                    'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
                 ],
             ]);
     }
@@ -145,14 +146,15 @@ class CommissionCadeteTest extends TestCase
                 'commission' => [
                     'id' => $this->commission->id,
                     'cadete_id' => $this->cadete->id,
-                    'status' => CommissionStatus::CADETE_ASIGNADO->value,
+                    // Asignar no cambia el estado: queda en ENTREGADO.
+                    'status' => CommissionStatus::ENTREGADO->value,
                 ],
             ]);
 
         $this->assertDatabaseHas('commissions', [
             'id' => $this->commission->id,
             'cadete_id' => $this->cadete->id,
-            'status' => CommissionStatus::CADETE_ASIGNADO->value,
+            'status' => CommissionStatus::ENTREGADO->value,
         ]);
     }
 
@@ -221,14 +223,15 @@ class CommissionCadeteTest extends TestCase
                 'commission' => [
                     'id' => $this->commission->id,
                     'cadete_id' => null,
-                    'status' => CommissionStatus::BUSCANDO_CADETE->value,
+                    // Desde ENTREGADO la desasignación NO fuerza BUSCANDO_CADETE: mantiene estado.
+                    'status' => CommissionStatus::ENTREGADO->value,
                 ],
             ]);
 
         $this->assertDatabaseHas('commissions', [
             'id' => $this->commission->id,
             'cadete_id' => null,
-            'status' => CommissionStatus::BUSCANDO_CADETE->value,
+            'status' => CommissionStatus::ENTREGADO->value,
         ]);
     }
 
@@ -247,7 +250,8 @@ class CommissionCadeteTest extends TestCase
                 'commission' => [
                     'id' => $this->commission->id,
                     'cadete_id' => $this->cadeteExterno->id,
-                    'status' => CommissionStatus::CADETE_ASIGNADO->value,
+                    // Cambiar cadete no cambia el estado (queda SOLICITUD_RECIBIDA).
+                    'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
                 ],
                 'previous_cadete_id' => $this->cadete->id,
             ]);
@@ -291,14 +295,15 @@ class CommissionCadeteTest extends TestCase
                 'commission' => [
                     'id' => $this->commission->id,
                     'cadete_id' => $this->cadeteExterno->id,
-                    'status' => CommissionStatus::CADETE_ASIGNADO->value,
+                    // Cambiar cadete no cambia el estado: queda ENTREGADO.
+                    'status' => CommissionStatus::ENTREGADO->value,
                 ],
             ]);
 
         $this->assertDatabaseHas('commissions', [
             'id' => $this->commission->id,
             'cadete_id' => $this->cadeteExterno->id,
-            'status' => CommissionStatus::CADETE_ASIGNADO->value,
+            'status' => CommissionStatus::ENTREGADO->value,
         ]);
     }
 

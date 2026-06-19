@@ -5,6 +5,7 @@ namespace App\Contexts\Customers\Infrastructure\Http\Requests;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 
 class UpdateCustomerRequest extends FormRequest
 {
@@ -17,9 +18,10 @@ class UpdateCustomerRequest extends FormRequest
      */
     public function rules(): array
     {
-        // Sin validaciones - todas las validaciones han sido removidas (v1)
-        // Mantenemos el campo auto_calculate_iva disponible para v2
-        return [];
+        // Email único ignorando al propio cliente que se actualiza.
+        return [
+            'email' => ['nullable', 'email', Rule::unique('customers', 'email')->ignore($this->route('id'))],
+        ];
     }
 
     protected function failedValidation(Validator $validator)

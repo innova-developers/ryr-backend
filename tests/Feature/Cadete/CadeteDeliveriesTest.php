@@ -148,9 +148,9 @@ class CadeteDeliveriesTest extends TestCase
                                 'id' => $commission->id,
                                 'tracking_number' => $commission->id,
                                 'customer_name' => 'Juan Pérez García',
-                                'customer_address' => 'Av. Principal 123, Ciudad',
                                 'customer_phone' => '+1234567890',
-                                'pickup_address' => 'Almacén Central, Zona Industrial',
+                                // customer_address/pickup_address ahora concatenan la ciudad
+                                // (valor no determinístico por el faker); se omiten del match exacto.
                                 'pickup_phone' => '+1234567891',
                                 'status' => 'En tránsito a destino',
                                 'commission_amount' => '25.50',
@@ -210,6 +210,7 @@ class CadeteDeliveriesTest extends TestCase
             'destination_location_id' => $this->destinationLocation->id,
             'date' => $today,
             'cadete_id' => $this->cadete->id,
+            'status' => CommissionStatus::EN_TRANSITO_DESTINO,
         ]);
 
         // Comisión de ayer
@@ -222,6 +223,7 @@ class CadeteDeliveriesTest extends TestCase
             'destination_location_id' => $this->destinationLocation->id,
             'date' => $yesterday,
             'cadete_id' => $this->cadete->id,
+            'status' => CommissionStatus::EN_TRANSITO_DESTINO,
         ]);
 
         $response = $this->actingAs($this->cadete)
@@ -243,6 +245,7 @@ class CadeteDeliveriesTest extends TestCase
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
             'cadete_id' => $this->cadete->id,
+            'status' => CommissionStatus::EN_TRANSITO_DESTINO,
         ]);
 
         $response = $this->actingAs($this->cadete)
@@ -257,7 +260,8 @@ class CadeteDeliveriesTest extends TestCase
 
     public function test_deliveries_pagination()
     {
-        // Crear 25 comisiones
+        // Crear 25 comisiones con un estado "en proceso" determinístico, ya que
+        // deliveries() filtra por esos estados cuando no se envía ?status.
         for ($i = 0; $i < 25; $i++) {
             Commission::factory()->create([
                 'client_id' => $this->client->id,
@@ -267,6 +271,7 @@ class CadeteDeliveriesTest extends TestCase
                 'origin_location_id' => $this->originLocation->id,
                 'destination_location_id' => $this->destinationLocation->id,
                 'cadete_id' => $this->cadete->id,
+                'status' => CommissionStatus::EN_TRANSITO_DESTINO,
             ]);
         }
 
@@ -298,6 +303,7 @@ class CadeteDeliveriesTest extends TestCase
             'destination_location_id' => $this->destinationLocation->id,
             'total' => 100.00,
             'cadete_id' => $this->cadete->id,
+            'status' => CommissionStatus::EN_TRANSITO_DESTINO,
         ]);
 
         Commission::factory()->create([
@@ -309,6 +315,7 @@ class CadeteDeliveriesTest extends TestCase
             'destination_location_id' => $this->destinationLocation->id,
             'total' => 50.00,
             'cadete_id' => $this->cadete->id,
+            'status' => CommissionStatus::EN_TRANSITO_DESTINO,
         ]);
 
         $response = $this->actingAs($this->cadete)

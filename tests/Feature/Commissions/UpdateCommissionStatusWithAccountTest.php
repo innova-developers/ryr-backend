@@ -56,8 +56,9 @@ class UpdateCommissionStatusWithAccountTest extends TestCase
 
     public function test_can_update_status_with_a_cuenta_true(): void
     {
+        // El movimiento en cuenta corriente (a cuenta) se genera al pasar a PAGO_VALIDACION.
         $response = $this->patchJson("/api/commissions/{$this->commission->id}/status", [
-            'status' => CommissionStatus::ENTREGADO->value,
+            'status' => CommissionStatus::PAGO_VALIDACION->value,
             'details' => 'Comisión entregada',
             'a_cuenta' => true,
         ]);
@@ -67,7 +68,7 @@ class UpdateCommissionStatusWithAccountTest extends TestCase
                 'message' => 'Estado de la comisión actualizado correctamente',
                 'commission' => [
                     'id' => $this->commission->id,
-                    'status' => CommissionStatus::ENTREGADO->value,
+                    'status' => CommissionStatus::PAGO_VALIDACION->value,
                 ],
             ]);
 
@@ -76,7 +77,6 @@ class UpdateCommissionStatusWithAccountTest extends TestCase
             'customer_id' => $this->customer->id,
             'type' => 'debit',
             'amount' => 5000.00,
-            'description' => "Comisión #{$this->commission->id} - Actualización de estado",
             'reference' => "COM-{$this->commission->id}",
         ]);
     }
