@@ -15,33 +15,30 @@ class DashboardController extends Controller
     {
         $dateFrom = $request->get('date_from');
         $dateTo = $request->get('date_to');
+        $branchId = $request->get('branch_id');
 
-        $commissionsQuery = Commission::query();
-        if ($dateFrom) {
-            $commissionsQuery->where('date', '>=', $dateFrom);
-        }
-        if ($dateTo) {
-            $commissionsQuery->where('date', '<=', $dateTo);
-        }
-
-        $totalCommissions = (clone $commissionsQuery)->count();
-
-        $customerIdsQuery = Commission::query()->select('client_id');
-        if ($dateFrom) {
-            $customerIdsQuery->where('date', '>=', $dateFrom);
-        }
-        if ($dateTo) {
-            $customerIdsQuery->where('date', '<=', $dateTo);
-        }
-        $totalCustomers = $customerIdsQuery->distinct()->count('client_id');
-
-        $totalTransports = Transport::whereHas('commissions', function ($q) use ($dateFrom, $dateTo) {
+        $applyCommissionFilters = function ($q) use ($dateFrom, $dateTo, $branchId) {
             if ($dateFrom) {
                 $q->where('date', '>=', $dateFrom);
             }
             if ($dateTo) {
                 $q->where('date', '<=', $dateTo);
             }
+            if ($branchId) {
+                $q->where('branch_id', $branchId);
+            }
+        };
+
+        $commissionsQuery = Commission::query();
+        $applyCommissionFilters($commissionsQuery);
+        $totalCommissions = (clone $commissionsQuery)->count();
+
+        $customerIdsQuery = Commission::query()->select('client_id');
+        $applyCommissionFilters($customerIdsQuery);
+        $totalCustomers = $customerIdsQuery->distinct()->count('client_id');
+
+        $totalTransports = Transport::whereHas('commissions', function ($q) use ($applyCommissionFilters) {
+            $applyCommissionFilters($q);
         })->count();
 
         $expensesQuery = Expense::query();
@@ -50,6 +47,9 @@ class DashboardController extends Controller
         }
         if ($dateTo) {
             $expensesQuery->where('date', '<=', $dateTo);
+        }
+        if ($branchId && \Illuminate\Support\Facades\Schema::hasColumn('expenses', 'branch_id')) {
+            $expensesQuery->where('branch_id', $branchId);
         }
         $totalExpenses = $expensesQuery->sum('amount');
 

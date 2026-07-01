@@ -16,6 +16,8 @@ class ListCommissionsFiltersDTO
         public readonly ?int $destinationId = null,
         public readonly ?int $branchId = null,
         public readonly ?int $userId = null,
+        public readonly ?int $cadeteId = null,
+        public readonly ?int $originLocationId = null,
         public readonly ?string $dateFrom = null,
         public readonly ?string $dateTo = null,
         public readonly ?CommissionStatus $status = null,
@@ -24,7 +26,7 @@ class ListCommissionsFiltersDTO
         public readonly ?float $total = null,
         public readonly int $page = 1,
         public readonly int $perPage = 15,
-        public readonly ?string $sort = 'date',
+        public readonly ?string $sort = 'pickup_first',
         public readonly ?string $sortDirection = 'asc',
     ) {
     }
@@ -59,6 +61,8 @@ class ListCommissionsFiltersDTO
             destinationId: $data['destination_id'] ?? null,
             branchId: $data['branch_id'] ?? null,
             userId: $data['user_id'] ?? null,
+            cadeteId: $data['cadete_id'] ?? $data['cadeteId'] ?? null,
+            originLocationId: $data['origin_location_id'] ?? $data['originLocationId'] ?? null,
             dateFrom: $data['date_from'] ?? $data['dateFrom'] ?? null,
             dateTo: $data['date_to'] ?? $data['dateTo'] ?? null,
             status: isset($data['status']) ? CommissionStatus::from($data['status']) : null,
@@ -67,7 +71,7 @@ class ListCommissionsFiltersDTO
             total: isset($data['total']) ? (float) $data['total'] : null,
             page: $data['page'] ?? 1,
             perPage: $data['per_page'] ?? $data['perPage'] ?? 15,
-            sort: $data['sort_by'] ?? null,
+            sort: $data['sort_by'] ?? 'pickup_first',
             sortDirection: $data['sort_direction'] ?? 'asc'
         );
     }

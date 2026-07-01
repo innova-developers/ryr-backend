@@ -46,6 +46,33 @@ class CommissionController extends Controller
         $this->whatsAppService = app(WhatsAppService::class);
     }
 
+    /**
+     * Conteo de comisiones por cadete (para el filtro "Cadete" del listado).
+     */
+    public function cadeteStats(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+
+        $query = \App\Shared\Models\Commission::query()
+            ->whereNotNull('cadete_id')
+            ->leftJoin('users', 'users.id', '=', 'commissions.cadete_id')
+            ->selectRaw('commissions.cadete_id, users.name as cadete_name, COUNT(*) as commission_count')
+            ->groupBy('commissions.cadete_id', 'users.name')
+            ->orderByDesc('commission_count');
+
+        // Respetar sucursal del usuario si aplica
+        if ($user && $user->branch_id) {
+            $query->where('commissions.branch_id', $user->branch_id);
+        } elseif ($request->filled('branch_id')) {
+            $query->where('commissions.branch_id', $request->integer('branch_id'));
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $query->get(),
+        ]);
+    }
+
     public function store(CreateCommissionRequest $request): JsonResponse
     {
         try {

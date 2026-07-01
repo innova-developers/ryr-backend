@@ -243,8 +243,18 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     $query->where('destination_id', $filters->destinationId);
                 }
 
-                // Solo aplicar branchId si el usuario es administrador sin sucursal (para otros roles ya está filtrado arriba)
-                if ($filters->branchId && $user && $user->role === UserRole::ADMINISTRADOR && ! $user->branch_id) {
+                // Filtro por origen (Location de retiro)
+                if ($filters->originLocationId) {
+                    $query->where('origin_location_id', $filters->originLocationId);
+                }
+
+                // Filtro por cadete asignado
+                if ($filters->cadeteId) {
+                    $query->where('cadete_id', $filters->cadeteId);
+                }
+
+                // Aplicar branchId si el usuario no está ya acotado a una sucursal (admin/superadmin sin branch)
+                if ($filters->branchId && (! $user || ! $user->branch_id)) {
                     $query->where('commissions.branch_id', $filters->branchId);
                 }
 
@@ -303,6 +313,14 @@ class CommissionsEloquentRepository implements CommissionsRepository
 
                 // Aplicar ordenamiento solo si no se proporciona commissionId
                 switch ($filters->sort) {
+                    case 'pickup_first':
+                        // Prioridad: comisiones "a retirar" primero, luego el resto; dentro de cada grupo, las más nuevas primero
+                        $query->orderByRaw('CASE WHEN status IN (?, ?) THEN 0 ELSE 1 END', [
+                            CommissionStatus::EN_PUNTO_RETIRO->value,
+                            CommissionStatus::DISPONIBLE_RETIRO->value,
+                        ])->orderBy('commissions.created_at', 'desc');
+
+                        break;
                     case 'id':
                         $query->orderBy('commissions.id', $filters->sortDirection);
 
@@ -436,8 +454,18 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     $query->where('destination_id', $filters->destinationId);
                 }
 
-                // Solo aplicar branchId si el usuario es administrador sin sucursal (para otros roles ya está filtrado arriba)
-                if ($filters->branchId && $user && $user->role === UserRole::ADMINISTRADOR && ! $user->branch_id) {
+                // Filtro por origen (Location de retiro)
+                if ($filters->originLocationId) {
+                    $query->where('origin_location_id', $filters->originLocationId);
+                }
+
+                // Filtro por cadete asignado
+                if ($filters->cadeteId) {
+                    $query->where('cadete_id', $filters->cadeteId);
+                }
+
+                // Aplicar branchId si el usuario no está ya acotado a una sucursal (admin/superadmin sin branch)
+                if ($filters->branchId && (! $user || ! $user->branch_id)) {
                     $query->where('commissions.branch_id', $filters->branchId);
                 }
 

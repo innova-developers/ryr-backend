@@ -78,6 +78,7 @@ Route::middleware(['auth:sanctum', 'adminOrCadete'])->group(function () {
     
     // Listado de comisiones
     Route::get('/commissions', [CommissionController::class, 'index']);
+    Route::get('/commissions/cadete-stats', [CommissionController::class, 'cadeteStats']);
     Route::get('/commissions/statuses', [CommissionController::class, 'getStatuses']);
     Route::get('/commissions/{id}', [CommissionController::class, 'show']);
     
@@ -124,6 +125,9 @@ Route::middleware(['auth:sanctum', 'adminOrCadete'])->group(function () {
         Route::get('/pending-transactions', [App\Http\Controllers\Admin\CollectionPoolController::class, 'getPendingTransactions']);
         Route::get('/{id}', [App\Http\Controllers\Admin\CollectionPoolController::class, 'show']);
     });
+
+    // Balance general por fechas reales (ingresos por fecha de cobro, egresos por fecha real)
+    Route::get('/admin/balances/general', [App\Http\Controllers\Admin\BalanceController::class, 'general']);
 
     // Cuenta corriente de clientes (accesible para admin y cobradores)
     Route::prefix('customers/{customerId}/current-account')->group(function () {

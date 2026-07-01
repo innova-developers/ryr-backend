@@ -708,8 +708,14 @@ class CadeteController extends Controller
             });
         }
 
+        // Por defecto (sin rango de fechas explícito) mostrar solo las entregas de HOY.
+        // Los filtros de fecha pueden ampliar el rango para ver histórico.
+        if (! $request->filled('date_from') && ! $request->filled('date_to')) {
+            $query->whereDate('date', now()->toDateString());
+        }
+
         // Ordenamiento
-        $sortBy = $request->get('sort_by', 'created_at');
+        $sortBy = $request->get('sort_by', 'pickup_first');
         $sortOrder = $request->get('sort_order', 'desc');
 
         switch ($sortBy) {
@@ -721,8 +727,16 @@ class CadeteController extends Controller
                 $query->orderBy('total', $sortOrder);
 
                 break;
-            case 'created_at':
+            case 'pickup_first':
             default:
+                // Prioridad: "a retirar" primero, luego el resto; dentro de cada grupo las más nuevas primero
+                $query->orderByRaw('CASE WHEN status IN (?, ?) THEN 0 ELSE 1 END', [
+                    CommissionStatus::EN_PUNTO_RETIRO->value,
+                    CommissionStatus::DISPONIBLE_RETIRO->value,
+                ])->orderBy('created_at', 'desc');
+
+                break;
+            case 'created_at':
                 $query->orderBy('created_at', $sortOrder);
 
                 break;
@@ -770,7 +784,6 @@ class CadeteController extends Controller
                     'receiver_name' => $commission->deliverySignature->receiver_name,
                     'receiver_phone' => $commission->deliverySignature->receiver_phone,
                     'notes' => $commission->deliverySignature->notes,
-                    'signature_image' => \DB::table('delivery_signatures')->where('commission_id', $commission->id)->value('signature_image'),
                     'delivery_timestamp' => $commission->deliverySignature->delivery_timestamp->toISOString(),
                 ] : null,
             ];
