@@ -89,6 +89,13 @@ class AppServiceProvider extends ServiceProvider
             FranchiseRepository::class,
             FranchiseEloquentRepository::class
         );
+
+        // Telescope es require-dev: registrar su provider solo si el paquete está instalado
+        // (no en producción con composer install --no-dev). Evita "Class ... not found".
+        if (class_exists(\Laravel\Telescope\TelescopeApplicationServiceProvider::class)
+            && class_exists(\App\Providers\TelescopeServiceProvider::class)) {
+            $this->app->register(\App\Providers\TelescopeServiceProvider::class);
+        }
     }
 
     /**

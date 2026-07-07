@@ -172,6 +172,7 @@ class CadeteDeliveriesTest extends TestCase
             'destination_location_id' => $this->destinationLocation->id,
             'status' => CommissionStatus::ENTREGADO,
             'cadete_id' => $this->cadete->id,
+            'date' => now(),
         ]);
 
         Commission::factory()->create([
@@ -183,6 +184,7 @@ class CadeteDeliveriesTest extends TestCase
             'destination_location_id' => $this->destinationLocation->id,
             'status' => CommissionStatus::EN_TRANSITO_DESTINO,
             'cadete_id' => $this->cadete->id,
+            'date' => now(),
         ]);
 
         $response = $this->actingAs($this->cadete)
@@ -246,6 +248,7 @@ class CadeteDeliveriesTest extends TestCase
             'destination_location_id' => $this->destinationLocation->id,
             'cadete_id' => $this->cadete->id,
             'status' => CommissionStatus::EN_TRANSITO_DESTINO,
+            'date' => now(),
         ]);
 
         $response = $this->actingAs($this->cadete)
@@ -272,6 +275,7 @@ class CadeteDeliveriesTest extends TestCase
                 'destination_location_id' => $this->destinationLocation->id,
                 'cadete_id' => $this->cadete->id,
                 'status' => CommissionStatus::EN_TRANSITO_DESTINO,
+                'date' => now(),
             ]);
         }
 
@@ -304,6 +308,7 @@ class CadeteDeliveriesTest extends TestCase
             'total' => 100.00,
             'cadete_id' => $this->cadete->id,
             'status' => CommissionStatus::EN_TRANSITO_DESTINO,
+            'date' => now(),
         ]);
 
         Commission::factory()->create([
@@ -316,6 +321,7 @@ class CadeteDeliveriesTest extends TestCase
             'total' => 50.00,
             'cadete_id' => $this->cadete->id,
             'status' => CommissionStatus::EN_TRANSITO_DESTINO,
+            'date' => now(),
         ]);
 
         $response = $this->actingAs($this->cadete)

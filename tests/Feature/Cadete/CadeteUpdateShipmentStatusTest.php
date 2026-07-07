@@ -93,6 +93,7 @@ class CadeteUpdateShipmentStatusTest extends TestCase
             'status' => CommissionStatus::EN_TRANSITO_DESTINO,
             'type' => CommissionType::ORDINARIA,
             'total' => 100.00,
+            'date' => now(),
         ]);
     }
 
