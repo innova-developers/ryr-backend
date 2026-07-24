@@ -2,8 +2,10 @@
 
 namespace App\Contexts\Destinations\Infrastructure\Http\Controllers;
 
+use App\Contexts\Destinations\Application\BulkAdjustPricesUseCase;
 use App\Contexts\Destinations\Application\CreateDestinationUseCase;
 use App\Contexts\Destinations\Application\DeleteDestinationUseCase;
+use App\Contexts\Destinations\Application\DTO\BulkAdjustPricesDTO;
 use App\Contexts\Destinations\Application\DTO\CreateDestinationDTO;
 use App\Contexts\Destinations\Application\DTO\GetDestinationRatesDTO;
 use App\Contexts\Destinations\Application\DTO\UpdateDestinationDTO;
@@ -14,6 +16,7 @@ use App\Contexts\Destinations\Application\GetDestinationUseCase;
 use App\Contexts\Destinations\Application\GetOriginsUseCase;
 use App\Contexts\Destinations\Application\UpdateDestinationUseCase;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
+use App\Contexts\Destinations\Infrastructure\Http\Requests\BulkAdjustPricesRequest;
 use App\Contexts\Destinations\Infrastructure\Http\Requests\CreateDestinationRequest;
 use App\Contexts\Destinations\Infrastructure\Http\Requests\UpdateDestinationRequest;
 use Illuminate\Http\JsonResponse;
@@ -79,6 +82,23 @@ class DestinationController extends Controller
         $updatedDestination = $useCase($dto);
 
         return response()->json($updatedDestination);
+    }
+
+    public function bulkAdjustPrices(BulkAdjustPricesRequest $request): JsonResponse
+    {
+        $useCase = new BulkAdjustPricesUseCase($this->repository);
+        $dto = new BulkAdjustPricesDTO(
+            (float) $request->input('percentage'),
+            $request->boolean('fixed_price'),
+            $request->boolean('small_bulk_price'),
+            $request->boolean('large_bulk_price'),
+        );
+        $affected = $useCase($dto);
+
+        return response()->json([
+            'message' => 'Precios actualizados correctamente',
+            'affected' => $affected,
+        ]);
     }
 
     public function destroy(int $id): JsonResponse

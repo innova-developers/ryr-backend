@@ -19,6 +19,7 @@ use App\Contexts\Locations\Domain\Repositories\LocationsRepository;
 use App\Contexts\Users\Application\CreateUserUseCase;
 use App\Contexts\Users\Application\DTO\CreateUserDTO;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
+use App\Shared\Enums\CustomerType;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -61,11 +62,24 @@ class CustomerController extends Controller
             // Si el usuario no tiene branch_id (super admin), establecer en 1
             $branchId = $user->branch_id ?? 1;
 
+            // Empresa: se identifica por razón social + CUIT (sin DNI obligatorio).
+            $type = $request->input('type', CustomerType::INDIVIDUAL->value);
+            $isCompany = $type === CustomerType::COMPANY->value;
+            $razonSocial = $request->input('razon_social');
+            $name = $isCompany ? $razonSocial : $request->input('name');
+            $lastName = $isCompany ? '' : ($request->input('last_name') ?? '');
+            $dniRaw = $request->input('dni');
+            $dni = ($dniRaw !== null && $dniRaw !== '') ? (int) $dniRaw : null;
+            // Password del usuario vinculado: DNI para común, dígitos del CUIT para empresa.
+            $userPassword = $isCompany
+                ? (preg_replace('/\D/', '', (string) $request->input('cuit')) ?: 'empresa')
+                : (string) $dniRaw;
+
             $useCaseCreateUser = new CreateUserUseCase($this->userRepository);
             $dtoCreateUser = new CreateUserDTO(
-                $request->input('name'),
+                $name,
                 $request->input('email'),
-                $request->input('dni'),
+                $userPassword,
                 'cliente',
                 $branchId
             );
@@ -73,10 +87,10 @@ class CustomerController extends Controller
 
             $useCase = new CreateCustomerUseCase($this->repository, $this->locationsRepository, $this->destinationRepository);
             $dto = new CreateCustomerDTO(
-                $request->input('dni'),
+                $dni,
                 $request->input('cuit'),
-                $request->input('name'),
-                $request->input('last_name'),
+                $name,
+                $lastName,
                 $request->input('mobile'),
                 $request->input('email'),
                 $request->input('address'),
@@ -88,7 +102,9 @@ class CustomerController extends Controller
                 $request->boolean('is_premium', false),
                 $request->boolean('auto_calculate_iva', true),
                 $userCreated->id,
-                $branchId
+                $branchId,
+                $type,
+                $razonSocial
             );
             $customer = $useCase($dto);
 
@@ -129,12 +145,21 @@ class CustomerController extends Controller
             // Si el usuario no tiene branch_id (super admin), establecer en 1
             $branchId = $user->branch_id ?? 1;
 
+            // Empresa: se identifica por razón social + CUIT (sin DNI obligatorio).
+            $type = $request->input('type', $currentCustomer->type?->value ?? CustomerType::INDIVIDUAL->value);
+            $isCompany = $type === CustomerType::COMPANY->value;
+            $razonSocial = $request->input('razon_social', $currentCustomer->razon_social);
+            $name = $isCompany ? $razonSocial : $request->input('name');
+            $lastName = $isCompany ? '' : ($request->input('last_name') ?? '');
+            $dniRaw = $request->input('dni');
+            $dni = ($dniRaw !== null && $dniRaw !== '') ? (int) $dniRaw : null;
+
             $dto = new UpdateCustomerDTO(
                 $id,
-                $request->input('dni'),
+                $dni,
                 $request->input('cuit'),
-                $request->input('name'),
-                $request->input('last_name'),
+                $name,
+                $lastName,
                 $request->input('mobile'),
                 $request->input('email'),
                 $request->input('address'),
@@ -147,7 +172,9 @@ class CustomerController extends Controller
                 $request->boolean('auto_calculate_iva', true),
                 $request->input('user_id', $currentCustomer->user_id), // Preservar user_id existente si no se proporciona
                 $branchId,
-                $request->input('internal_user_id', $currentCustomer->internal_user_id) // Preservar internal_user_id existente si no se proporciona
+                $request->input('internal_user_id', $currentCustomer->internal_user_id), // Preservar internal_user_id existente si no se proporciona
+                $type,
+                $razonSocial
             );
             $customer = $useCase($dto);
 

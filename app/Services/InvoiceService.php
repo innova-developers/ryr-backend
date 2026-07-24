@@ -65,7 +65,9 @@ class InvoiceService
                 'iva_rate' => $ivaRate,
                 'doc_tipo' => $docTipo,
                 'doc_numero' => (string) $docNumero,
-                'razon_social' => $customer->name . ' ' . ($customer->last_name ?? ''),
+                'razon_social' => ($customer->isCompany() && $customer->razon_social)
+                    ? $customer->razon_social
+                    : trim($customer->name . ' ' . ($customer->last_name ?? '')),
                 'domicilio_cliente' => $customer->address,
                 'condicion_iva' => $this->resolveCondicionIva($customer),
                 'concepto' => $datos['concepto'] ?? 2,
@@ -218,6 +220,11 @@ class InvoiceService
             return 80; // CUIT
         }
 
+        // Empresa se identifica por CUIT.
+        if ($customer->isCompany() && $customer->cuit) {
+            return 80; // CUIT
+        }
+
         if ($customer->dni) {
             return 96; // DNI
         }
@@ -227,6 +234,11 @@ class InvoiceService
 
     private function resolveDocNumero(Customer $customer): string
     {
+        // Empresa (o cliente sin DNI con CUIT cargado) factura con CUIT.
+        if ($customer->cuit && ($customer->isCompany() || ! $customer->dni)) {
+            return preg_replace('/\D/', '', $customer->cuit);
+        }
+
         return (string) ($customer->dni ?? 0);
     }
 

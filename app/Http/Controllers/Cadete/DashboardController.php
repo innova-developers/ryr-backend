@@ -12,17 +12,66 @@ use Illuminate\Support\Facades\Auth;
 class DashboardController extends Controller
 {
     /**
+     * Ventana por defecto (en días) para arrastrar comisiones pendientes no finalizadas
+     * de días previos. Configurable por request vía el parámetro `carryover_days`.
+     */
+    private const VISIBILITY_CARRYOVER_DAYS = 7;
+
+    /**
+     * Estados finales de una comisión: ya no debe arrastrarse al dashboard del cadete.
+     *
+     * @return array<int, string>
+     */
+    private static function finalStatuses(): array
+    {
+        return [
+            CommissionStatus::ENTREGADO->value,
+            CommissionStatus::RETIRADO_SUCURSAL->value,
+            CommissionStatus::DEVUELTO_REMITENTE->value,
+            CommissionStatus::CANCELADO->value,
+        ];
+    }
+
+    /**
      * GET /cadete/home - Dashboard principal del cadete
      */
     public function home(Request $request): JsonResponse
     {
         $user = Auth::user();
-        $date = $request->get('date', now()->format('Y-m-d'));
+
+        $query = Commission::where('cadete_id', $user->id);
+
+        if ($request->filled('date')) {
+            // Fecha explícita: dashboard de ese día exacto (histórico/consulta puntual).
+            $query->whereDate('date', $request->get('date'));
+        } else {
+            // Por defecto, alinear la visibilidad con la lista de entregas:
+            //  - Hoy (y mañana a partir de las 20:00).
+            //  - Pendientes no finalizadas arrastradas de días previos dentro de una
+            //    ventana configurable (param `carryover_days`).
+            $carryoverDays = max(0, (int) $request->get('carryover_days', self::VISIBILITY_CARRYOVER_DAYS));
+            $today = now()->toDateString();
+            $upper = now()->hour >= 20 ? now()->addDay()->toDateString() : $today;
+            $carryoverFrom = now()->subDays($carryoverDays)->toDateString();
+            $finalStatuses = self::finalStatuses();
+
+            $query->where(function ($q) use ($today, $upper, $carryoverFrom, $finalStatuses) {
+                // Comparar solo por fecha: la columna `date` puede llevar hora y un
+                // whereBetween de strings excluiría comisiones con hora != 00:00:00.
+                $q->where(function ($qd) use ($today, $upper) {
+                    $qd->whereDate('date', '>=', $today)
+                        ->whereDate('date', '<=', $upper);
+                })
+                    ->orWhere(function ($q2) use ($today, $carryoverFrom, $finalStatuses) {
+                        $q2->whereDate('date', '<', $today)
+                            ->whereDate('date', '>=', $carryoverFrom)
+                            ->whereNotIn('status', $finalStatuses);
+                    });
+            });
+        }
 
         // Obtener comisiones del cadete directamente por cadete_id
-        $commissions = Commission::where('cadete_id', $user->id)
-                                ->whereDate('date', $date)
-                                ->get();
+        $commissions = $query->get();
 
         if ($commissions->isEmpty()) {
             return $this->emptyDashboardResponse();

@@ -35,6 +35,7 @@ Route::post('/verify-code', [App\Http\Controllers\Auth\ValidateIdentifierControl
 Route::get('destinations', [DestinationController::class, 'index']);
 Route::post('destinations', [DestinationController::class, 'store']);
 Route::get('destinations/rates/{origin}/{destination}', [DestinationController::class, 'rates']);
+Route::middleware(['auth:sanctum', 'isAdmin'])->post('destinations/bulk-price-adjust', [DestinationController::class, 'bulkAdjustPrices']);
 Route::get('/origins', [DestinationController::class, 'origins']);
 Route::get('/destinations/origin/{origin}', [DestinationController::class, 'destinations']);
 Route::get('destinations/{id}', [DestinationController::class, 'show']);

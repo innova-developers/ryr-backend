@@ -23,6 +23,28 @@ use Illuminate\Support\Facades\DB;
 class CadeteController extends Controller
 {
     /**
+     * Ventana por defecto (en días) para arrastrar comisiones pendientes no finalizadas
+     * de días previos en la lista de entregas del cadete. Configurable por request vía
+     * el parámetro `carryover_days`.
+     */
+    private const VISIBILITY_CARRYOVER_DAYS = 7;
+
+    /**
+     * Estados finales de una comisión: ya no debe arrastrarse a la lista del cadete.
+     *
+     * @return array<int, string>
+     */
+    private static function finalStatuses(): array
+    {
+        return [
+            CommissionStatus::ENTREGADO->value,
+            CommissionStatus::RETIRADO_SUCURSAL->value,
+            CommissionStatus::DEVUELTO_REMITENTE->value,
+            CommissionStatus::CANCELADO->value,
+        ];
+    }
+
+    /**
      * GET /cadete/profile - Perfil del cadete
      */
     public function profile(): JsonResponse
@@ -708,10 +730,37 @@ class CadeteController extends Controller
             });
         }
 
-        // Por defecto (sin rango de fechas explícito) mostrar solo las entregas de HOY.
-        // Los filtros de fecha pueden ampliar el rango para ver histórico.
+        // Por defecto (sin rango de fechas explícito) mostrar:
+        //  - Las entregas de HOY.
+        //  - A partir de las 20:00, también las del día SIGUIENTE (regla de visibilidad
+        //    ya usada en el listado admin, para preparar la jornada siguiente).
+        //  - Las PENDIENTES arrastradas de días previos (no finalizadas) dentro de una
+        //    ventana configurable (param `carryover_days`, default VISIBILITY_CARRYOVER_DAYS),
+        //    para que una comisión asignada pero sin completar no desaparezca al cambiar de día.
+        // Los filtros de fecha explícitos (date_from/date_to) siguen ampliando el rango
+        // para ver histórico sin aplicar esta lógica.
         if (! $request->filled('date_from') && ! $request->filled('date_to')) {
-            $query->whereDate('date', now()->toDateString());
+            $carryoverDays = max(0, (int) $request->get('carryover_days', self::VISIBILITY_CARRYOVER_DAYS));
+            $today = now()->toDateString();
+            $upper = now()->hour >= 20 ? now()->addDay()->toDateString() : $today;
+            $carryoverFrom = now()->subDays($carryoverDays)->toDateString();
+            $finalStatuses = self::finalStatuses();
+
+            $query->where(function ($q) use ($today, $upper, $carryoverFrom, $finalStatuses) {
+                // Hoy (y mañana si ya pasaron las 20:00). Comparar solo por fecha:
+                // la columna `date` puede llevar hora, y un whereBetween de strings
+                // excluiría las comisiones con hora distinta de 00:00:00.
+                $q->where(function ($qd) use ($today, $upper) {
+                    $qd->whereDate('date', '>=', $today)
+                        ->whereDate('date', '<=', $upper);
+                })
+                    // Pendientes no finalizadas arrastradas de días previos (ventana acotada)
+                    ->orWhere(function ($q2) use ($today, $carryoverFrom, $finalStatuses) {
+                        $q2->whereDate('date', '<', $today)
+                            ->whereDate('date', '>=', $carryoverFrom)
+                            ->whereNotIn('status', $finalStatuses);
+                    });
+            });
         }
 
         // Ordenamiento
@@ -1013,8 +1062,8 @@ class CadeteController extends Controller
         $endDate = $periodDates['end'];
         $periodLabel = $periodDates['label'];
 
-        // Construir query base para comisiones del cadete
-        $baseQuery = Commission::where('cadete_id', $user->id)
+        // Ganancias = comisiones que el cadete LEVANTÓ (pickup_cadete_id), no las que entregó.
+        $baseQuery = Commission::where('pickup_cadete_id', $user->id)
                               ->whereBetween('date', [$startDate, $endDate]);
 
         // Aplicar filtros adicionales
@@ -1743,7 +1792,7 @@ class CadeteController extends Controller
     private function calculateGrowthComparison(int $cadeteId, $startDate, $endDate, float $commissionPercentage): array
     {
         // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
-        $currentPeriodCommissionAmount = Commission::where('cadete_id', $cadeteId)
+        $currentPeriodCommissionAmount = Commission::where('pickup_cadete_id', $cadeteId)
             ->whereBetween('date', [$startDate, $endDate])
             ->whereIn('status', [
                 CommissionStatus::ENTREGADO,
@@ -1763,7 +1812,7 @@ class CadeteController extends Controller
         $previousEndDate = $startDate->copy()->subDay();
 
         // Incluir estados: ENTREGADO, RETIRADO_SUCURSAL, PENDIENTE_PAGO, PAGO_VALIDACION, PAGO_CONFIRMADO
-        $previousPeriodCommissionAmount = Commission::where('cadete_id', $cadeteId)
+        $previousPeriodCommissionAmount = Commission::where('pickup_cadete_id', $cadeteId)
             ->whereBetween('date', [$previousStartDate, $previousEndDate])
             ->whereIn('status', [
                 CommissionStatus::ENTREGADO,

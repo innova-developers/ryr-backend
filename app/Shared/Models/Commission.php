@@ -36,6 +36,7 @@ class Commission extends Model
         'destination_location_id',
         'transport_id',
         'cadete_id',
+        'pickup_cadete_id',
         'franchise_id',
     ];
 
@@ -102,6 +103,23 @@ class Commission extends Model
     public function cadete(): BelongsTo
     {
         return $this->belongsTo(User::class, 'cadete_id');
+    }
+
+    /**
+     * Cadete que LEVANTÓ la comisión (el primero que la tomó). Es el cadete
+     * al que se le acredita la comisión, independiente de quién la entregue.
+     */
+    public function pickupCadete(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'pickup_cadete_id');
+    }
+
+    /**
+     * Historial de manos: cada cadete que tuvo la comisión en custodia.
+     */
+    public function cadeteHistory(): HasMany
+    {
+        return $this->hasMany(CommissionCadeteHistory::class)->orderBy('assigned_at');
     }
 
     public function deliverySignature(): HasOne

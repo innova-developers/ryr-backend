@@ -4,10 +4,12 @@ namespace App\Contexts\Customers\Application\DTO;
 
 class CreateCustomerDTO
 {
-    public int $dni;
+    public ?int $dni;
     public ?string $cuit;
+    public string $type;
     public string $name;
     public string $lastName;
+    public ?string $razonSocial;
     public ?string $mobile;
     public string $email;
     public ?string $address;
@@ -21,7 +23,7 @@ class CreateCustomerDTO
     public ?int $userId;
     public int $branchId;
     public function __construct(
-        int $dni,
+        ?int $dni,
         ?string $cuit,
         string $name,
         string $lastName,
@@ -36,12 +38,16 @@ class CreateCustomerDTO
         bool $isPremium = false,
         bool $autoCalculateIva = true,
         ?int $userId = null,
-        int $branchId
+        int $branchId,
+        string $type = 'individual',
+        ?string $razonSocial = null
     ) {
         $this->dni = $dni;
         $this->cuit = $cuit;
+        $this->type = $type;
         $this->name = $name;
         $this->lastName = $lastName;
+        $this->razonSocial = $razonSocial;
         $this->mobile = $mobile;
         $this->email = $email;
         $this->address = $address;
