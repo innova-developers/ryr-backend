@@ -747,8 +747,13 @@ class CadeteController extends Controller
             $finalStatuses = self::finalStatuses();
 
             $query->where(function ($q) use ($today, $upper, $carryoverFrom, $finalStatuses) {
-                // Hoy (y mañana si ya pasaron las 20:00)
-                $q->whereBetween('date', [$today, $upper])
+                // Hoy (y mañana si ya pasaron las 20:00). Comparar solo por fecha:
+                // la columna `date` puede llevar hora, y un whereBetween de strings
+                // excluiría las comisiones con hora distinta de 00:00:00.
+                $q->where(function ($qd) use ($today, $upper) {
+                    $qd->whereDate('date', '>=', $today)
+                        ->whereDate('date', '<=', $upper);
+                })
                     // Pendientes no finalizadas arrastradas de días previos (ventana acotada)
                     ->orWhere(function ($q2) use ($today, $carryoverFrom, $finalStatuses) {
                         $q2->whereDate('date', '<', $today)

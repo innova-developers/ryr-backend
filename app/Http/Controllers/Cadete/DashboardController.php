@@ -56,7 +56,12 @@ class DashboardController extends Controller
             $finalStatuses = self::finalStatuses();
 
             $query->where(function ($q) use ($today, $upper, $carryoverFrom, $finalStatuses) {
-                $q->whereBetween('date', [$today, $upper])
+                // Comparar solo por fecha: la columna `date` puede llevar hora y un
+                // whereBetween de strings excluiría comisiones con hora != 00:00:00.
+                $q->where(function ($qd) use ($today, $upper) {
+                    $qd->whereDate('date', '>=', $today)
+                        ->whereDate('date', '<=', $upper);
+                })
                     ->orWhere(function ($q2) use ($today, $carryoverFrom, $finalStatuses) {
                         $q2->whereDate('date', '<', $today)
                             ->whereDate('date', '>=', $carryoverFrom)
