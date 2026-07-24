@@ -23,16 +23,21 @@ class PublicCustomerController
     public function store(Request $request): JsonResponse
     {
         try {
-            // Validar el payload
+            $isCompany = $request->input('type') === \App\Shared\Enums\CustomerType::COMPANY->value;
+
+            // Validar el payload. Empresa se identifica por razón social + CUIT.
             $validator = Validator::make($request->all(), [
-                'name' => 'required|string|max:255',
-                'last_name' => 'required|string|max:255',
+                'type' => ['nullable', \Illuminate\Validation\Rule::in(\App\Shared\Enums\CustomerType::values())],
+                'name' => $isCompany ? 'nullable|string|max:255' : 'required|string|max:255',
+                'last_name' => $isCompany ? 'nullable|string|max:255' : 'required|string|max:255',
+                'razon_social' => $isCompany ? 'required|string|max:255' : 'nullable|string|max:255',
                 'email' => 'required|email|max:255|unique:customers,email',
                 'phone' => 'nullable|string|max:255',
                 'mobile' => 'nullable|string|max:255',
                 'address' => 'nullable|string|max:255',
                 'city' => 'nullable|string|max:255',
-                'dni' => 'required|string|max:255|unique:customers,dni',
+                'dni' => $isCompany ? 'nullable|string|max:255|unique:customers,dni' : 'required|string|max:255|unique:customers,dni',
+                'cuit' => $isCompany ? 'required|string|max:13' : 'nullable|string|max:13',
                 'maps_url' => 'nullable|string|max:255',
                 'business_hours' => 'nullable|string|max:255',
                 'observations' => 'nullable|string',
@@ -67,10 +72,12 @@ class PublicCustomerController
                 ], 422);
             }
 
+            $displayName = $isCompany ? $request->input('razon_social') : $request->input('name');
+
             // Crear usuario primero
             $useCaseCreateUser = new CreateUserUseCase($this->userRepository);
             $dtoCreateUser = new CreateUserDTO(
-                $request->input('name'),
+                $displayName,
                 $request->input('email'),
                 Hash::make('temp_password_' . time()), // Password temporal ya que se autentica con código
                 'cliente',
@@ -84,10 +91,12 @@ class PublicCustomerController
 
             // Crear el cliente
             $customer = Customer::create([
-                'dni' => $request->input('dni'),
+                'dni' => $request->input('dni') ?: null,
                 'cuit' => $request->input('cuit'),
-                'name' => $request->input('name'),
-                'last_name' => $request->input('last_name'),
+                'type' => $isCompany ? \App\Shared\Enums\CustomerType::COMPANY->value : \App\Shared\Enums\CustomerType::INDIVIDUAL->value,
+                'name' => $displayName,
+                'last_name' => $isCompany ? '' : $request->input('last_name'),
+                'razon_social' => $isCompany ? $request->input('razon_social') : null,
                 'mobile' => $request->input('mobile') ?: $request->input('phone'), // Usar phone como mobile si no se proporciona mobile
                 'email' => $request->input('email'),
                 'address' => $request->input('address'),

@@ -114,8 +114,8 @@ class CadetePaymentController extends Controller
         // Obtener porcentaje de comisión del cadete
         $commissionPercentage = $cadete->commission_percentage ?? 0;
 
-        // Obtener comisiones del cadete
-        $commissionsQuery = \App\Shared\Models\Commission::where('cadete_id', $cadeteId);
+        // Comisiones acreditadas al cadete = las que LEVANTÓ (pickup_cadete_id), para el pago
+        $commissionsQuery = \App\Shared\Models\Commission::where('pickup_cadete_id', $cadeteId);
 
         // Aplicar filtro de fecha si se proporciona
         if ($request->filled('date_from') && $request->filled('date_to')) {

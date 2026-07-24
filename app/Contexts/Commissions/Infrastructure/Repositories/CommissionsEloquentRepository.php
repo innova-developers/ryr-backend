@@ -64,11 +64,28 @@ class CommissionsEloquentRepository implements CommissionsRepository
             }
 
             // Si el usuario que crea la comisión es un cadete, asignar automáticamente su ID (v1)
-            if ($user && in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO])) {
+            // y acreditarlo como el cadete que la levantó (pickup).
+            $creatorIsCadete = $user && in_array($user->role, [UserRole::CADETE, UserRole::CADETE_EXTERNO]);
+            if ($creatorIsCadete) {
                 $commission->cadete_id = $userId;
+                $commission->pickup_cadete_id = $userId;
             }
 
             $commission->save();
+
+            // Registrar la primera mano en el historial de custodia.
+            if ($creatorIsCadete) {
+                \App\Shared\Models\CommissionCadeteHistory::create([
+                    'commission_id' => $commission->id,
+                    'cadete_id' => $userId,
+                    'action' => 'LEVANTO',
+                    'assigned_by' => $userId,
+                    'status_at_assignment' => $commission->status instanceof \App\Shared\Enums\CommissionStatus
+                        ? $commission->status->value
+                        : $commission->status,
+                    'assigned_at' => now(),
+                ]);
+            }
 
             return $commission;
         } catch (\Exception $e) {
@@ -178,6 +195,8 @@ class CommissionsEloquentRepository implements CommissionsRepository
             'destinationLocation',
             'logs.user',
             'cadete',
+            'pickupCadete',
+            'cadeteHistory.cadete',
             'deliverySignature',
         ])->find($id);
 
@@ -205,6 +224,8 @@ class CommissionsEloquentRepository implements CommissionsRepository
                 'logs.user',
                 'logs.user.branch',
                 'cadete',
+                'pickupCadete',
+                'cadeteHistory.cadete',
                 'deliverySignature',
             ]);
 
@@ -248,9 +269,9 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     $query->where('origin_location_id', $filters->originLocationId);
                 }
 
-                // Filtro por cadete asignado
+                // Filtro por cadete: vinculación al empleado = el que LEVANTÓ (pickup_cadete_id)
                 if ($filters->cadeteId) {
-                    $query->where('cadete_id', $filters->cadeteId);
+                    $query->where('pickup_cadete_id', $filters->cadeteId);
                 }
 
                 // Aplicar branchId si el usuario no está ya acotado a una sucursal (admin/superadmin sin branch)
@@ -459,9 +480,9 @@ class CommissionsEloquentRepository implements CommissionsRepository
                     $query->where('origin_location_id', $filters->originLocationId);
                 }
 
-                // Filtro por cadete asignado
+                // Filtro por cadete: vinculación al empleado = el que LEVANTÓ (pickup_cadete_id)
                 if ($filters->cadeteId) {
-                    $query->where('cadete_id', $filters->cadeteId);
+                    $query->where('pickup_cadete_id', $filters->cadeteId);
                 }
 
                 // Aplicar branchId si el usuario no está ya acotado a una sucursal (admin/superadmin sin branch)

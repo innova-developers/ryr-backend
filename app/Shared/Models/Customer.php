@@ -3,6 +3,7 @@
 namespace App\Shared\Models;
 
 use App\Shared\Enums\CurrentAccountStatus;
+use App\Shared\Enums\CustomerType;
 use App\Shared\Enums\IvaStatus;
 use Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,8 +20,10 @@ class Customer extends Model
     protected $fillable = [
         'dni',
         'cuit',
+        'type',
         'name',
         'last_name',
+        'razon_social',
         'mobile',
         'email',
         'address',
@@ -42,8 +45,14 @@ class Customer extends Model
         'is_premium' => 'boolean',
         'auto_calculate_iva' => 'boolean',
         'iva_status' => IvaStatus::class,
+        'type' => CustomerType::class,
         'dni' => 'integer',
     ];
+
+    public function isCompany(): bool
+    {
+        return $this->type === CustomerType::COMPANY;
+    }
 
     public function user(): BelongsTo
     {

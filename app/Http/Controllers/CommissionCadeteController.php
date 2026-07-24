@@ -19,7 +19,8 @@ class CommissionCadeteController extends Controller
 {
     public function __construct(
         private readonly NotificationService $notificationService,
-        private readonly FcmNotificationService $fcmNotificationService
+        private readonly FcmNotificationService $fcmNotificationService,
+        private readonly \App\Services\CommissionCustodyService $custodyService
     ) {
     }
     /**
@@ -52,10 +53,12 @@ class CommissionCadeteController extends Controller
             ], 400);
         }
 
-        // Actualizar solo el cadete, mantener el estado actual de la comisión
-        $commission->update([
-            'cadete_id' => $request->cadete_id,
-        ]);
+        // Registrar la mano y fijar al cadete que levantó (si es la primera).
+        $this->custodyService->takeCustody($commission, (int) $request->cadete_id, $request->user()?->id);
+
+        // Actualizar el cadete operativo, mantener el estado actual de la comisión
+        $commission->cadete_id = $request->cadete_id;
+        $commission->save();
 
         // Crear notificación para el cadete
         $this->notificationService->createCommissionAssignedNotification($commission);
@@ -102,11 +105,14 @@ class CommissionCadeteController extends Controller
             CommissionStatus::EN_PUNTO_RETIRO,
         ];
 
+        // Cerrar el tramo de custodia. Si el que la suelta era el cadete acreditado,
+        // libera el crédito para que lo tome el próximo que la levante.
+        $this->custodyService->releaseCustody($commission);
+
         // Actualizar la comisión
-        $commission->update([
-            'cadete_id' => null,
-            'status' => in_array($commission->status, $initialStatus) ? CommissionStatus::BUSCANDO_CADETE->value : $commission->status,
-        ]);
+        $commission->cadete_id = null;
+        $commission->status = in_array($commission->status, $initialStatus) ? CommissionStatus::BUSCANDO_CADETE->value : $commission->status;
+        $commission->save();
 
         // Notificar a todos los cadetes que hay una nueva comisión disponible
         $this->notifyAllCadetesNewCommission($commission->fresh());
@@ -192,10 +198,13 @@ class CommissionCadeteController extends Controller
 
         $previousCadeteId = $commission->cadete_id;
 
-        // Actualizar la comisión
-        $commission->update([
-            'cadete_id' => $request->cadete_id,
-        ]);
+        // Traspaso de mano: registra el nuevo tramo y cierra el anterior. NO cambia
+        // al cadete acreditado (pickup) — el crédito queda con quien la levantó.
+        $this->custodyService->takeCustody($commission, (int) $request->cadete_id, $request->user()?->id);
+
+        // Actualizar el cadete operativo
+        $commission->cadete_id = $request->cadete_id;
+        $commission->save();
 
         // Crear notificación para el nuevo cadete
         $this->notificationService->createCommissionAssignedNotification($commission);
@@ -250,7 +259,8 @@ class CommissionCadeteController extends Controller
             }
         }
 
-        $commissions = Commission::where('cadete_id', $cadete->id)
+        // Comisiones vinculadas al empleado = las que LEVANTÓ (pickup_cadete_id).
+        $commissions = Commission::where('pickup_cadete_id', $cadete->id)
             ->with(['client', 'destination', 'branch', 'items', 'deliverySignature'])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -456,11 +466,13 @@ class CommissionCadeteController extends Controller
                 CommissionStatus::EN_PUNTO_RETIRO,
             ];
 
+            // Registrar la mano y fijar al cadete que levantó (primera mano = LEVANTO).
+            $this->custodyService->takeCustody($commission, $currentUser->id, $currentUser->id);
+
             // Asignar la comisión al cadete autenticado, mantener el estado actual
-            $commission->update([
-                'cadete_id' => $currentUser->id,
-                'status' => in_array($commission->status, $initialStatus) ? CommissionStatus::CADETE_ASIGNADO->value : $commission->status,
-            ]);
+            $commission->cadete_id = $currentUser->id;
+            $commission->status = in_array($commission->status, $initialStatus) ? CommissionStatus::CADETE_ASIGNADO->value : $commission->status;
+            $commission->save();
 
             // Crear notificación para el cadete
             $this->notificationService->createCommissionAssignedNotification($commission);

@@ -2,9 +2,11 @@
 
 namespace App\Contexts\Customers\Infrastructure\Http\Requests;
 
+use App\Shared\Enums\CustomerType;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 
 class CreateCustomerRequest extends FormRequest
 {
@@ -17,9 +19,19 @@ class CreateCustomerRequest extends FormRequest
      */
     public function rules(): array
     {
-        // Validación mínima: identificación y nombre obligatorios, email único.
-        // Evita que un body vacío o un email duplicado revienten en 500.
+        // Empresa se identifica por CUIT + razón social; cliente común por DNI + nombre.
+        if ($this->input('type') === CustomerType::COMPANY->value) {
+            return [
+                'type' => ['required', Rule::in(CustomerType::values())],
+                'razon_social' => ['required', 'string', 'max:255'],
+                'cuit' => ['required', 'string', 'max:13'],
+                'dni' => ['nullable'],
+                'email' => ['nullable', 'email', 'unique:customers,email'],
+            ];
+        }
+
         return [
+            'type' => ['nullable', Rule::in(CustomerType::values())],
             'dni' => ['required'],
             'name' => ['required', 'string'],
             'email' => ['nullable', 'email', 'unique:customers,email'],
