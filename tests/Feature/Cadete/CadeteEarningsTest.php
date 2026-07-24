@@ -88,6 +88,7 @@ class CadeteEarningsTest extends TestCase
         // Crear comisiones entregadas para este mes
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,
@@ -99,6 +100,7 @@ class CadeteEarningsTest extends TestCase
 
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,
@@ -129,6 +131,7 @@ class CadeteEarningsTest extends TestCase
         // Crear comisión entregada hoy
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,
@@ -162,6 +165,7 @@ class CadeteEarningsTest extends TestCase
         // Crear comisión en el período personalizado
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,
@@ -191,6 +195,7 @@ class CadeteEarningsTest extends TestCase
         // Comisión entregada (pagada)
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,
@@ -203,6 +208,7 @@ class CadeteEarningsTest extends TestCase
         // Comisión en tránsito (pendiente)
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,
@@ -215,6 +221,7 @@ class CadeteEarningsTest extends TestCase
         // Comisión cancelada
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,
@@ -258,6 +265,7 @@ class CadeteEarningsTest extends TestCase
         // Comisión entregada hoy
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,
@@ -270,6 +278,7 @@ class CadeteEarningsTest extends TestCase
         // Comisión entregada ayer
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,
@@ -314,6 +323,7 @@ class CadeteEarningsTest extends TestCase
         // Comisiones en ruta CABA → Zona Norte
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,
@@ -325,6 +335,7 @@ class CadeteEarningsTest extends TestCase
 
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,
@@ -337,6 +348,7 @@ class CadeteEarningsTest extends TestCase
         // Comisión en ruta Palermo → Belgrano
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $destination2->id,
             'origin_location_id' => $this->originLocation->id,
@@ -374,6 +386,7 @@ class CadeteEarningsTest extends TestCase
         // Comisión entregada
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,
@@ -386,6 +399,7 @@ class CadeteEarningsTest extends TestCase
         // Comisión cancelada
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,
@@ -418,6 +432,7 @@ class CadeteEarningsTest extends TestCase
         for ($i = 1; $i <= 5; $i++) {
             Commission::factory()->create([
                 'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
                 'client_id' => $this->client->id,
                 'destination_id' => $this->destination->id,
                 'origin_location_id' => $this->originLocation->id,
@@ -551,6 +566,7 @@ class CadeteEarningsTest extends TestCase
         // Crear comisión entregada con total de $1000
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,
@@ -618,6 +634,7 @@ class CadeteEarningsTest extends TestCase
         // Crear comisión entregada
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,
@@ -649,6 +666,7 @@ class CadeteEarningsTest extends TestCase
         // Crear comisión entregada
         Commission::factory()->create([
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'client_id' => $this->client->id,
             'destination_id' => $this->destination->id,
             'origin_location_id' => $this->originLocation->id,

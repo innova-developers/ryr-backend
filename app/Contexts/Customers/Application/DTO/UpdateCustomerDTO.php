@@ -5,10 +5,12 @@ namespace App\Contexts\Customers\Application\DTO;
 class UpdateCustomerDTO
 {
     public int $id;
-    public int $dni;
+    public ?int $dni;
     public ?string $cuit;
+    public string $type;
     public string $name;
     public string $lastName;
+    public ?string $razonSocial;
     public ?string $mobile;
     public string $email;
     public ?string $address;
@@ -24,7 +26,7 @@ class UpdateCustomerDTO
     public ?int $internalUserId;
     public function __construct(
         int $id,
-        int $dni,
+        ?int $dni,
         ?string $cuit,
         string $name,
         string $lastName,
@@ -40,13 +42,17 @@ class UpdateCustomerDTO
         bool $autoCalculateIva = true,
         ?int $userId = null,
         int $branchId,
-        ?int $internalUserId = null
+        ?int $internalUserId = null,
+        string $type = 'individual',
+        ?string $razonSocial = null
     ) {
         $this->id = $id;
         $this->dni = $dni;
         $this->cuit = $cuit;
+        $this->type = $type;
         $this->name = $name;
         $this->lastName = $lastName;
+        $this->razonSocial = $razonSocial;
         $this->mobile = $mobile;
         $this->email = $email;
         $this->address = $address;

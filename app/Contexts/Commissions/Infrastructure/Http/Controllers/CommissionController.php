@@ -53,11 +53,13 @@ class CommissionController extends Controller
     {
         $user = Auth::user();
 
+        // Vinculación al empleado = el cadete que LEVANTÓ la comisión (pickup_cadete_id),
+        // no el que la entregó. El alias se mantiene como cadete_id para el filtro del front.
         $query = \App\Shared\Models\Commission::query()
-            ->whereNotNull('cadete_id')
-            ->leftJoin('users', 'users.id', '=', 'commissions.cadete_id')
-            ->selectRaw('commissions.cadete_id, users.name as cadete_name, COUNT(*) as commission_count')
-            ->groupBy('commissions.cadete_id', 'users.name')
+            ->whereNotNull('pickup_cadete_id')
+            ->leftJoin('users', 'users.id', '=', 'commissions.pickup_cadete_id')
+            ->selectRaw('commissions.pickup_cadete_id as cadete_id, users.name as cadete_name, COUNT(*) as commission_count')
+            ->groupBy('commissions.pickup_cadete_id', 'users.name')
             ->orderByDesc('commission_count');
 
         // Respetar sucursal del usuario si aplica

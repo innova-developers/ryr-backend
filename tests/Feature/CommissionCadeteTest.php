@@ -336,7 +336,7 @@ class CommissionCadeteTest extends TestCase
 
     public function test_can_get_commissions_by_cadete(): void
     {
-        // Crear varias comisiones asignadas al cadete
+        // Comisiones LEVANTADAS por el cadete (vinculación = pickup_cadete_id)
         $commission1 = Commission::factory()->create([
             'client_id' => $this->customer->id,
             'branch_id' => $this->branch->id,
@@ -344,6 +344,7 @@ class CommissionCadeteTest extends TestCase
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'status' => CommissionStatus::CADETE_ASIGNADO,
         ]);
 
@@ -354,6 +355,7 @@ class CommissionCadeteTest extends TestCase
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
             'cadete_id' => $this->cadete->id,
+            'pickup_cadete_id' => $this->cadete->id,
             'status' => CommissionStatus::EN_PROCESO_ENTREGA,
         ]);
 

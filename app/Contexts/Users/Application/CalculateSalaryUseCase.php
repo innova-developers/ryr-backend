@@ -27,7 +27,9 @@ class CalculateSalaryUseCase
         $startOfMonth = $targetMonth->copy()->startOfMonth();
         $endOfMonth = $targetMonth->copy()->endOfMonth();
 
-        $collectedCommissions = Commission::where('cadete_id', $userId)
+        // Vinculación al empleado = comisiones que este cadete LEVANTÓ (pickup_cadete_id),
+        // no las que entregó. El crédito/salario sigue al que la levantó primero.
+        $collectedCommissions = Commission::where('pickup_cadete_id', $userId)
             ->whereBetween('date', [$startOfMonth, $endOfMonth])
             ->whereIn('status', [CommissionStatus::PAGO_VALIDACION, CommissionStatus::PAGO_CONFIRMADO]);
 

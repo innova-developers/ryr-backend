@@ -2,11 +2,13 @@
 
 namespace App\Contexts\Destinations\Infrastructure\Repositories;
 
+use App\Contexts\Destinations\Application\DTO\BulkAdjustPricesDTO;
 use App\Contexts\Destinations\Application\DTO\CreateDestinationDTO;
 use App\Contexts\Destinations\Application\DTO\GetDestinationRatesDTO;
 use App\Contexts\Destinations\Application\DTO\UpdateDestinationDTO;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
 use App\Shared\Models\Destination;
+use Illuminate\Support\Facades\DB;
 
 class DestinationEloquentRepository implements DestinationRepository
 {
@@ -74,6 +76,46 @@ class DestinationEloquentRepository implements DestinationRepository
             return $destination;
         } catch (\Exception $exception) {
             throw new \Exception($exception->getMessage());
+        }
+    }
+
+    /**
+     * Ajusta en bloque los precios de todos los destinos por un porcentaje.
+     * Solo actualiza las columnas marcadas en el DTO. Redondea a 2 decimales.
+     *
+     * @throws \Exception
+     */
+    public function bulkAdjustPrices(BulkAdjustPricesDTO $dto): int
+    {
+        $factor = 1 + ($dto->percentage / 100);
+
+        $columns = [];
+        if ($dto->fixed_price) {
+            $columns[] = 'fixed_price';
+        }
+        if ($dto->small_bulk_price) {
+            $columns[] = 'small_bulk_price';
+        }
+        if ($dto->large_bulk_price) {
+            $columns[] = 'large_bulk_price';
+        }
+
+        if (empty($columns)) {
+            return 0;
+        }
+
+        $updates = [];
+        foreach ($columns as $column) {
+            $updates[$column] = DB::raw('ROUND(`' . $column . '` * ' . $factor . ', 2)');
+        }
+        $updates['updated_at'] = now();
+
+        try {
+            return Destination::query()
+                ->whereNull('deleted_at')
+                ->update($updates);
+        } catch (\Exception $exception) {
+            throw new \Exception('Error al ajustar precios: ' . $exception->getMessage());
         }
     }
 

@@ -17,7 +17,7 @@ class CustomerEloquentRepository implements CustomerRepository
 {
     public function get(?GetCustomersFiltersDTO $filters = null): array
     {
-        $query = Customer::select('id', 'dni', 'cuit', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'user_id', 'observations', 'created_at')
+        $query = Customer::select('id', 'dni', 'cuit', 'type', 'name', 'email', 'last_name', 'razon_social', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'user_id', 'observations', 'created_at')
             ->with(['user:id,name']);
 
         // Filtrar por sucursal según el rol del usuario
@@ -104,9 +104,11 @@ class CustomerEloquentRepository implements CustomerRepository
                         'id' => $customer->id,
                         'dni' => $customer->dni,
                         'cuit' => $customer->cuit,
+                        'type' => $customer->type,
                         'name' => $customer->name,
                         'email' => $customer->email,
                         'last_name' => $customer->last_name,
+                        'razon_social' => $customer->razon_social,
                         'address' => $customer->address,
                         'city' => $customer->city,
                         'phone' => $customer->phone,
@@ -137,9 +139,11 @@ class CustomerEloquentRepository implements CustomerRepository
                     'id' => $customer->id,
                     'dni' => $customer->dni,
                     'cuit' => $customer->cuit,
+                    'type' => $customer->type,
                     'name' => $customer->name,
                     'email' => $customer->email,
                     'last_name' => $customer->last_name,
+                    'razon_social' => $customer->razon_social,
                     'address' => $customer->address,
                     'city' => $customer->city,
                     'phone' => $customer->phone,
@@ -161,8 +165,10 @@ class CustomerEloquentRepository implements CustomerRepository
             $customer = new Customer();
             $customer->dni = $dto->dni;
             $customer->cuit = $dto->cuit;
+            $customer->type = $dto->type;
             $customer->name = $dto->name;
             $customer->last_name = $dto->lastName;
+            $customer->razon_social = $dto->razonSocial;
             $customer->mobile = $dto->mobile;
             $customer->email = $dto->email;
             $customer->address = $dto->address;
@@ -202,8 +208,10 @@ class CustomerEloquentRepository implements CustomerRepository
 
             $customer->dni = $dto->dni;
             $customer->cuit = $dto->cuit;
+            $customer->type = $dto->type;
             $customer->name = $dto->name;
             $customer->last_name = $dto->lastName;
+            $customer->razon_social = $dto->razonSocial;
             $customer->mobile = $dto->mobile;
             $customer->email = $dto->email;
             $customer->address = $dto->address;
@@ -261,7 +269,7 @@ class CustomerEloquentRepository implements CustomerRepository
 
     public function search(string $query): array
     {
-        $searchQuery = Customer::select('id', 'dni', 'cuit', 'name', 'email', 'last_name', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'user_id', 'observations', 'created_at')
+        $searchQuery = Customer::select('id', 'dni', 'cuit', 'type', 'name', 'email', 'last_name', 'razon_social', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'user_id', 'observations', 'created_at')
             ->with(['user:id,name']);
 
         $user = Auth::user();
@@ -284,9 +292,11 @@ class CustomerEloquentRepository implements CustomerRepository
                     'id' => $customer->id,
                     'dni' => $customer->dni,
                     'cuit' => $customer->cuit,
+                    'type' => $customer->type,
                     'name' => $customer->name,
                     'email' => $customer->email,
                     'last_name' => $customer->last_name,
+                    'razon_social' => $customer->razon_social,
                     'address' => $customer->address,
                     'city' => $customer->city,
                     'phone' => $customer->phone,
