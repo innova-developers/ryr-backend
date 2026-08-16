@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Shared\Models\Commission;
 use App\Shared\Models\FeedbackSurvey;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class FeedbackService
@@ -121,7 +122,19 @@ class FeedbackService
 
     private function sendSurveyWhatsApp(FeedbackSurvey $survey, $customer, Commission $commission): void
     {
-        if (empty($customer->mobile)) {
+        // El resto de las notificaciones (creación y cambio de estado) usan
+        // mobile ?: phone. Acá se miraba SÓLO mobile y se salía en silencio, así que
+        // los 755 clientes que tienen teléfono pero no mobile nunca recibían la
+        // encuesta y no quedaba rastro de por qué.
+        $telefono = $customer->mobile ?: $customer->phone;
+
+        if (empty($telefono)) {
+            Log::info('Encuesta de feedback sin canal: el cliente no tiene teléfono cargado', [
+                'survey_id' => $survey->id,
+                'commission_id' => $commission->id,
+                'customer_id' => $customer->id,
+            ]);
+
             return;
         }
 
@@ -135,6 +148,6 @@ class FeedbackService
         $message .= "{$feedbackUrl}\n\n";
         $message .= "¡Gracias por confiar en RYR! 🙏";
 
-        $this->whatsAppService->sendMessage($customer->mobile, $message);
+        $this->whatsAppService->sendMessage($telefono, $message);
     }
 }
