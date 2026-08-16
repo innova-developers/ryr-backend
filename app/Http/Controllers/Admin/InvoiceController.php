@@ -10,6 +10,7 @@ use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\InvoiceType;
 use App\Shared\Models\Commission;
 use App\Shared\Models\CurrentAccount;
+use App\Shared\Models\Customer;
 use App\Shared\Models\Invoice;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -56,6 +57,12 @@ class InvoiceController
             'observaciones' => 'nullable|string|max:500',
             'fecha' => 'nullable|date',
             'concepto' => 'nullable|integer|in:1,2,3',
+            // Datos fiscales corregidos en la pantalla de confirmación (RC-497).
+            'razon_social' => 'nullable|string|max:255',
+            'doc_tipo' => 'nullable|integer|in:80,86,96,99',
+            'doc_numero' => 'nullable|string|max:20',
+            'condicion_iva' => 'nullable|string|max:60',
+            'domicilio_cliente' => 'nullable|string|max:255',
         ]);
 
         $validated['franchise_id'] = $request->user()->franchise_id;
@@ -66,6 +73,35 @@ class InvoiceController
         return response()->json($invoice, 201);
     }
 
+    /**
+     * Devuelve los datos fiscales que se usarían para facturar, SIN pedir CAE a ARCA.
+     * Es el paso previo obligatorio: el operador revisa la razón social y el documento,
+     * los corrige si hace falta, y recién ahí confirma la emisión (RC-497).
+     */
+    public function preview(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'customer_id' => 'required|exists:customers,id',
+            'tipo_comprobante' => 'required|integer',
+            'importe_total' => 'required|numeric|min:0.01',
+            'iva_rate' => 'nullable|numeric',
+        ]);
+
+        $customer = Customer::findOrFail($validated['customer_id']);
+
+        $datos = $this->invoiceService->resolverDatosFiscales(
+            $customer,
+            (int) $validated['tipo_comprobante'],
+            (float) $validated['importe_total'],
+            isset($validated['iva_rate']) ? (float) $validated['iva_rate'] : null
+        );
+
+        return response()->json([
+            'data' => $datos,
+            'editable' => ['razon_social', 'doc_tipo', 'doc_numero', 'condicion_iva', 'domicilio_cliente'],
+        ]);
+    }
+
     public function facturarComision(Request $request, Commission $commission): JsonResponse
     {
         if ($commission->status !== CommissionStatus::PAGO_VALIDACION) {
@@ -74,9 +110,22 @@ class InvoiceController
             ], 422);
         }
 
+        $overrides = $request->validate([
+            'razon_social' => 'nullable|string|max:255',
+            'doc_tipo' => 'nullable|integer|in:80,86,96,99',
+            'doc_numero' => 'nullable|string|max:20',
+            'condicion_iva' => 'nullable|string|max:60',
+            'domicilio_cliente' => 'nullable|string|max:255',
+        ]);
+
         $tipoComprobante = $request->input('tipo_comprobante', InvoiceType::FACTURA_B->value);
 
-        $invoice = $this->invoiceService->facturarComision($commission, $tipoComprobante, $request->user());
+        $invoice = $this->invoiceService->facturarComision(
+            $commission,
+            $tipoComprobante,
+            $request->user(),
+            array_filter($overrides, fn ($v) => $v !== null)
+        );
 
         return response()->json($invoice, 201);
     }
@@ -89,9 +138,22 @@ class InvoiceController
             ], 422);
         }
 
+        $overrides = $request->validate([
+            'razon_social' => 'nullable|string|max:255',
+            'doc_tipo' => 'nullable|integer|in:80,86,96,99',
+            'doc_numero' => 'nullable|string|max:20',
+            'condicion_iva' => 'nullable|string|max:60',
+            'domicilio_cliente' => 'nullable|string|max:255',
+        ]);
+
         $tipoComprobante = $request->input('tipo_comprobante', InvoiceType::FACTURA_B->value);
 
-        $invoice = $this->invoiceService->facturarIngreso($payment, $tipoComprobante, $request->user());
+        $invoice = $this->invoiceService->facturarIngreso(
+            $payment,
+            $tipoComprobante,
+            $request->user(),
+            array_filter($overrides, fn ($v) => $v !== null)
+        );
 
         return response()->json($invoice, 201);
     }

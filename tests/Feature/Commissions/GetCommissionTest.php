@@ -187,43 +187,42 @@ class GetCommissionTest extends TestCase
 
         $response = $this->getJson("/api/commissions/{$commission->id}/tracking");
 
+        // RC-500: el seguimiento público se minimizó. Antes devolvía direcciones,
+        // teléfonos, notas e historial con nombres de empleados; ahora sólo lo
+        // necesario para saber dónde está el envío. El detalle exige validar
+        // identidad con un código de un solo uso.
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'success',
                 'data' => [
-                    'tracking_id',
                     'tracking_number',
+                    'tracking_code',
                     'status',
-                    'origin',
-                    'destination',
+                    'status_label',
+                    'origin_city',
+                    'destination_city',
                     'date',
                     'items_count',
-                    'created_at',
-                    'updated_at',
+                    'detail_requires_verification',
                 ],
             ])
             ->assertJson([
                 'success' => true,
                 'data' => [
-                    'tracking_id' => $commission->id,
+                    'tracking_number' => $commission->id,
                     'status' => CommissionStatus::SOLICITUD_RECIBIDA->value,
                 ],
             ]);
 
-        // Verificar que NO incluye información sensible
-        $response->assertJsonMissing([
-            'data' => [
-                'client_id',
-                'user_id',
-                'branch_id',
-                'customer' => [
-                    'id',
-                    'dni',
-                    'email',
-                    'phone',
-                    'address',
-                ],
-            ],
-        ]);
+        // No debe exponer datos personales ni identificadores internos.
+        $body = $response->getContent();
+
+        foreach (['client_id', 'user_id', 'branch_id', 'notes', 'logs', 'address', 'phone'] as $prohibido) {
+            $this->assertStringNotContainsString(
+                '"' . $prohibido . '"',
+                $body,
+                "el seguimiento público no debe exponer {$prohibido}"
+            );
+        }
     }
 }

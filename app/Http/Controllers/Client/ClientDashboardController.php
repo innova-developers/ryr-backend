@@ -13,6 +13,32 @@ use Illuminate\Support\Facades\Validator;
 
 class ClientDashboardController
 {
+    /**
+     * Resuelve el cliente detrás del usuario logueado.
+     *
+     * Primero por customers.user_id, que es el vínculo real que crea el alta de
+     * cliente. Se mantiene el match por email/teléfono como respaldo porque en la
+     * base histórica hay 2931 clientes cuyo user_id apunta al administrador que los
+     * cargó, no al usuario del cliente; para esos, el vínculo fuerte no existe.
+     */
+    private function resolveCustomer($user): ?Customer
+    {
+        $customer = Customer::where('user_id', $user->id)->first();
+
+        if ($customer) {
+            return $customer;
+        }
+
+        return Customer::where(function ($q) use ($user) {
+            $q->where('email', $user->email)
+              ->orWhere('mobile', $user->email);
+
+            if (! empty($user->phone)) {
+                $q->orWhere('phone', $user->phone);
+            }
+        })->first();
+    }
+
     public function getProfile(): JsonResponse
     {
         try {
@@ -34,9 +60,7 @@ class ClientDashboardController
             }
 
             // Buscar el cliente asociado al usuario
-            $customer = Customer::where('email', $user->email)
-                ->orWhere('mobile', $user->email)
-                ->first();
+            $customer = $this->resolveCustomer($user);
 
             return response()->json([
                 'success' => true,
@@ -101,9 +125,7 @@ class ClientDashboardController
             }
 
             // Buscar el cliente asociado al usuario
-            $customer = Customer::where('email', $user->email)
-                ->orWhere('phone', $user->phone)
-                ->first();
+            $customer = $this->resolveCustomer($user);
 
             if (! $customer) {
                 return response()->json([
@@ -168,9 +190,7 @@ class ClientDashboardController
             }
 
             // Buscar el cliente asociado al usuario
-            $customer = Customer::where('email', $user->email)
-                ->orWhere('mobile', $user->email)
-                ->first();
+            $customer = $this->resolveCustomer($user);
 
             if (! $customer) {
                 return response()->json([
@@ -249,9 +269,7 @@ class ClientDashboardController
             }
 
             // Buscar el cliente asociado al usuario
-            $customer = Customer::where('email', $user->email)
-                ->orWhere('mobile', $user->email)
-                ->first();
+            $customer = $this->resolveCustomer($user);
 
             if (! $customer) {
                 return response()->json([
@@ -306,9 +324,7 @@ class ClientDashboardController
             }
 
             // Buscar el cliente asociado al usuario
-            $customer = Customer::where('email', $user->email)
-                ->orWhere('mobile', $user->email)
-                ->first();
+            $customer = $this->resolveCustomer($user);
 
             if (! $customer) {
                 return response()->json([
@@ -371,9 +387,7 @@ class ClientDashboardController
             }
 
             // Buscar el cliente asociado al usuario
-            $customer = Customer::where('email', $user->email)
-                ->orWhere('mobile', $user->email)
-                ->first();
+            $customer = $this->resolveCustomer($user);
 
             if (! $customer) {
                 return response()->json([

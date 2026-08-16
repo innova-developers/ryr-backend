@@ -6,11 +6,13 @@ use App\Services\FcmNotificationService;
 use App\Services\NotificationService;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Enums\UserRole;
+use App\Shared\Models\BranchLocality;
 use App\Shared\Models\Commission;
 use App\Shared\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -309,10 +311,29 @@ class CommissionCadeteController extends Controller
                 CommissionStatus::EN_PROCESO_ENTREGA,
             ];
 
-            // Query base: comisiones sin cadete asignado y del branch_id del usuario
+            // RC-483: el pool incluye las comisiones propias de la sucursal MÁS las de
+            // otras sucursales cuyo origen o destino cae en una localidad que esta
+            // sucursal atiende. La comisión sigue siendo de quien la cargó: esto sólo
+            // habilita quién puede ejecutar el retiro/entrega.
+            $localidades = BranchLocality::where('branch_id', $currentUser->branch_id)
+                ->pluck('locality');
+
             $query = Commission::whereNull('cadete_id')
-                ->where('branch_id', $currentUser->branch_id)
-                ->whereIn('status', $statusesAvailableToShow);
+                ->whereIn('status', $statusesAvailableToShow)
+                ->where(function ($q) use ($currentUser, $localidades) {
+                    $q->where('branch_id', $currentUser->branch_id);
+
+                    // Sin localidades configuradas, la sucursal ve sólo lo suyo.
+                    if ($localidades->isEmpty()) {
+                        return;
+                    }
+
+                    $q->orWhereHas('originLocation', function ($loc) use ($localidades) {
+                        $loc->whereIn(DB::raw('UPPER(TRIM(origin))'), $localidades->all());
+                    })->orWhereHas('destinationLocation', function ($loc) use ($localidades) {
+                        $loc->whereIn(DB::raw('UPPER(TRIM(origin))'), $localidades->all());
+                    });
+                });
 
             // Aplicar filtros opcionales
             if (isset($validated['status'])) {

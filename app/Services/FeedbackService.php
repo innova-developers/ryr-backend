@@ -125,7 +125,7 @@ class FeedbackService
             return;
         }
 
-        $feedbackUrl = config('app.url') . "/feedback/{$survey->token}";
+        $feedbackUrl = rtrim(config('app.frontend_url'), '/') . "/feedback/{$survey->token}";
 
         $message = "🚚 *RYR Comisiones - Tu opinión nos importa*\n\n";
         $message .= "Hola {$customer->name},\n\n";

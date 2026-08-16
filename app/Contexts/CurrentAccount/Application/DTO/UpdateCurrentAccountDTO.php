@@ -13,6 +13,10 @@ class UpdateCurrentAccountDTO
         public readonly ?string $transactionDate,
         public readonly ?string $paymentMethod,
         public readonly ?string $observations,
+        // RC-499: al cambiar el cliente de una comisión hay que mover también su
+        // movimiento de cuenta corriente. Sin esto el débito quedaba colgado del
+        // cliente anterior y la comisión aparecía en las dos cuentas.
+        public readonly ?int $customerId = null,
     ) {
     }
 
@@ -27,6 +31,7 @@ class UpdateCurrentAccountDTO
             transactionDate: $data['transaction_date'] ?? null,
             paymentMethod: $data['payment_method'] ?? null,
             observations: $data['observations'] ?? null,
+            customerId: $data['customer_id'] ?? null,
         );
     }
 }

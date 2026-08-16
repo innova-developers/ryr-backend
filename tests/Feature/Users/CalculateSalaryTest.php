@@ -46,13 +46,15 @@ class CalculateSalaryTest extends TestCase
     }
 
     /**
-     * El cálculo de sueldo cuenta comisiones por cadete_id (no user_id) y sólo en
-     * estado PAGO_VALIDACION/PAGO_CONFIRMADO. Helper para crear comisiones contables.
+     * El cálculo de sueldo cuenta comisiones por pickup_cadete_id —el cadete que
+     * REALIZÓ EL RETIRO, que es a quien se le acredita (RC-482)— y sólo en estado
+     * PAGO_VALIDACION/PAGO_CONFIRMADO. Helper para crear comisiones contables.
      */
     private function makeCommission(int $cadeteId, float $total, string $date): Commission
     {
         return Commission::factory()->create([
             'cadete_id' => $cadeteId,
+            'pickup_cadete_id' => $cadeteId,
             'client_id' => $this->customer->id,
             'destination_id' => $this->destination->id,
             'branch_id' => $this->branch->id,

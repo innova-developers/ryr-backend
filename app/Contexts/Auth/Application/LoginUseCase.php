@@ -41,13 +41,18 @@ class LoginUseCase
     {
         switch ($scope) {
             case 'web':
-                // Permitir acceso a administradores, mostradores y cadetes
+                // Permitir acceso a administradores, mostradores, cadetes y clientes.
+                // RC-492: CLIENTE faltaba en esta lista, así que el Portal del Cliente
+                // rechazaba TODO login por scope inválido, aunque las credenciales
+                // fueran correctas y el usuario existiera. El front enruta después
+                // según el rol: los clientes van al portal, no al admin.
                 if (! in_array($userRole, [
                     UserRole::ADMINISTRADOR,
                     UserRole::MOSTRADOR,
                     UserRole::CADETE,
                     UserRole::CADETE_EXTERNO,
                     UserRole::COBRADOR,
+                    UserRole::CLIENTE,
                 ])) {
                     throw new InvalidScopeException($userRole->value, $scope);
                 }

@@ -179,6 +179,7 @@ class CustomerEloquentRepository implements CustomerRepository
             $customer->observations = $dto->observations;
             $customer->is_premium = $dto->isPremium;
             $customer->auto_calculate_iva = $dto->autoCalculateIva;
+            $customer->iva_status = $dto->ivaStatus;
             $customer->user_id = $dto->userId;
             $customer->branch_id = $dto->branchId;
             $customer->save();
@@ -222,6 +223,7 @@ class CustomerEloquentRepository implements CustomerRepository
             $customer->observations = $dto->observations;
             $customer->is_premium = $dto->isPremium;
             $customer->auto_calculate_iva = $dto->autoCalculateIva;
+            $customer->iva_status = $dto->ivaStatus;
             $customer->user_id = $dto->userId;
             $customer->branch_id = $dto->branchId;
             $customer->internal_user_id = $dto->internalUserId;
