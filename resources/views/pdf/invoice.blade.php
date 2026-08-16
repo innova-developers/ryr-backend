@@ -12,6 +12,7 @@
         .header-cell-center { display: table-cell; vertical-align: middle; text-align: center; padding: 12px 28px; border-left: 2px solid #000; border-right: 2px solid #000; }
         .header-cell:first-child { border-right: none; }
 
+        .emisor-logo { width: 62px; height: auto; margin-bottom: 8px; }
         .emisor-name { font-weight: 700; font-size: 18px; margin-bottom: 8px; }
         .emisor-detail { font-size: 12px; color: #444; line-height: 1.7; }
 
@@ -54,6 +55,9 @@
     <div class="header-box">
         <div class="header-grid">
             <div class="header-cell">
+                @if(!empty($logo_data_uri))
+                    <img src="{{ $logo_data_uri }}" class="emisor-logo" alt="">
+                @endif
                 <div class="emisor-name">{{ $emisor['razon_social'] }}</div>
                 <div class="emisor-detail">
                     <div><strong>C.U.I.T.:</strong> {{ $emisor['cuit'] }}</div>

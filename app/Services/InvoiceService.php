@@ -245,9 +245,29 @@ class InvoiceService
             ...$data,
             'doc_label' => $docLabel,
             'description' => $description,
+            'logo_data_uri' => $this->logoDataUri(),
         ]);
 
         return $pdf->output();
+    }
+
+    /**
+     * Logo de marca embebido como data URI. Se embebe en vez de referenciarlo por
+     * ruta para que DomPDF no dependa de acceso al filesystem ni a la red.
+     */
+    private function logoDataUri(): ?string
+    {
+        $path = public_path('logo-ryr.png');
+
+        if (! is_file($path)) {
+            return null;
+        }
+
+        $contents = @file_get_contents($path);
+
+        return $contents === false
+            ? null
+            : 'data:image/png;base64,'.base64_encode($contents);
     }
 
     private function resolveDocTipo(Customer $customer, int $tipoComprobante): int

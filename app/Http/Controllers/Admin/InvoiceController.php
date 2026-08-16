@@ -96,9 +96,25 @@ class InvoiceController
             isset($validated['iva_rate']) ? (float) $validated['iva_rate'] : null
         );
 
+        // Datos del emisor y del comprobante, para poder dibujar en pantalla cómo va a
+        // quedar la factura antes de pedir el CAE. El número y el CAE todavía no
+        // existen: los asigna ARCA recién al emitir.
+        $invoiceType = InvoiceType::tryFrom((int) $validated['tipo_comprobante']);
+
         return response()->json([
             'data' => $datos,
             'editable' => ['razon_social', 'doc_tipo', 'doc_numero', 'condicion_iva', 'domicilio_cliente'],
+            'comprobante' => [
+                'letra' => $invoiceType?->letter() ?? '?',
+                'label' => $invoiceType?->label() ?? 'Comprobante',
+                'punto_venta' => (int) config('afip.punto_venta', 5),
+            ],
+            'emisor' => [
+                'razon_social' => config('afip.razon_social'),
+                'cuit' => config('afip.cuit'),
+                'domicilio' => config('afip.domicilio'),
+                'condicion_iva' => config('afip.condicion_iva'),
+            ],
         ]);
     }
 
