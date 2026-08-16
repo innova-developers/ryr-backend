@@ -111,4 +111,59 @@ class FeedbackPublicFlowTest extends TestCase
 
         $this->assertSame("https://ryrcomisiones.com/feedback/{$survey->token}", $url);
     }
+
+    // --- Canal de envío ---
+
+    public function test_survey_is_sent_to_phone_when_mobile_is_empty(): void
+    {
+        // 755 de los 3418 clientes de producción tienen phone pero no mobile. Antes
+        // sendSurveyWhatsApp() miraba sólo mobile y salía en silencio: nunca recibían
+        // la encuesta y no quedaba rastro del motivo.
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $customer = Customer::factory()->create(['mobile' => null, 'phone' => '2915662430']);
+
+        $whatsapp = \Mockery::mock(\App\Services\WhatsAppService::class);
+        $whatsapp->shouldReceive('sendMessage')
+            ->once()
+            ->with('2915662430', \Mockery::type('string'))
+            ->andReturn(true);
+        $this->app->instance(\App\Services\WhatsAppService::class, $whatsapp);
+
+        $branch = \App\Shared\Models\Branch::factory()->create();
+        $commission = \App\Shared\Models\Commission::factory()->create([
+            'client_id' => $customer->id,
+            'destination_id' => \App\Shared\Models\Destination::factory()->create()->id,
+            'branch_id' => $branch->id,
+            'user_id' => \App\Shared\Models\User::factory()->create(['role' => 'administrador', 'branch_id' => $branch->id])->id,
+        ]);
+
+        app(\App\Services\FeedbackService::class)->createSurveyForCommission($commission);
+
+        $this->assertDatabaseHas('feedback_surveys', ['commission_id' => $commission->id]);
+    }
+
+    public function test_survey_prefers_mobile_when_both_exist(): void
+    {
+        $customer = Customer::factory()->create(['mobile' => '3492111111', 'phone' => '2915662430']);
+
+        $whatsapp = \Mockery::mock(\App\Services\WhatsAppService::class);
+        $whatsapp->shouldReceive('sendMessage')
+            ->once()
+            ->with('3492111111', \Mockery::type('string'))
+            ->andReturn(true);
+        $this->app->instance(\App\Services\WhatsAppService::class, $whatsapp);
+
+        $branch = \App\Shared\Models\Branch::factory()->create();
+        $commission = \App\Shared\Models\Commission::factory()->create([
+            'client_id' => $customer->id,
+            'destination_id' => \App\Shared\Models\Destination::factory()->create()->id,
+            'branch_id' => $branch->id,
+            'user_id' => \App\Shared\Models\User::factory()->create(['role' => 'administrador', 'branch_id' => $branch->id])->id,
+        ]);
+
+        app(\App\Services\FeedbackService::class)->createSurveyForCommission($commission);
+
+        $this->assertDatabaseHas('feedback_surveys', ['commission_id' => $commission->id]);
+    }
 }
