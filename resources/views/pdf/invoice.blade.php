@@ -55,7 +55,7 @@
     <div class="header-box">
         <div class="header-grid">
             <div class="header-cell">
-                @if(!empty($logo_data_uri))
+                @if(!empty($logo_data_uri ?? null))
                     <img src="{{ $logo_data_uri }}" class="emisor-logo" alt="">
                 @endif
                 <div class="emisor-name">{{ $emisor['razon_social'] }}</div>

@@ -171,4 +171,36 @@ class InvoicePreviewTest extends TestCase
             'doc_tipo' => 12,
         ])->assertStatus(422);
     }
+
+    public function test_matriz_admin_without_branch_can_emit(): void
+    {
+        // superadmin no tiene sucursal: invoices.branch_id era NOT NULL y la emisión
+        // reventaba con "Column 'branch_id' cannot be null".
+        $sinSucursal = User::factory()->create(['role' => 'administrador', 'branch_id' => null]);
+        $customer = Customer::factory()->create(['branch_id' => null]);
+
+        $this->actingAs($sinSucursal)->postJson('/api/admin/invoices', [
+            'customer_id' => $customer->id,
+            'tipo_comprobante' => InvoiceType::FACTURA_B->value,
+            'importe_total' => 5000,
+        ])->assertCreated();
+    }
+
+    public function test_branch_falls_back_to_the_customer(): void
+    {
+        $sinSucursal = User::factory()->create(['role' => 'administrador', 'branch_id' => null]);
+        $branch = Branch::factory()->create();
+        $customer = Customer::factory()->create(['branch_id' => $branch->id]);
+
+        $this->actingAs($sinSucursal)->postJson('/api/admin/invoices', [
+            'customer_id' => $customer->id,
+            'tipo_comprobante' => InvoiceType::FACTURA_B->value,
+            'importe_total' => 5000,
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('invoices', [
+            'customer_id' => $customer->id,
+            'branch_id' => $branch->id,
+        ]);
+    }
 }

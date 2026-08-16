@@ -36,7 +36,7 @@ class InvoiceService
             'tipo_comprobante' => $tipoComprobante,
             'razon_social' => ($customer->isCompany() && $customer->razon_social)
                 ? $customer->razon_social
-                : trim($customer->name . ' ' . ($customer->last_name ?? '')),
+                : trim($customer->name.' '.($customer->last_name ?? '')),
             'doc_tipo' => $this->resolveDocTipo($customer, $tipoComprobante),
             'doc_numero' => $this->resolveDocNumero($customer),
             'condicion_iva' => $this->resolveCondicionIva($customer),
@@ -88,7 +88,9 @@ class InvoiceService
                 'commission_id' => $datos['commission_id'] ?? null,
                 'current_account_id' => $datos['current_account_id'] ?? null,
                 'franchise_id' => $datos['franchise_id'] ?? $customer->franchise_id,
-                'branch_id' => $datos['branch_id'] ?? $user->branch_id,
+                // El admin de matriz no tiene sucursal: antes de dejarlo en null se
+                // intenta la que venga en los datos (la de la comisión) y la del cliente.
+                'branch_id' => $datos['branch_id'] ?? $user->branch_id ?? $customer->branch_id,
                 'user_id' => $user->id,
                 'tipo_comprobante' => $tipoComprobante,
                 'punto_venta' => $resultado['punto_venta'],
@@ -113,7 +115,7 @@ class InvoiceService
     }
 
     /**
-     * @param array<string, mixed> $overrides Datos fiscales corregidos en la confirmación.
+     * @param  array<string, mixed>  $overrides  Datos fiscales corregidos en la confirmación.
      */
     public function facturarComision(Commission $commission, int $tipoComprobante, User $user, array $overrides = []): Invoice
     {
@@ -133,7 +135,7 @@ class InvoiceService
     }
 
     /**
-     * @param array<string, mixed> $overrides Datos fiscales corregidos en la confirmación.
+     * @param  array<string, mixed>  $overrides  Datos fiscales corregidos en la confirmación.
      */
     public function facturarIngreso(CurrentAccount $payment, int $tipoComprobante, User $user, array $overrides = []): Invoice
     {
@@ -197,8 +199,8 @@ class InvoiceService
             $s = $filters['search'];
             $query->where(function ($q) use ($s) {
                 $q->where('razon_social', 'like', "%{$s}%")
-                  ->orWhere('cae', 'like', "%{$s}%")
-                  ->orWhere('numero_comprobante', 'like', "%{$s}%");
+                    ->orWhere('cae', 'like', "%{$s}%")
+                    ->orWhere('numero_comprobante', 'like', "%{$s}%");
             });
         }
 
