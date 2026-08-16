@@ -339,6 +339,8 @@ Route::post('/feedback/respond', [App\Http\Controllers\Admin\FeedbackController:
 
 // Feedback - Dashboard y listado (admin)
 Route::middleware(['auth:sanctum', 'isAdmin', 'franchiseScope'])->prefix('admin/feedback')->group(function () {
+    // RC-507: reenvío manual de una encuesta pendiente, eligiendo canal.
+    Route::post('/{id}/resend', [App\Http\Controllers\Admin\FeedbackController::class, 'resend']);
     Route::get('/dashboard', [App\Http\Controllers\Admin\FeedbackController::class, 'dashboard']);
     Route::get('/', [App\Http\Controllers\Admin\FeedbackController::class, 'index']);
 });

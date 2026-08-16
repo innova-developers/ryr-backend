@@ -18,6 +18,9 @@ class FeedbackSurvey extends Model
         'comment',
         'status',
         'token',
+        'resend_count',
+        'last_resent_at',
+        'last_resent_channels',
         'sent_at',
         'responded_at',
     ];
@@ -25,6 +28,7 @@ class FeedbackSurvey extends Model
     protected $casts = [
         'rating' => 'integer',
         'sent_at' => 'datetime',
+        'last_resent_at' => 'datetime',
         'responded_at' => 'datetime',
     ];
 
