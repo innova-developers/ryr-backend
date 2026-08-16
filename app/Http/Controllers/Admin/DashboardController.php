@@ -10,6 +10,7 @@ use App\Shared\Models\Transport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -65,6 +66,21 @@ class DashboardController extends Controller
         $applyCommissionFilters($commissionsQuery);
         $totalCommissions = (clone $commissionsQuery)->count();
 
+        // RC-489: "Comisiones tomadas hoy". Es un indicador propio, deliberadamente
+        // INDEPENDIENTE de los filtros de la pantalla: siempre el día actual y sin
+        // filtro de estado de pago. Una comisión que se toma hoy todavía no está en
+        // PAGO_CONFIRMADO, así que reusar el filtro del Inicio (que existe para cuadrar
+        // con el Balance) daría 0 casi siempre. Sólo se descartan las canceladas.
+        $todayQuery = Commission::query()
+            ->whereDate('date', now()->toDateString())
+            ->where('status', '!=', CommissionStatus::CANCELADO->value);
+        if ($user && $user->branch_id) {
+            $todayQuery->where('branch_id', $user->branch_id);
+        } elseif ($branchId) {
+            $todayQuery->where('branch_id', $branchId);
+        }
+        $commissionsToday = $todayQuery->count();
+
         $customerIdsQuery = Commission::query()->select('client_id');
         $applyCommissionFilters($customerIdsQuery);
         $totalCustomers = $customerIdsQuery->distinct()->count('client_id');
@@ -87,12 +103,18 @@ class DashboardController extends Controller
 
         // ==== AGREGADOS PARA LOS GRÁFICOS (sobre TODO el set filtrado, no la lista paginada) ====
 
+        // MONTH()/DATE() son de MySQL y hacían que este endpoint no se pudiera testear
+        // con el sqlite de la suite. Se resuelve la expresión según el driver.
+        $isSqlite = DB::connection()->getDriverName() === 'sqlite';
+        $monthExpr = $isSqlite ? "CAST(strftime('%m', date) AS INTEGER)" : 'MONTH(date)';
+        $dayExpr = $isSqlite ? "date(date)" : 'DATE(date)';
+
         // Comisiones por mes (índice 0=Enero ... 11=Diciembre) dentro del rango filtrado
         $monthlyQuery = Commission::query();
         $applyCommissionFilters($monthlyQuery);
         $monthlyRows = $monthlyQuery
-            ->selectRaw('MONTH(date) as m, COUNT(*) as c')
-            ->groupByRaw('MONTH(date)')
+            ->selectRaw("{$monthExpr} as m, COUNT(*) as c")
+            ->groupByRaw($monthExpr)
             ->pluck('c', 'm');
         $commissionsByMonth = [];
         for ($i = 1; $i <= 12; $i++) {
@@ -123,8 +145,8 @@ class DashboardController extends Controller
         }
         $dailyQuery->whereDate('date', '>=', now()->subDays(6)->toDateString());
         $dailyRows = $dailyQuery
-            ->selectRaw('DATE(date) as d, COUNT(*) as c')
-            ->groupByRaw('DATE(date)')
+            ->selectRaw("{$dayExpr} as d, COUNT(*) as c")
+            ->groupByRaw($dayExpr)
             ->pluck('c', 'd');
         $dailyDeliveries = [];
         for ($i = 6; $i >= 0; $i--) {
@@ -143,6 +165,7 @@ class DashboardController extends Controller
 
         return response()->json([
             'total_commissions' => $totalCommissions,
+            'commissions_today' => $commissionsToday,
             'total_customers' => $totalCustomers,
             'total_transports' => $totalTransports,
             'total_expenses' => $totalExpenses,

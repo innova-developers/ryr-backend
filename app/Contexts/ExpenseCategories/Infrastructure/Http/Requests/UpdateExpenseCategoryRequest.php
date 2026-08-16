@@ -15,6 +15,7 @@ class UpdateExpenseCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'is_extraordinary' => 'boolean',
             'name' => [
                 'required',
                 'string',

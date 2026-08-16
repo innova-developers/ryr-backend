@@ -17,6 +17,37 @@ class InvoiceService
     {
     }
 
+    /**
+     * Resuelve los datos fiscales que van a ir al comprobante, ANTES de pedirle el CAE
+     * a ARCA. Se expone aparte de emitirFactura() para poder mostrarlos en pantalla y
+     * dejar que el operador los corrija: una vez emitido el CAE ya no hay vuelta atrás,
+     * sólo anulación.
+     *
+     * @return array<string, mixed>
+     */
+    public function resolverDatosFiscales(Customer $customer, int $tipoComprobante, float $total, ?float $ivaRate = null): array
+    {
+        $ivaRate = $ivaRate ?? 21;
+        $total = round($total, 2);
+        $neto = round($total / (1 + $ivaRate / 100), 2);
+
+        return [
+            'customer_id' => $customer->id,
+            'tipo_comprobante' => $tipoComprobante,
+            'razon_social' => ($customer->isCompany() && $customer->razon_social)
+                ? $customer->razon_social
+                : trim($customer->name . ' ' . ($customer->last_name ?? '')),
+            'doc_tipo' => $this->resolveDocTipo($customer, $tipoComprobante),
+            'doc_numero' => $this->resolveDocNumero($customer),
+            'condicion_iva' => $this->resolveCondicionIva($customer),
+            'domicilio_cliente' => $customer->address,
+            'importe_total' => $total,
+            'importe_neto' => $neto,
+            'importe_iva' => round($total - $neto, 2),
+            'iva_rate' => $ivaRate,
+        ];
+    }
+
     public function emitirFactura(array $datos, User $user): Invoice
     {
         return DB::transaction(function () use ($datos, $user) {
@@ -27,8 +58,14 @@ class InvoiceService
             $neto = round($total / (1 + $ivaRate / 100), 2);
             $iva = round($total - $neto, 2);
 
-            $docTipo = $this->resolveDocTipo($customer, $tipoComprobante);
-            $docNumero = $this->resolveDocNumero($customer);
+            // Datos fiscales resueltos desde el cliente, salvo que el operador los haya
+            // corregido en la pantalla de confirmación (RC-497).
+            $resueltos = $this->resolverDatosFiscales($customer, $tipoComprobante, $total, $ivaRate);
+            $docTipo = (int) ($datos['doc_tipo'] ?? $resueltos['doc_tipo']);
+            $docNumero = (string) ($datos['doc_numero'] ?? $resueltos['doc_numero']);
+            $razonSocial = $datos['razon_social'] ?? $resueltos['razon_social'];
+            $condicionIva = $datos['condicion_iva'] ?? $resueltos['condicion_iva'];
+            $domicilioCliente = $datos['domicilio_cliente'] ?? $resueltos['domicilio_cliente'];
 
             $resultado = $this->arcaService->emitirComprobante([
                 'tipo_comprobante' => $tipoComprobante,
@@ -65,11 +102,9 @@ class InvoiceService
                 'iva_rate' => $ivaRate,
                 'doc_tipo' => $docTipo,
                 'doc_numero' => (string) $docNumero,
-                'razon_social' => ($customer->isCompany() && $customer->razon_social)
-                    ? $customer->razon_social
-                    : trim($customer->name . ' ' . ($customer->last_name ?? '')),
-                'domicilio_cliente' => $customer->address,
-                'condicion_iva' => $this->resolveCondicionIva($customer),
+                'razon_social' => $razonSocial,
+                'domicilio_cliente' => $domicilioCliente,
+                'condicion_iva' => $condicionIva,
                 'concepto' => $datos['concepto'] ?? 2,
                 'status' => InvoiceStatus::EMITIDA->value,
                 'observaciones' => $datos['observaciones'] ?? null,
@@ -77,13 +112,16 @@ class InvoiceService
         });
     }
 
-    public function facturarComision(Commission $commission, int $tipoComprobante, User $user): Invoice
+    /**
+     * @param array<string, mixed> $overrides Datos fiscales corregidos en la confirmación.
+     */
+    public function facturarComision(Commission $commission, int $tipoComprobante, User $user, array $overrides = []): Invoice
     {
         if ($commission->invoices()->where('status', 'emitida')->exists()) {
             throw new \RuntimeException('Esta comisión ya tiene una factura emitida');
         }
 
-        return $this->emitirFactura([
+        return $this->emitirFactura($overrides + [
             'customer_id' => $commission->client_id,
             'commission_id' => $commission->id,
             'tipo_comprobante' => $tipoComprobante,
@@ -94,9 +132,12 @@ class InvoiceService
         ], $user);
     }
 
-    public function facturarIngreso(CurrentAccount $payment, int $tipoComprobante, User $user): Invoice
+    /**
+     * @param array<string, mixed> $overrides Datos fiscales corregidos en la confirmación.
+     */
+    public function facturarIngreso(CurrentAccount $payment, int $tipoComprobante, User $user, array $overrides = []): Invoice
     {
-        return $this->emitirFactura([
+        return $this->emitirFactura($overrides + [
             'customer_id' => $payment->customer_id,
             'current_account_id' => $payment->id,
             'tipo_comprobante' => $tipoComprobante,

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Shared\Enums\CampaignStatus;
+use App\Shared\Enums\CurrentAccountStatus;
 use App\Shared\Models\Customer;
 use App\Shared\Models\WhatsAppCampaign;
 use App\Shared\Models\WhatsAppCampaignMessage;
@@ -25,6 +26,15 @@ class CampaignService
 
         if (! empty($filters['city'])) {
             $query->where('city', 'LIKE', '%' . $filters['city'] . '%');
+        }
+
+        // RC-485: la categoría de cliente que se ve en la ficha es customers.type
+        // (individual = "Cliente común", company = "Empresa"). Campañas filtraba por
+        // is_premium, que es otro campo y está en 0 para todos los clientes, así que
+        // el filtro "Premium" no podía matchear nada. Ahora se usa el mismo dato.
+        if (! empty($filters['type'])) {
+            $types = is_array($filters['type']) ? $filters['type'] : [$filters['type']];
+            $query->whereIn('type', $types);
         }
 
         if (isset($filters['is_premium']) && $filters['is_premium'] !== '') {
@@ -54,21 +64,32 @@ class CampaignService
             $query->where('internal_user_id', (int) $filters['internal_user_id']);
         }
 
-        if (! empty($filters['min_commissions'])) {
+        // Ojo: acá se usa isset() y no empty(), porque 0 es un valor válido de corte
+        // (p. ej. "clientes con 0 comisiones") y empty() lo descartaba en silencio.
+        if (isset($filters['min_commissions']) && $filters['min_commissions'] !== '') {
             $minCount = (int) $filters['min_commissions'];
             $query->whereHas('commissions', null, '>=', $minCount);
         }
 
-        if (! empty($filters['min_balance'])) {
-            $query->whereHas('currentAccounts', function ($q) use ($filters) {
-                $q->havingRaw('SUM(amount) >= ?', [(float) $filters['min_balance']]);
-            });
+        // RC-488: "monto mínimo" es el total facturado al cliente, que antes no existía
+        // como filtro (sólo estaba el saldo de cuenta corriente, que es otra cosa).
+        if (isset($filters['min_commission_amount']) && $filters['min_commission_amount'] !== '') {
+            $this->whereAmount($query, $this->billedAmountSql(), '>=', $filters['min_commission_amount']);
         }
 
-        if (! empty($filters['max_balance'])) {
-            $query->whereHas('currentAccounts', function ($q) use ($filters) {
-                $q->havingRaw('SUM(amount) <= ?', [(float) $filters['max_balance']]);
-            });
+        if (isset($filters['max_commission_amount']) && $filters['max_commission_amount'] !== '') {
+            $this->whereAmount($query, $this->billedAmountSql(), '<=', $filters['max_commission_amount']);
+        }
+
+        // El saldo se compara contra la suma de movimientos confirmados. Se usa una
+        // subconsulta con COALESCE en vez de whereHas + havingRaw sin groupBy: así los
+        // clientes sin movimientos cuentan como saldo 0 en lugar de quedar afuera.
+        if (isset($filters['min_balance']) && $filters['min_balance'] !== '') {
+            $this->whereAmount($query, $this->balanceSql(), '>=', $filters['min_balance']);
+        }
+
+        if (isset($filters['max_balance']) && $filters['max_balance'] !== '') {
+            $this->whereAmount($query, $this->balanceSql(), '<=', $filters['max_balance']);
         }
 
         if (! empty($filters['created_after'])) {
@@ -80,6 +101,47 @@ class CampaignService
         }
 
         return $query->get();
+    }
+
+    /**
+     * Compara una subconsulta de importe contra un valor.
+     *
+     * El valor se interpola como literal numérico en vez de ligarse como parámetro:
+     * PDO liga los bindings como texto y SQLite, que ordena por tipo, considera que
+     * cualquier número es menor que cualquier texto. Con binding, "12000 <= '5000'"
+     * daba verdadero y el filtro no descartaba a nadie. El cast a float previo hace
+     * que la interpolación sea segura.
+     */
+    private function whereAmount($query, string $sql, string $operator, mixed $value): void
+    {
+        $query->whereRaw("({$sql}) {$operator} " . (float) $value);
+    }
+
+    /**
+     * Saldo del cliente: créditos menos débitos sobre los movimientos confirmados.
+     * Devuelve 0 (no NULL) para clientes sin movimientos.
+     *
+     * Las cadenas van entre comillas SIMPLES a propósito: en SQLite las dobles son
+     * identificadores y 'credit' se interpretaría como un nombre de columna.
+     */
+    private function balanceSql(): string
+    {
+        $ok = CurrentAccountStatus::OK->value;
+
+        return "SELECT COALESCE(SUM(CASE WHEN ca.type = 'credit' THEN ca.amount
+                                         WHEN ca.type = 'debit' THEN -ca.amount
+                                         ELSE 0 END), 0)
+                FROM current_accounts ca
+                WHERE ca.customer_id = customers.id AND ca.status = '{$ok}'";
+    }
+
+    /**
+     * Total facturado al cliente (suma de totales de sus comisiones). 0 si no tiene.
+     */
+    private function billedAmountSql(): string
+    {
+        return 'SELECT COALESCE(SUM(c.total), 0) FROM commissions c
+                WHERE c.client_id = customers.id AND c.deleted_at IS NULL';
     }
 
     public function previewCampaign(WhatsAppCampaign $campaign): array

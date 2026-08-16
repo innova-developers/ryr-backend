@@ -46,12 +46,16 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission->origin_location_id = $dto->originLocationId;
             $commission->destination_location_id = $dto->destinationLocationId;
 
-            // Aplicar lógica de IVA si hay método de pago (v2)
-            if (isset($dto->paymentMethod)) {
-                $customer = \App\Shared\Models\Customer::find($dto->clientId);
+            // Aplicar lógica de IVA (v2). Se evalúa SIEMPRE, no solo cuando hay método de
+            // pago: un cliente con iva_status = "always" debe pagar IVA aunque la comisión
+            // se cargue sin método elegido.
+            $customer = \App\Shared\Models\Customer::find($dto->clientId);
+            if ($customer) {
                 $ivaCalculation = $this->ivaCalculationService->calculateIva($customer, $dto->paymentMethod, $dto->total);
 
-                $commission->payment_method = $dto->paymentMethod;
+                if (isset($dto->paymentMethod)) {
+                    $commission->payment_method = $dto->paymentMethod;
+                }
                 $commission->iva_amount = $ivaCalculation['iva_amount'];
                 $commission->iva_applied = $ivaCalculation['iva_applied'];
                 $commission->total = $ivaCalculation['total_with_iva'];
@@ -111,21 +115,23 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission->origin_location_id = $dto->originLocationId;
             $commission->destination_location_id = $dto->destinationLocationId;
 
-            // Aplicar lógica de IVA si hay método de pago (v2)
-            if (isset($dto->paymentMethod)) {
-                $customer = \App\Shared\Models\Customer::find($dto->clientId);
+            // Aplicar lógica de IVA (v2). Igual que en create(), se evalúa siempre: el
+            // estado "always"/"exempt" del cliente manda aunque no haya método de pago.
+            // $dto->total llega SIN IVA (el use case lo recalcula desde destino + items),
+            // así que se puede recalcular de cero sin arrastrar el IVA anterior.
+            $customer = \App\Shared\Models\Customer::find($dto->clientId);
+            if ($customer) {
+                // El método de pago sólo se pisa si el request lo trae; si no, se conserva.
+                $effectivePaymentMethod = $dto->paymentMethod ?? $previousPaymentMethod;
 
-                // Si cambió el método de pago, recalcular IVA
-                if ($previousPaymentMethod !== $dto->paymentMethod) {
-                    $commission = $this->ivaCalculationService->updateIvaForPaymentMethodChange($commission, $dto->paymentMethod);
-                } else {
-                    // Si no cambió, solo aplicar IVA si corresponde
-                    $ivaCalculation = $this->ivaCalculationService->calculateIva($customer, $dto->paymentMethod, $dto->total);
+                $ivaCalculation = $this->ivaCalculationService->calculateIva($customer, $effectivePaymentMethod, $dto->total);
+
+                if (isset($dto->paymentMethod)) {
                     $commission->payment_method = $dto->paymentMethod;
-                    $commission->iva_amount = $ivaCalculation['iva_amount'];
-                    $commission->iva_applied = $ivaCalculation['iva_applied'];
-                    $commission->total = $ivaCalculation['total_with_iva'];
                 }
+                $commission->iva_amount = $ivaCalculation['iva_amount'];
+                $commission->iva_applied = $ivaCalculation['iva_applied'];
+                $commission->total = $ivaCalculation['total_with_iva'];
 
                 // Agregar nota sobre IVA si se aplicó
                 if ($commission->iva_applied && $commission->iva_amount > 0) {

@@ -3,6 +3,7 @@
 namespace App\Contexts\Customers\Infrastructure\Http\Requests;
 
 use App\Shared\Enums\CustomerType;
+use App\Shared\Enums\IvaStatus;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -22,6 +23,7 @@ class UpdateCustomerRequest extends FormRequest
         // Email único ignorando al propio cliente que se actualiza.
         $rules = [
             'type' => ['nullable', Rule::in(CustomerType::values())],
+            'iva_status' => ['nullable', Rule::in(IvaStatus::values())],
             'email' => ['nullable', 'email', Rule::unique('customers', 'email')->ignore($this->route('id'))],
         ];
 

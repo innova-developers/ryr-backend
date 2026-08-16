@@ -20,6 +20,7 @@ class CreateCustomerDTO
     public ?string $observations;
     public bool $isPremium;
     public bool $autoCalculateIva;
+    public string $ivaStatus;
     public ?int $userId;
     public int $branchId;
     public function __construct(
@@ -40,7 +41,8 @@ class CreateCustomerDTO
         ?int $userId = null,
         int $branchId,
         string $type = 'individual',
-        ?string $razonSocial = null
+        ?string $razonSocial = null,
+        string $ivaStatus = 'auto'
     ) {
         $this->dni = $dni;
         $this->cuit = $cuit;
@@ -58,6 +60,7 @@ class CreateCustomerDTO
         $this->observations = $observations;
         $this->isPremium = $isPremium;
         $this->autoCalculateIva = $autoCalculateIva;
+        $this->ivaStatus = $ivaStatus;
         $this->userId = $userId;
         $this->branchId = $branchId;
     }

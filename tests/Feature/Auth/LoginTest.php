@@ -18,11 +18,13 @@ class LoginTest extends TestCase
     public static function webScopeCredentialsProvider(): array
     {
         return [
-            // Scope web permite admin, mostrador y cadetes; solo cliente queda excluido.
+            // RC-492: el scope web ahora incluye a CLIENTE. El Portal del Cliente usa
+            // el mismo login que el panel y antes quedaba inaccesible; el front separa
+            // los destinos por rol (cliente -> /client-dashboard, resto -> /admin).
             'Administrador' => [UserRole::ADMINISTRADOR, true],
             'Cadete' => [UserRole::CADETE, true],
             'Mostrador' => [UserRole::MOSTRADOR, true],
-            'Cliente' => [UserRole::CLIENTE, false],
+            'Cliente' => [UserRole::CLIENTE, true],
             'Cadete Externo' => [UserRole::CADETE_EXTERNO, true],
         ];
     }

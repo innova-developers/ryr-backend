@@ -68,6 +68,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Frontend URL
+    |--------------------------------------------------------------------------
+    |
+    | Base de los links que se mandan al cliente (encuesta de feedback, tracking).
+    | Tienen que apuntar al SPA, no a la API. En producción coinciden porque el
+    | front se sirve desde el mismo dominio, pero en local no: ahí APP_URL es el
+    | backend y el link quedaría roto.
+    |
+    */
+
+    'frontend_url' => env('FRONTEND_URL', env('APP_URL', 'http://localhost')),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

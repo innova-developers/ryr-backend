@@ -54,6 +54,7 @@ class ExpenseCategoryController extends Controller
                 name: $request->validated('name'),
                 description: $request->validated('description'),
                 isActive: $request->validated('is_active', true),
+                isExtraordinary: (bool) $request->validated('is_extraordinary', false),
             );
 
             $category = $this->createUseCase->execute($dto);
@@ -73,7 +74,8 @@ class ExpenseCategoryController extends Controller
             $dto = new UpdateExpenseCategoryDTO(
                 name: $request->validated('name'),
                 description: $request->validated('description'),
-                isActive: true
+                isActive: true,
+                isExtraordinary: (bool) $request->validated('is_extraordinary', false),
             );
 
             $category = $this->updateUseCase->execute($id, $dto);

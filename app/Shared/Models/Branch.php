@@ -28,6 +28,15 @@ class Branch extends Model
         return $relation;
     }
 
+    /**
+     * Localidades que atiende esta sucursal (RC-483). Define qué comisiones de otras
+     * sucursales puede tomar su gente, sin cambiar de quién es la comisión.
+     */
+    public function localities(): HasMany
+    {
+        return $this->hasMany(BranchLocality::class);
+    }
+
     public function franchise(): BelongsTo
     {
         return $this->belongsTo(Franchise::class);
