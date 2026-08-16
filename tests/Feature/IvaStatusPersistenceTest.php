@@ -151,4 +151,46 @@ class IvaStatusPersistenceTest extends TestCase
         $this->assertFalse($result['iva_applied']);
         $this->assertEquals(1000.00, $result['total_with_iva']);
     }
+
+    // --- Lectura: el listado tiene que devolver iva_status ---
+
+    public function test_customer_list_exposes_iva_status(): void
+    {
+        // Sin este campo en el listado, el formulario de edición del front abre
+        // siempre en "auto" y al guardar pisa la configuración del cliente.
+        // El listado se acota a la sucursal del admin, así que el cliente va en la misma.
+        Customer::factory()->create([
+            'email' => 'listado@example.com',
+            'iva_status' => IvaStatus::ALWAYS->value,
+            'branch_id' => $this->admin->branch_id,
+        ]);
+
+        $this->actingAs($this->admin)
+            ->getJson('/api/customers?search=listado@example.com')
+            ->assertOk()
+            ->assertJsonFragment(['iva_status' => IvaStatus::ALWAYS->value]);
+    }
+
+    public function test_editing_without_touching_iva_status_does_not_reset_it(): void
+    {
+        $customer = Customer::factory()->create([
+            'iva_status' => IvaStatus::ALWAYS->value,
+            'branch_id' => $this->admin->branch_id,
+        ]);
+
+        // El front relee el valor del listado y lo reenvía tal cual.
+        $leido = $this->actingAs($this->admin)
+            ->getJson("/api/customers?search={$customer->email}")
+            ->json('data.0.iva_status');
+
+        $this->actingAs($this->admin)->putJson("/api/customers/{$customer->id}", [
+            'type' => 'individual',
+            'name' => $customer->name,
+            'last_name' => $customer->last_name ?? '',
+            'email' => $customer->email,
+            'iva_status' => $leido,
+        ])->assertOk();
+
+        $this->assertSame(IvaStatus::ALWAYS, $customer->fresh()->iva_status);
+    }
 }

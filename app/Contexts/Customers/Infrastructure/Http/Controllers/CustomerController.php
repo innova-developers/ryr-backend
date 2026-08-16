@@ -106,7 +106,10 @@ class CustomerController extends Controller
                 $branchId,
                 $type,
                 $razonSocial,
-                $request->input('iva_status', IvaStatus::AUTO->value)
+                // ?? además del default: input() sólo aplica el default si la clave no
+                // viene; si llega explícitamente en null, devolvería null y el DTO (string)
+                // tiraría TypeError -> 500.
+                $request->input('iva_status') ?? IvaStatus::AUTO->value
             );
             $customer = $useCase($dto);
 
@@ -177,8 +180,9 @@ class CustomerController extends Controller
                 $request->input('internal_user_id', $currentCustomer->internal_user_id), // Preservar internal_user_id existente si no se proporciona
                 $type,
                 $razonSocial,
-                // Preservar el estado de IVA existente si el request no lo trae.
-                $request->input('iva_status', $currentCustomer->iva_status?->value ?? IvaStatus::AUTO->value)
+                // Preservar el estado de IVA existente si el request no lo trae (o lo trae
+                // en null: input() con default no cubre ese caso y el DTO exige string).
+                $request->input('iva_status') ?? $currentCustomer->iva_status?->value ?? IvaStatus::AUTO->value
             );
             $customer = $useCase($dto);
 
