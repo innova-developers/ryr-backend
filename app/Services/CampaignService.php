@@ -12,9 +12,7 @@ use Illuminate\Support\Facades\Log;
 
 class CampaignService
 {
-    public function __construct(private WhatsAppService $whatsAppService)
-    {
-    }
+    public function __construct(private WhatsAppService $whatsAppService) {}
 
     public function getSegmentedCustomers(array $filters, ?int $franchiseId = null): Collection
     {
@@ -25,7 +23,7 @@ class CampaignService
         }
 
         if (! empty($filters['city'])) {
-            $query->where('city', 'LIKE', '%' . $filters['city'] . '%');
+            $query->where('city', 'LIKE', '%'.$filters['city'].'%');
         }
 
         // RC-485: la categoría de cliente que se ve en la ficha es customers.type
@@ -48,7 +46,7 @@ class CampaignService
         if (! empty($filters['has_mobile'])) {
             $query->where(function ($q) {
                 $q->where(fn ($q2) => $q2->whereNotNull('mobile')->where('mobile', '!=', ''))
-                  ->orWhere(fn ($q2) => $q2->whereNotNull('phone')->where('phone', '!=', ''));
+                    ->orWhere(fn ($q2) => $q2->whereNotNull('phone')->where('phone', '!=', ''));
             });
         }
 
@@ -71,26 +69,25 @@ class CampaignService
             $query->whereHas('commissions', null, '>=', $minCount);
         }
 
-        // RC-488: "monto mínimo" es el total facturado al cliente, que antes no existía
-        // como filtro (sólo estaba el saldo de cuenta corriente, que es otra cosa).
-        if (isset($filters['min_commission_amount']) && $filters['min_commission_amount'] !== '') {
-            $this->whereAmount($query, $this->billedAmountSql(), '>=', $filters['min_commission_amount']);
+        // RC-488: el monto total es lo que se le facturó al cliente, o sea la suma de
+        // los débitos de su cuenta corriente: comisiones más cualquier otro cargo.
+        // Antes sumaba commissions.total, que dejaba afuera los cargos que no son
+        // comisiones y además contaba comisiones en cualquier estado.
+        //
+        // Las claves viejas min/max_commission_amount se siguen aceptando porque son
+        // las que quedaron guardadas en las campañas ya creadas.
+        $minTotal = $filters['min_total_amount'] ?? $filters['min_commission_amount'] ?? null;
+        $maxTotal = $filters['max_total_amount'] ?? $filters['max_commission_amount'] ?? null;
+
+        if ($minTotal !== null && $minTotal !== '') {
+            $this->whereAmount($query, $this->totalBilledSql(), '>=', $minTotal);
         }
 
-        if (isset($filters['max_commission_amount']) && $filters['max_commission_amount'] !== '') {
-            $this->whereAmount($query, $this->billedAmountSql(), '<=', $filters['max_commission_amount']);
+        if ($maxTotal !== null && $maxTotal !== '') {
+            $this->whereAmount($query, $this->totalBilledSql(), '<=', $maxTotal);
         }
 
-        // El saldo se compara contra la suma de movimientos confirmados. Se usa una
-        // subconsulta con COALESCE en vez de whereHas + havingRaw sin groupBy: así los
-        // clientes sin movimientos cuentan como saldo 0 en lugar de quedar afuera.
-        if (isset($filters['min_balance']) && $filters['min_balance'] !== '') {
-            $this->whereAmount($query, $this->balanceSql(), '>=', $filters['min_balance']);
-        }
-
-        if (isset($filters['max_balance']) && $filters['max_balance'] !== '') {
-            $this->whereAmount($query, $this->balanceSql(), '<=', $filters['max_balance']);
-        }
+        $this->applyBalanceFilters($query, $filters);
 
         if (! empty($filters['created_after'])) {
             $query->where('created_at', '>=', $filters['created_after']);
@@ -114,11 +111,62 @@ class CampaignService
      */
     private function whereAmount($query, string $sql, string $operator, mixed $value): void
     {
-        $query->whereRaw("({$sql}) {$operator} " . (float) $value);
+        $query->whereRaw("({$sql}) {$operator} ".(float) $value);
     }
 
     /**
-     * Saldo del cliente: créditos menos débitos sobre los movimientos confirmados.
+     * Filtros de saldo de cuenta corriente.
+     *
+     * El saldo firmado (créditos menos débitos) es contraintuitivo para segmentar: el
+     * que DEBE plata da negativo, así que para buscar deudores había que cargar un
+     * "saldo máximo" negativo. Nadie lo adivina — la campaña #3 de dev, "COBRANZA -
+     * Clientes con Saldo", usaba min_balance positivo y por eso traía acreedores.
+     *
+     * Ahora se elige el lado con `balance_type` (acreedor / deudor) y los montos van
+     * siempre en positivo. Sin lado elegido, los montos se comparan contra el valor
+     * absoluto del saldo, que es el "monto en cuenta" sin importar para qué lado.
+     */
+    private function applyBalanceFilters($query, array $filters): void
+    {
+        $tipo = $filters['balance_type'] ?? '';
+        $min = $filters['min_balance_amount'] ?? null;
+        $max = $filters['max_balance_amount'] ?? null;
+
+        // Claves viejas con signo: las campañas ya guardadas las siguen usando y se
+        // respetan tal cual para no cambiarles la segmentación por atrás.
+        if (isset($filters['min_balance']) && $filters['min_balance'] !== '') {
+            $this->whereAmount($query, $this->balanceSql(), '>=', $filters['min_balance']);
+        }
+        if (isset($filters['max_balance']) && $filters['max_balance'] !== '') {
+            $this->whereAmount($query, $this->balanceSql(), '<=', $filters['max_balance']);
+        }
+
+        // La magnitud sobre la que se comparan los montos depende del lado elegido, de
+        // manera que el operador siempre carga números positivos.
+        $magnitud = match ($tipo) {
+            'acreedor' => $this->balanceSql(),
+            'deudor' => $this->debtSql(),
+            default => 'SELECT ABS(('.$this->balanceSql().'))',
+        };
+
+        // Elegir un lado ya es un filtro: deja sólo a los que están de ese lado. El
+        // saldo 0 no es ni acreedor ni deudor, así que queda afuera de ambos.
+        if ($tipo === 'acreedor' || $tipo === 'deudor') {
+            $this->whereAmount($query, $magnitud, '>', 0);
+        }
+
+        if ($min !== null && $min !== '') {
+            $this->whereAmount($query, $magnitud, '>=', abs((float) $min));
+        }
+
+        if ($max !== null && $max !== '') {
+            $this->whereAmount($query, $magnitud, '<=', abs((float) $max));
+        }
+    }
+
+    /**
+     * Saldo del cliente a FAVOR: créditos menos débitos sobre los movimientos
+     * confirmados. Positivo = el cliente tiene plata a favor (acreedor).
      * Devuelve 0 (no NULL) para clientes sin movimientos.
      *
      * Las cadenas van entre comillas SIMPLES a propósito: en SQLite las dobles son
@@ -136,12 +184,36 @@ class CampaignService
     }
 
     /**
-     * Total facturado al cliente (suma de totales de sus comisiones). 0 si no tiene.
+     * Deuda del cliente: el mismo saldo con el signo dado vuelta, o sea
+     * total facturado menos lo pagado. Positivo = el cliente debe.
      */
-    private function billedAmountSql(): string
+    private function debtSql(): string
     {
-        return 'SELECT COALESCE(SUM(c.total), 0) FROM commissions c
-                WHERE c.client_id = customers.id AND c.deleted_at IS NULL';
+        $ok = CurrentAccountStatus::OK->value;
+
+        return "SELECT COALESCE(SUM(CASE WHEN ca.type = 'debit' THEN ca.amount
+                                         WHEN ca.type = 'credit' THEN -ca.amount
+                                         ELSE 0 END), 0)
+                FROM current_accounts ca
+                WHERE ca.customer_id = customers.id AND ca.status = '{$ok}'";
+    }
+
+    /**
+     * Total facturado al cliente: la suma de los débitos de su cuenta corriente.
+     *
+     * Es el libro mayor de todo lo que se le cargó —comisiones y cualquier otro
+     * cargo—, y es la cifra que cierra con el saldo: total facturado menos lo pagado
+     * es la deuda. Antes se sumaba commissions.total, que dejaba afuera los cargos
+     * que no son comisiones y contaba comisiones en cualquier estado.
+     */
+    private function totalBilledSql(): string
+    {
+        $ok = CurrentAccountStatus::OK->value;
+
+        return "SELECT COALESCE(SUM(ca.amount), 0)
+                FROM current_accounts ca
+                WHERE ca.customer_id = customers.id
+                  AND ca.type = 'debit' AND ca.status = '{$ok}'";
     }
 
     public function previewCampaign(WhatsAppCampaign $campaign): array

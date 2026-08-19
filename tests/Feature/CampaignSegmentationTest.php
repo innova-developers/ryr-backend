@@ -29,8 +29,11 @@ class CampaignSegmentationTest extends TestCase
     use RefreshDatabase;
 
     private CampaignService $service;
+
     private Branch $branch;
+
     private Destination $destination;
+
     private User $user;
 
     protected function setUp(): void
@@ -42,6 +45,10 @@ class CampaignSegmentationTest extends TestCase
         $this->user = User::factory()->create(['role' => 'administrador', 'branch_id' => $this->branch->id]);
     }
 
+    /**
+     * Crea la comisión y su débito de cuenta corriente, que es lo que pasa en
+     * producción al facturarla. El monto total del cliente sale de esos débitos.
+     */
     private function commissionFor(Customer $customer, float $total): void
     {
         Commission::factory()->create([
@@ -50,6 +57,20 @@ class CampaignSegmentationTest extends TestCase
             'branch_id' => $this->branch->id,
             'user_id' => $this->user->id,
             'total' => $total,
+        ]);
+
+        $this->movimiento($customer, 'debit', $total);
+    }
+
+    private function movimiento(Customer $customer, string $type, float $amount): void
+    {
+        CurrentAccount::factory()->create([
+            'customer_id' => $customer->id,
+            'type' => $type,
+            'amount' => $amount,
+            'status' => CurrentAccountStatus::OK->value,
+            'balance' => $type === 'credit' ? $amount : -$amount,
+            'transaction_date' => now()->toDateString(),
         ]);
     }
 
@@ -90,7 +111,7 @@ class CampaignSegmentationTest extends TestCase
         $this->commissionFor($grande, 4000); // total 12000
         $this->commissionFor($chico, 1000);
 
-        $result = $this->service->getSegmentedCustomers(['min_commission_amount' => 10000]);
+        $result = $this->service->getSegmentedCustomers(['min_total_amount' => 10000]);
 
         $this->assertCount(1, $result);
         $this->assertSame($grande->id, $result->first()->id);
@@ -103,7 +124,7 @@ class CampaignSegmentationTest extends TestCase
         $this->commissionFor($grande, 12000);
         $this->commissionFor($chico, 1000);
 
-        $result = $this->service->getSegmentedCustomers(['max_commission_amount' => 5000]);
+        $result = $this->service->getSegmentedCustomers(['max_total_amount' => 5000]);
 
         $this->assertCount(1, $result);
         $this->assertSame($chico->id, $result->first()->id);
@@ -185,6 +206,90 @@ class CampaignSegmentationTest extends TestCase
         $this->assertSame($acreedor->id, $result->first()->id);
     }
 
+    public function test_total_amount_cuenta_cargos_que_no_son_comisiones(): void
+    {
+        // El monto total es el libro mayor de débitos, no sólo las comisiones: un
+        // cargo manual también se le facturó al cliente y antes no se contaba.
+        $cliente = Customer::factory()->create();
+        $this->commissionFor($cliente, 4000);
+        $this->movimiento($cliente, 'debit', 6000);
+
+        $this->assertCount(1, $this->service->getSegmentedCustomers(['min_total_amount' => 10000]));
+        $this->assertCount(0, $this->service->getSegmentedCustomers(['min_total_amount' => 10001]));
+    }
+
+    public function test_total_amount_acepta_las_claves_viejas(): void
+    {
+        // Las campañas ya guardadas usan min/max_commission_amount.
+        $cliente = Customer::factory()->create();
+        $this->commissionFor($cliente, 12000);
+
+        $this->assertCount(1, $this->service->getSegmentedCustomers(['min_commission_amount' => 10000]));
+        $this->assertCount(0, $this->service->getSegmentedCustomers(['max_commission_amount' => 5000]));
+    }
+
+    public function test_balance_type_deudor_trae_a_los_que_deben(): void
+    {
+        $deudor = Customer::factory()->create();
+        $acreedor = Customer::factory()->create();
+        $enCero = Customer::factory()->create();
+
+        $this->movimiento($deudor, 'debit', 5000);
+        $this->movimiento($acreedor, 'credit', 3000);
+
+        $result = $this->service->getSegmentedCustomers(['balance_type' => 'deudor']);
+
+        $this->assertCount(1, $result);
+        $this->assertSame($deudor->id, $result->first()->id);
+        $this->assertNotContains($enCero->id, $result->pluck('id')->all());
+    }
+
+    public function test_balance_type_acreedor_trae_a_los_que_tienen_a_favor(): void
+    {
+        $deudor = Customer::factory()->create();
+        $acreedor = Customer::factory()->create();
+
+        $this->movimiento($deudor, 'debit', 5000);
+        $this->movimiento($acreedor, 'credit', 3000);
+
+        $result = $this->service->getSegmentedCustomers(['balance_type' => 'acreedor']);
+
+        $this->assertCount(1, $result);
+        $this->assertSame($acreedor->id, $result->first()->id);
+    }
+
+    public function test_monto_en_cc_se_carga_en_positivo_para_ambos_lados(): void
+    {
+        // El operador nunca escribe un signo: elige el lado y carga el monto.
+        $debeMucho = Customer::factory()->create();
+        $debePoco = Customer::factory()->create();
+
+        $this->movimiento($debeMucho, 'debit', 9000);
+        $this->movimiento($debePoco, 'debit', 1000);
+
+        $result = $this->service->getSegmentedCustomers([
+            'balance_type' => 'deudor',
+            'min_balance_amount' => 5000,
+        ]);
+
+        $this->assertCount(1, $result);
+        $this->assertSame($debeMucho->id, $result->first()->id);
+    }
+
+    public function test_saldo_neto_no_cuenta_al_que_ya_pago(): void
+    {
+        // Se le facturó y pagó todo: no es deudor ni acreedor, aunque tenga
+        // movimientos por un monto alto.
+        $salda = Customer::factory()->create();
+        $this->commissionFor($salda, 8000);
+        $this->movimiento($salda, 'credit', 8000);
+
+        $this->assertCount(0, $this->service->getSegmentedCustomers(['balance_type' => 'deudor']));
+        $this->assertCount(0, $this->service->getSegmentedCustomers(['balance_type' => 'acreedor']));
+        // Pero sí entra por monto total facturado.
+        $this->assertCount(1, $this->service->getSegmentedCustomers(['min_total_amount' => 8000]));
+    }
+
     public function test_type_combines_with_other_filters(): void
     {
         // La card pide explícitamente que la categoría se pueda combinar con monto.
@@ -198,7 +303,7 @@ class CampaignSegmentationTest extends TestCase
 
         $result = $this->service->getSegmentedCustomers([
             'type' => ['company'],
-            'min_commission_amount' => 10000,
+            'min_total_amount' => 10000,
         ]);
 
         $this->assertCount(1, $result);

@@ -16,9 +16,7 @@ use Illuminate\Validation\Rule;
 
 class WhatsAppCampaignController extends Controller
 {
-    public function __construct(private CampaignService $campaignService)
-    {
-    }
+    public function __construct(private CampaignService $campaignService) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -195,8 +193,16 @@ class WhatsAppCampaignController extends Controller
             'branch_id' => 'nullable|integer',
             'internal_user_id' => 'nullable|integer',
             'min_commissions' => 'nullable|integer|min:0',
+            // Monto total facturado. Las claves *_commission_amount son las viejas y
+            // se siguen aceptando por las campañas ya guardadas.
+            'min_total_amount' => 'nullable|numeric|min:0',
+            'max_total_amount' => 'nullable|numeric|min:0',
             'min_commission_amount' => 'nullable|numeric|min:0',
             'max_commission_amount' => 'nullable|numeric|min:0',
+            // Saldo de cuenta corriente: se elige el lado y el monto va en positivo.
+            'balance_type' => 'nullable|in:acreedor,deudor',
+            'min_balance_amount' => 'nullable|numeric|min:0',
+            'max_balance_amount' => 'nullable|numeric|min:0',
             'min_balance' => 'nullable|numeric',
             'max_balance' => 'nullable|numeric',
             'created_after' => 'nullable|date',
@@ -247,7 +253,7 @@ class WhatsAppCampaignController extends Controller
             ->where('city', '!=', '');
 
         if ($search) {
-            $query->where('city', 'LIKE', '%' . $search . '%');
+            $query->where('city', 'LIKE', '%'.$search.'%');
         }
 
         $cities = $query->select('city')
