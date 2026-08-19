@@ -221,7 +221,7 @@ class WhatsAppService
 
         $statusMessage = $statusMessages[$newStatus] ?? "El estado de tu envío ha cambiado a: {$newStatus}";
 
-        $trackingUrl = config('app.url') . "/tracking/{$commissionId}";
+        $trackingUrl = rtrim(config('app.frontend_url'), '/') . "/tracking/{$commissionId}";
 
         $message = "🚚 *RYR Comisiones*\n\n";
         $message .= "Hola {$customerName},\n\n";
@@ -249,7 +249,7 @@ class WhatsAppService
         string $customerName,
         ?object $commission = null
     ): bool {
-        $trackingUrl = config('app.url') . "/tracking/{$commissionId}";
+        $trackingUrl = rtrim(config('app.frontend_url'), '/') . "/tracking/{$commissionId}";
 
         $message = "🚚 *RYR Comisiones*\n\n";
         $message .= "Hola {$customerName},\n\n";

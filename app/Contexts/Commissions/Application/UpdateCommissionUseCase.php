@@ -48,16 +48,17 @@ readonly class UpdateCommissionUseCase
             $this->validateLocations($dto->originLocationId, $dto->destinationLocationId);
 
             // Recalcular precios de items si faltan valores (cuando viene desde la app de cadetes)
-            $recalculatedItems = $this->recalculateItemsPrices($dto->items, $destination);
+            $recalculatedItems = $this->recalculateItemsPrices($dto->items, $destination, $dto->clientId);
 
-            // Recalcular el total: fixed_price de destination + suma de subtotales de items
-            $itemsTotal = 0.0;
-            if ($recalculatedItems !== null && ! empty($recalculatedItems)) {
-                foreach ($recalculatedItems as $item) {
-                    $itemsTotal += $item->subtotal;
-                }
-            }
-            $recalculatedTotal = $destination->fixed_price + $itemsTotal;
+            // RC-484: el total sale de la tarifa resuelta para este cliente. Con precio de
+            // acuerdo cerrado, ese valor manda y no se suman base ni bultos; si el cliente
+            // no tiene tarifa especial, la resolución devuelve la tabla general del destino.
+            $rateResolver = app(\App\Services\CustomerRateResolver::class);
+            $resolvedRate = $rateResolver->resolve($dto->clientId, $destination);
+            $recalculatedTotal = $rateResolver->totalFor(
+                $resolvedRate,
+                array_map(fn ($i) => ['subtotal' => (float) $i->subtotal], $recalculatedItems ?? [])
+            );
 
             // Crear un nuevo DTO con el total recalculado y los items con precios recalculados
             $updatedDto = new UpdateCommissionDTO(
@@ -73,6 +74,10 @@ readonly class UpdateCommissionUseCase
                 destinationLocationId: $dto->destinationLocationId,
                 notes: $dto->notes,
                 aCuenta: $dto->aCuenta,
+                // El método de pago se perdía al rearmar el DTO, y como el bloque de IVA
+                // del repositorio dependía de él, editar una comisión nunca recalculaba
+                // el IVA ni persistía un cambio de método de pago.
+                paymentMethod: $dto->paymentMethod,
                 type: $dto->type
             );
 
@@ -85,8 +90,9 @@ readonly class UpdateCommissionUseCase
                 $this->commissionRepository->addItems($dto->id, $recalculatedItems);
             }
 
-            // Actualizar el movimiento en cuenta corriente si existe (cuando se recalcula el total)
-            $this->updateCurrentAccountTransaction($dto->id, $recalculatedTotal, $dto->origin, $dto->destination);
+            // Actualizar el movimiento en cuenta corriente si existe (cuando se recalcula
+            // el total, y moviéndolo al cliente correcto si la comisión cambió de cliente)
+            $this->updateCurrentAccountTransaction($dto->id, $recalculatedTotal, $dto->origin, $dto->destination, $dto->clientId);
 
             // Obtener el tipo de comisión antes de procesar el estado
             $commissionType = $existingCommission->type;
@@ -226,13 +232,15 @@ readonly class UpdateCommissionUseCase
     /**
      * Actualiza el movimiento en cuenta corriente asociado a una comisión cuando se recalcula el total
      */
-    private function updateCurrentAccountTransaction(int $commissionId, float $newTotal, string $origin, string $destination): void
+    private function updateCurrentAccountTransaction(int $commissionId, float $newTotal, string $origin, string $destination, ?int $clientId = null): void
     {
         $reference = "COM-{$commissionId}";
         $currentAccountTransaction = CurrentAccount::where('reference', $reference)->first();
 
         if ($currentAccountTransaction) {
-            // Actualizar el monto y la descripción con el nuevo total
+            // Actualizar el monto, la descripción y —si cambió— el cliente dueño del
+            // movimiento. Sin lo último la comisión quedaba figurando en la cuenta
+            // corriente del cliente anterior Y en la del nuevo.
             $updateDTO = new UpdateCurrentAccountDTO(
                 id: $currentAccountTransaction->id,
                 type: null,
@@ -242,6 +250,7 @@ readonly class UpdateCommissionUseCase
                 transactionDate: null,
                 paymentMethod: null,
                 observations: null,
+                customerId: $clientId,
             );
 
             $this->currentAccountRepository->update($updateDTO);
@@ -258,11 +267,16 @@ readonly class UpdateCommissionUseCase
      * Recalcula los precios de los items cuando faltan valores (unit_price o subtotal = 0)
      * Esto ocurre cuando la actualización viene desde la app de cadetes que no tiene acceso a los precios
      */
-    private function recalculateItemsPrices(?array $items, \App\Shared\Models\Destination $destination): ?array
+    private function recalculateItemsPrices(?array $items, \App\Shared\Models\Destination $destination, ?int $customerId = null): ?array
     {
         if ($items === null || empty($items)) {
             return $items;
         }
+
+        // RC-484: los precios salen de la tarifa especial del cliente si tiene una;
+        // si no, de la tabla general del destino.
+        $resolver = app(\App\Services\CustomerRateResolver::class);
+        $rate = $resolver->resolve($customerId, $destination);
 
         $recalculatedItems = [];
         foreach ($items as $item) {
@@ -273,11 +287,12 @@ readonly class UpdateCommissionUseCase
             if ($unitPrice <= 0 || $subtotal <= 0) {
                 // Solo recalcular si el item tiene tamaño (ORDINARIA)
                 if ($item->size !== null) {
-                    // Determinar el precio unitario según el tamaño
+                    // Determinar el precio unitario según el tamaño y la tarifa resuelta,
+                    // aplicando el escalón por cantidad si el cliente tiene uno.
                     if ($item->size === CommissionItemSize::SMALL) {
-                        $unitPrice = $destination->small_bulk_price;
+                        $unitPrice = $resolver->unitPriceFor($rate, 'CHICO', (int) $item->quantity);
                     } elseif ($item->size === CommissionItemSize::LARGE) {
-                        $unitPrice = $destination->large_bulk_price;
+                        $unitPrice = $resolver->unitPriceFor($rate, 'GRANDE', (int) $item->quantity);
                     } else {
                         // Si no es CHICO ni GRANDE, mantener el precio original o usar un valor por defecto
                         $unitPrice = $unitPrice > 0 ? $unitPrice : 0;

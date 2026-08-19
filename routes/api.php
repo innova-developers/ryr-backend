@@ -66,7 +66,15 @@ Route::middleware(['auth:sanctum'])->prefix('current-accounts')->group(function 
 });
 
 // Rutas públicas para comisiones
-Route::get('/commissions/{id}/tracking', [CommissionController::class, 'showPublic']);
+// RC-500: seguimiento público minimizado + detalle con OTP. La ruta vieja
+// (showPublic) exponía direcciones, teléfonos, notas e historial con nombres de
+// empleados, y el id secuencial permitía enumerarlo todo.
+Route::get('/commissions/{identifier}/tracking', [App\Http\Controllers\Public\PublicTrackingController::class, 'show']);
+Route::post('/commissions/{identifier}/tracking/request-code', [App\Http\Controllers\Public\PublicTrackingController::class, 'requestCode'])
+    ->middleware('throttle:6,1');
+Route::post('/commissions/{identifier}/tracking/verify-code', [App\Http\Controllers\Public\PublicTrackingController::class, 'verifyCode'])
+    ->middleware('throttle:10,1');
+Route::get('/commissions/{identifier}/tracking/detail', [App\Http\Controllers\Public\PublicTrackingController::class, 'detail']);
 Route::post('/commissions/public', [App\Http\Controllers\Public\PublicCommissionController::class, 'store']);
 
 // Rutas públicas para clientes
@@ -134,6 +142,8 @@ Route::middleware(['auth:sanctum', 'adminOrCadete'])->group(function () {
     Route::prefix('customers/{customerId}/current-account')->group(function () {
         Route::get('/transactions', [CurrentAccountController::class, 'getCustomerTransactions']);
         Route::get('/balance', [CurrentAccountController::class, 'getCustomerBalance']);
+        // Extracto unificado: misma fuente para la pantalla y para el PDF (RC-1, RC-498).
+        Route::get('/statement', [App\Http\Controllers\Admin\CurrentAccountStatementController::class, 'show']);
     });
 });
 
@@ -267,6 +277,36 @@ Route::middleware(['auth:sanctum', 'isAdmin', 'franchiseScope'])->group(function
     Route::get('/admin/reports/iva/detail', [App\Http\Controllers\Admin\IvaReportController::class, 'detail']);
 });
 
+// Chatbot básico (RC-490). Público y anónimo: no devuelve datos personales.
+Route::post('/chatbot/message', [App\Http\Controllers\Public\ChatbotController::class, 'message']);
+Route::get('/chatbot/suggestions', [App\Http\Controllers\Public\ChatbotController::class, 'suggestions']);
+
+// ABM de preguntas frecuentes del chatbot
+Route::middleware(['auth:sanctum', 'isAdmin'])->prefix('admin/chatbot/faqs')->group(function () {
+    Route::get('/', [App\Http\Controllers\Public\ChatbotController::class, 'index']);
+    Route::post('/', [App\Http\Controllers\Public\ChatbotController::class, 'store']);
+    Route::put('/{id}', [App\Http\Controllers\Public\ChatbotController::class, 'update']);
+    Route::delete('/{id}', [App\Http\Controllers\Public\ChatbotController::class, 'destroy']);
+});
+
+// Tarifas especiales por cliente (RC-484). Si un cliente no tiene tarifa, rige la
+// tabla general del destino.
+Route::middleware(['auth:sanctum', 'isAdmin'])->prefix('admin/customers/{customerId}/rates')->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\CustomerRateController::class, 'index']);
+    Route::post('/', [App\Http\Controllers\Admin\CustomerRateController::class, 'store']);
+    Route::get('/preview', [App\Http\Controllers\Admin\CustomerRateController::class, 'preview']);
+    Route::put('/{rateId}', [App\Http\Controllers\Admin\CustomerRateController::class, 'update']);
+    Route::delete('/{rateId}', [App\Http\Controllers\Admin\CustomerRateController::class, 'destroy']);
+});
+
+// Localidades que atiende cada sucursal (RC-483): define el alcance operativo del
+// pool de cadetes, no la propiedad de la comisión.
+Route::middleware(['auth:sanctum', 'isAdmin'])->prefix('admin/branches')->group(function () {
+    Route::get('/localities/available', [App\Http\Controllers\Admin\BranchLocalityController::class, 'available']);
+    Route::get('/{branchId}/localities', [App\Http\Controllers\Admin\BranchLocalityController::class, 'index']);
+    Route::put('/{branchId}/localities', [App\Http\Controllers\Admin\BranchLocalityController::class, 'sync']);
+});
+
 // Configuración del sistema (solo admin matriz)
 Route::middleware(['auth:sanctum', 'isAdmin'])->prefix('admin/settings')->group(function () {
     Route::get('/iva', [App\Http\Controllers\Admin\SystemSettingsController::class, 'getIvaConfig']);
@@ -299,6 +339,8 @@ Route::post('/feedback/respond', [App\Http\Controllers\Admin\FeedbackController:
 
 // Feedback - Dashboard y listado (admin)
 Route::middleware(['auth:sanctum', 'isAdmin', 'franchiseScope'])->prefix('admin/feedback')->group(function () {
+    // RC-507: reenvío manual de una encuesta pendiente, eligiendo canal.
+    Route::post('/{id}/resend', [App\Http\Controllers\Admin\FeedbackController::class, 'resend']);
     Route::get('/dashboard', [App\Http\Controllers\Admin\FeedbackController::class, 'dashboard']);
     Route::get('/', [App\Http\Controllers\Admin\FeedbackController::class, 'index']);
 });
@@ -322,6 +364,7 @@ Route::middleware(['auth:sanctum', 'isAdmin', 'franchiseScope'])->prefix('admin/
     Route::get('/', [App\Http\Controllers\Admin\InvoiceController::class, 'index']);
     Route::post('/', [App\Http\Controllers\Admin\InvoiceController::class, 'store']);
     Route::get('/tipos-comprobante', [App\Http\Controllers\Admin\InvoiceController::class, 'tiposComprobante']);
+    Route::post('/preview', [App\Http\Controllers\Admin\InvoiceController::class, 'preview']);
     Route::post('/consultar-cuit', [App\Http\Controllers\Admin\InvoiceController::class, 'consultarCuit']);
     Route::get('/customer/{customerId}', [App\Http\Controllers\Admin\InvoiceController::class, 'customerInvoices']);
     Route::get('/{invoice}', [App\Http\Controllers\Admin\InvoiceController::class, 'show']);

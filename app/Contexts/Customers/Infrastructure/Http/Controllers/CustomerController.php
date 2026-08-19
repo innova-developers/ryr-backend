@@ -20,6 +20,7 @@ use App\Contexts\Users\Application\CreateUserUseCase;
 use App\Contexts\Users\Application\DTO\CreateUserDTO;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
 use App\Shared\Enums\CustomerType;
+use App\Shared\Enums\IvaStatus;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -104,7 +105,11 @@ class CustomerController extends Controller
                 $userCreated->id,
                 $branchId,
                 $type,
-                $razonSocial
+                $razonSocial,
+                // ?? además del default: input() sólo aplica el default si la clave no
+                // viene; si llega explícitamente en null, devolvería null y el DTO (string)
+                // tiraría TypeError -> 500.
+                $request->input('iva_status') ?? IvaStatus::AUTO->value
             );
             $customer = $useCase($dto);
 
@@ -174,7 +179,10 @@ class CustomerController extends Controller
                 $branchId,
                 $request->input('internal_user_id', $currentCustomer->internal_user_id), // Preservar internal_user_id existente si no se proporciona
                 $type,
-                $razonSocial
+                $razonSocial,
+                // Preservar el estado de IVA existente si el request no lo trae (o lo trae
+                // en null: input() con default no cubre ese caso y el DTO exige string).
+                $request->input('iva_status') ?? $currentCustomer->iva_status?->value ?? IvaStatus::AUTO->value
             );
             $customer = $useCase($dto);
 

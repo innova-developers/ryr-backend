@@ -17,7 +17,9 @@ class CustomerEloquentRepository implements CustomerRepository
 {
     public function get(?GetCustomersFiltersDTO $filters = null): array
     {
-        $query = Customer::select('id', 'dni', 'cuit', 'type', 'name', 'email', 'last_name', 'razon_social', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'user_id', 'observations', 'created_at')
+        // iva_status va en el select: sin él, el formulario de edición no puede mostrar
+        // el valor real y al guardar mandaba siempre 'auto', pisando la configuración.
+        $query = Customer::select('id', 'dni', 'cuit', 'type', 'name', 'email', 'last_name', 'razon_social', 'address', 'city', 'phone', 'is_premium', 'auto_calculate_iva', 'iva_status', 'user_id', 'observations', 'created_at')
             ->with(['user:id,name']);
 
         // Filtrar por sucursal según el rol del usuario
@@ -114,6 +116,7 @@ class CustomerEloquentRepository implements CustomerRepository
                         'phone' => $customer->phone,
                         'is_premium' => $customer->is_premium,
                         'auto_calculate_iva' => $customer->auto_calculate_iva,
+                        'iva_status' => $customer->iva_status?->value,
                         'observations' => $customer->observations,
                         'user' => optional($customer->user),
                         'branch' => optional($customer->branch),
@@ -149,6 +152,7 @@ class CustomerEloquentRepository implements CustomerRepository
                     'phone' => $customer->phone,
                     'is_premium' => $customer->is_premium,
                     'auto_calculate_iva' => $customer->auto_calculate_iva,
+                    'iva_status' => $customer->iva_status?->value,
                     'observations' => $customer->observations,
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),
@@ -179,6 +183,7 @@ class CustomerEloquentRepository implements CustomerRepository
             $customer->observations = $dto->observations;
             $customer->is_premium = $dto->isPremium;
             $customer->auto_calculate_iva = $dto->autoCalculateIva;
+            $customer->iva_status = $dto->ivaStatus;
             $customer->user_id = $dto->userId;
             $customer->branch_id = $dto->branchId;
             $customer->save();
@@ -222,6 +227,7 @@ class CustomerEloquentRepository implements CustomerRepository
             $customer->observations = $dto->observations;
             $customer->is_premium = $dto->isPremium;
             $customer->auto_calculate_iva = $dto->autoCalculateIva;
+            $customer->iva_status = $dto->ivaStatus;
             $customer->user_id = $dto->userId;
             $customer->branch_id = $dto->branchId;
             $customer->internal_user_id = $dto->internalUserId;
@@ -302,6 +308,7 @@ class CustomerEloquentRepository implements CustomerRepository
                     'phone' => $customer->phone,
                     'is_premium' => $customer->is_premium,
                     'auto_calculate_iva' => $customer->auto_calculate_iva,
+                    'iva_status' => $customer->iva_status?->value,
                     'observations' => $customer->observations,
                     'user' => optional($customer->user),
                     'branch' => optional($customer->branch),

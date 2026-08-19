@@ -17,6 +17,7 @@ class CreateExpenseCategoryRequest extends FormRequest
             'name' => 'required|string|max:255|unique:expense_categories,name',
             'description' => 'nullable|string|max:1000',
             'is_active' => 'boolean',
+            'is_extraordinary' => 'boolean',
         ];
     }
 

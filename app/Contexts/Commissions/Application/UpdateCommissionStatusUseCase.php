@@ -7,6 +7,7 @@ use App\Contexts\Commissions\Application\DTOs\CreateCommissionLogDTO;
 use App\Contexts\Commissions\Domain\Repositories\CommissionsRepository;
 use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
+use App\Services\CommissionCustodyService;
 use App\Services\CommissionNotificationService;
 use App\Services\FcmNotificationService;
 use App\Services\FeedbackService;
@@ -107,6 +108,18 @@ class UpdateCommissionStatusUseCase
                 // Refrescar la comisión para asegurar que tenemos el estado final correcto
                 $commission->refresh();
                 $finalStatus = $commission->status;
+
+                // RC-482: la liquidación se le acredita al cadete que REALIZÓ EL RETIRO,
+                // no al primero que se asignó la comisión. Este es el único punto por el
+                // que pasan todos los cambios de estado, así que es donde se define.
+                if ($finalStatus === CommissionStatus::ENCOMIENDA_RETIRADA) {
+                    $actorId = Auth::id() ?? $commission->cadete_id;
+
+                    if ($actorId) {
+                        app(CommissionCustodyService::class)->confirmPickup($commission, (int) $actorId);
+                        $commission->save();
+                    }
+                }
 
                 // Si el estado es INTENTO_ENTREGA_FALLIDO, crear nueva comisión con precio base
                 if ($finalStatus === CommissionStatus::INTENTO_ENTREGA_FALLIDO) {

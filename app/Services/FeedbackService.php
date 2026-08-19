@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Mail\FeedbackSurveyMail;
 use App\Shared\Models\Commission;
 use App\Shared\Models\FeedbackSurvey;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class FeedbackService
@@ -35,7 +38,9 @@ class FeedbackService
             'sent_at' => now(),
         ]);
 
-        $this->sendSurveyWhatsApp($survey, $customer, $commission);
+        // Al entregar se manda por los dos canales disponibles: si el cliente no
+        // tiene alguno, sendSurvey() lo omite sin romper.
+        $this->sendSurvey($survey, ['whatsapp', 'email']);
 
         return $survey;
     }
@@ -119,22 +124,101 @@ class FeedbackService
         ];
     }
 
-    private function sendSurveyWhatsApp(FeedbackSurvey $survey, $customer, Commission $commission): void
+    /**
+     * RC-507 — Envía (o reenvía) la encuesta por los canales pedidos.
+     *
+     * Devuelve el resultado por canal para que la pantalla pueda avisar cuándo el
+     * cliente no tiene el dato necesario, en vez de fallar en silencio.
+     *
+     * @param  array<int, string>  $canales  whatsapp | email
+     * @return array{enviados: array<int, string>, omitidos: array<string, string>}
+     */
+    public function sendSurvey(FeedbackSurvey $survey, array $canales = ['whatsapp']): array
     {
-        if (empty($customer->mobile)) {
-            return;
+        $customer = $survey->customer;
+        $commissionId = $survey->commission_id;
+
+        $enviados = [];
+        $omitidos = [];
+
+        if (! $customer) {
+            return ['enviados' => [], 'omitidos' => ['cliente' => 'La encuesta no tiene cliente asociado']];
         }
 
-        $feedbackUrl = config('app.url') . "/feedback/{$survey->token}";
+        $feedbackUrl = rtrim(config('app.frontend_url'), '/') . "/feedback/{$survey->token}";
+        $nombre = trim($customer->name . ' ' . ($customer->last_name ?? '')) ?: 'cliente';
 
-        $message = "🚚 *RYR Comisiones - Tu opinión nos importa*\n\n";
-        $message .= "Hola {$customer->name},\n\n";
-        $message .= "Tu envío #{$commission->id} fue entregado.\n";
-        $message .= "¿Cómo fue tu experiencia?\n\n";
-        $message .= "📝 Dejanos tu opinión acá:\n";
-        $message .= "{$feedbackUrl}\n\n";
-        $message .= "¡Gracias por confiar en RYR! 🙏";
+        if (in_array('whatsapp', $canales, true)) {
+            // Mismo criterio que el resto de las notificaciones: mobile y si no, phone.
+            $telefono = $customer->mobile ?: $customer->phone;
 
-        $this->whatsAppService->sendMessage($customer->mobile, $message);
+            if (empty($telefono)) {
+                $omitidos['whatsapp'] = 'El cliente no tiene teléfono cargado';
+            } else {
+                try {
+                    $this->whatsAppService->sendMessage($telefono, $this->mensajeWhatsApp($nombre, $commissionId, $feedbackUrl));
+                    $enviados[] = 'whatsapp';
+                } catch (\Throwable $e) {
+                    $omitidos['whatsapp'] = 'No se pudo enviar el WhatsApp';
+                    Log::warning('Fallo el envío de la encuesta por WhatsApp', [
+                        'survey_id' => $survey->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
+        if (in_array('email', $canales, true)) {
+            if (empty($customer->email)) {
+                $omitidos['email'] = 'El cliente no tiene email cargado';
+            } else {
+                try {
+                    Mail::to($customer->email)->send(new FeedbackSurveyMail($nombre, $commissionId, $feedbackUrl));
+                    $enviados[] = 'email';
+                } catch (\Throwable $e) {
+                    $omitidos['email'] = 'No se pudo enviar el email';
+                    Log::warning('Fallo el envío de la encuesta por email', [
+                        'survey_id' => $survey->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
+        return ['enviados' => $enviados, 'omitidos' => $omitidos];
+    }
+
+    /**
+     * Reenvío manual desde el dashboard. No toca el token: el link anterior sigue valiendo.
+     *
+     * @param  array<int, string>  $canales
+     * @return array{enviados: array<int, string>, omitidos: array<string, string>}
+     */
+    public function resendSurvey(FeedbackSurvey $survey, array $canales): array
+    {
+        $resultado = $this->sendSurvey($survey, $canales);
+
+        if (! empty($resultado['enviados'])) {
+            $survey->update([
+                'resend_count' => (int) $survey->resend_count + 1,
+                'last_resent_at' => now(),
+                'last_resent_channels' => implode(',', $resultado['enviados']),
+            ]);
+        }
+
+        return $resultado;
+    }
+
+    private function mensajeWhatsApp(string $nombre, int $commissionId, string $feedbackUrl): string
+    {
+        $mensaje = "🚚 *RYR Comisiones - Tu opinión nos importa*\n\n";
+        $mensaje .= "Hola {$nombre},\n\n";
+        $mensaje .= "Tu envío #{$commissionId} fue entregado.\n";
+        $mensaje .= "¿Cómo fue tu experiencia?\n\n";
+        $mensaje .= "📝 Dejanos tu opinión acá:\n";
+        $mensaje .= "{$feedbackUrl}\n\n";
+        $mensaje .= "¡Gracias por confiar en RYR! 🙏";
+
+        return $mensaje;
     }
 }

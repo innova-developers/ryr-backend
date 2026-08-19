@@ -6,14 +6,18 @@ use App\Shared\Enums\InvoiceType;
 use Exception;
 use Illuminate\Support\Facades\Log;
 
-require_once __DIR__ . '/AFIP/Afip.php';
+require_once __DIR__.'/AFIP/Afip.php';
 
 class ArcaService
 {
     private $afip;
+
     private string $cuit;
+
     private bool $production;
+
     private bool $mockMode;
+
     private int $puntoVenta;
 
     public function __construct()
@@ -31,11 +35,11 @@ class ArcaService
                     'cert' => 'cert',
                     'key' => 'key',
                     'passphrase' => config('afip.passphrase', 'xxxxx'),
-                    'res_folder' => __DIR__ . '/AFIP/Afip_res/',
-                    'ta_folder' => __DIR__ . '/AFIP/Afip_res/',
+                    'res_folder' => __DIR__.'/AFIP/Afip_res/',
+                    'ta_folder' => __DIR__.'/AFIP/Afip_res/',
                 ]);
             } catch (Exception $e) {
-                Log::error('Error inicializando AFIP: ' . $e->getMessage());
+                Log::error('Error inicializando AFIP: '.$e->getMessage());
 
                 throw $e;
             }
@@ -87,19 +91,31 @@ class ArcaService
                 $ivaId = 6;
             }
 
+            $concepto = (int) ($datos['concepto'] ?? 2);
+
+            // Concepto 1 es productos y ARCA rechaza el comprobante si le mandás fechas
+            // de servicio. Para 2 (servicios) y 3 (productos y servicios) son obligatorias:
+            // sin ellas el comprobante salía sin período facturado ni vencimiento de pago.
+            $conServicios = in_array($concepto, [2, 3], true);
+            $aYmd = fn (?string $v) => $v ? (int) str_replace('-', '', $v) : null;
+
+            $fchServDesde = $conServicios ? ($aYmd($datos['fecha_servicio_desde'] ?? null) ?? $fechaFormateada) : null;
+            $fchServHasta = $conServicios ? ($aYmd($datos['fecha_servicio_hasta'] ?? null) ?? $fechaFormateada) : null;
+            $fchVtoPago = $conServicios ? ($aYmd($datos['fecha_vto_pago'] ?? null) ?? $fechaFormateada) : null;
+
             $data = [
                 'CantReg' => 1,
                 'PtoVta' => $this->puntoVenta,
                 'CbteTipo' => $tipoComprobante,
-                'Concepto' => (int) ($datos['concepto'] ?? 2),
+                'Concepto' => $concepto,
                 'DocTipo' => $docTipo,
                 'DocNro' => $docNro,
                 'CbteDesde' => $numero,
                 'CbteHasta' => $numero,
                 'CbteFch' => $fechaFormateada,
-                'FchServDesde' => null,
-                'FchServHasta' => null,
-                'FchVtoPago' => null,
+                'FchServDesde' => $fchServDesde,
+                'FchServHasta' => $fchServHasta,
+                'FchVtoPago' => $fchVtoPago,
                 'ImpTotal' => $total,
                 'ImpTotConc' => 0,
                 'ImpNeto' => $neto,
@@ -142,7 +158,7 @@ class ArcaService
                 'tipo_comprobante' => $tipoComprobante,
             ];
         } catch (Exception $e) {
-            Log::error('Error emitiendo comprobante ARCA: ' . $e->getMessage());
+            Log::error('Error emitiendo comprobante ARCA: '.$e->getMessage());
 
             return [
                 'success' => false,
@@ -161,7 +177,7 @@ class ArcaService
 
             if ($this->mockMode) {
                 return [
-                    'razonSocial' => 'CONTRIBUYENTE MOCK ' . $cuitLimpio,
+                    'razonSocial' => 'CONTRIBUYENTE MOCK '.$cuitLimpio,
                     'tipoResponsable' => 'IVA Responsable Inscripto',
                     'domicilio' => 'Av. Ejemplo 1234, CABA, Buenos Aires',
                 ];
@@ -173,7 +189,7 @@ class ArcaService
             }
 
             $razonSocial = $persona->razonSocial
-                ?? trim(($persona->apellido ?? '') . ', ' . ($persona->nombre ?? ''));
+                ?? trim(($persona->apellido ?? '').', '.($persona->nombre ?? ''));
 
             $tipoResponsable = 'Consumidor Final';
             if (! empty($persona->impuestos)) {
@@ -214,7 +230,7 @@ class ArcaService
                 }
                 $dom ??= $domicilios[0] ?? null;
                 if ($dom) {
-                    $dir = $dom->direccion ?? trim(($dom->calle ?? '') . ' ' . ($dom->numero ?? ''));
+                    $dir = $dom->direccion ?? trim(($dom->calle ?? '').' '.($dom->numero ?? ''));
                     $partes = array_filter([$dir, $dom->localidad ?? null, $dom->descripcionProvincia ?? null, $dom->codigoPostal ?? null]);
                     $domicilio = implode(', ', $partes);
                 }
@@ -222,7 +238,7 @@ class ArcaService
 
             return compact('razonSocial', 'tipoResponsable', 'domicilio');
         } catch (Exception $e) {
-            Log::warning('Error consultando padrón ARCA: ' . $e->getMessage());
+            Log::warning('Error consultando padrón ARCA: '.$e->getMessage());
 
             return null;
         }
@@ -242,8 +258,8 @@ class ArcaService
                 'cert' => 'cert',
                 'key' => 'key',
                 'passphrase' => config('afip.passphrase', 'xxxxx'),
-                'res_folder' => __DIR__ . '/AFIP/Afip_res/',
-                'ta_folder' => __DIR__ . '/AFIP/Afip_res/',
+                'res_folder' => __DIR__.'/AFIP/Afip_res/',
+                'ta_folder' => __DIR__.'/AFIP/Afip_res/',
             ]);
         }
 

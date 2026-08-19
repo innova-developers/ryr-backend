@@ -21,10 +21,15 @@ class InvoiceTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private User $franchiseAdmin;
+
     private User $cadete;
+
     private Branch $branch;
+
     private Franchise $franchise;
+
     private Customer $customer;
 
     protected function setUp(): void
@@ -157,6 +162,54 @@ class InvoiceTest extends TestCase
         $this->assertEquals($commission->id, $response->json('commission_id'));
         $this->assertEquals(5000, (float) $response->json('importe_total'));
         $this->assertNotNull($response->json('cae'));
+    }
+
+    public function test_facturar_commission_guarda_periodo_de_servicio()
+    {
+        $destination = Destination::factory()->create();
+        $commission = Commission::factory()->create([
+            'client_id' => $this->customer->id,
+            'destination_id' => $destination->id,
+            'branch_id' => $this->branch->id,
+            'user_id' => $this->admin->id,
+            'franchise_id' => $this->franchise->id,
+            'total' => 5000,
+            'date' => '2026-08-12',
+            'status' => CommissionStatus::PAGO_VALIDACION->value,
+        ]);
+
+        $this->actingAs($this->admin, 'sanctum');
+
+        $response = $this->postJson("/api/admin/invoices/commission/{$commission->id}/facturar", [
+            'tipo_comprobante' => InvoiceType::FACTURA_B->value,
+        ]);
+
+        $response->assertStatus(201);
+
+        $invoice = Invoice::find($response->json('id'));
+
+        // Concepto 2 (servicios): ARCA exige periodo facturado y vencimiento de pago.
+        $this->assertSame(2, (int) $invoice->concepto);
+        $this->assertSame('2026-08-12', $invoice->fecha_servicio_desde->toDateString());
+        $this->assertSame('2026-08-12', $invoice->fecha_servicio_hasta->toDateString());
+        $this->assertNotNull($invoice->fecha_vto_pago);
+    }
+
+    public function test_facturar_con_concepto_productos_no_guarda_periodo_de_servicio()
+    {
+        $this->actingAs($this->admin, 'sanctum');
+
+        $invoice = app(\App\Services\InvoiceService::class)->emitirFactura([
+            'customer_id' => $this->customer->id,
+            'tipo_comprobante' => InvoiceType::FACTURA_B->value,
+            'importe_total' => 1000,
+            'concepto' => 1,
+        ], $this->admin);
+
+        // Concepto 1 es productos: ARCA rechaza el comprobante si le mandan fechas de servicio.
+        $this->assertNull($invoice->fecha_servicio_desde);
+        $this->assertNull($invoice->fecha_servicio_hasta);
+        $this->assertNull($invoice->fecha_vto_pago);
     }
 
     public function test_cannot_facturar_commission_wrong_status()

@@ -23,7 +23,7 @@ class IvaCalculationService
      * @param float $total
      * @return array
      */
-    public function calculateIva(Customer $customer, PaymentMethod $paymentMethod, float $total): array
+    public function calculateIva(Customer $customer, ?PaymentMethod $paymentMethod, float $total): array
     {
         $shouldApplyIva = $this->shouldApplyIva($customer, $paymentMethod);
 
@@ -54,15 +54,22 @@ class IvaCalculationService
      * @param PaymentMethod $paymentMethod
      * @return bool
      */
-    public function shouldApplyIva(Customer $customer, PaymentMethod $paymentMethod): bool
+    public function shouldApplyIva(Customer $customer, ?PaymentMethod $paymentMethod): bool
     {
         $ivaStatus = $customer->iva_status ?? IvaStatus::AUTO;
 
+        // "Siempre" y "Exento" no dependen del método de pago: valen incluso cuando
+        // la comisión se carga sin elegir método.
         if ($ivaStatus === IvaStatus::ALWAYS) {
             return true;
         }
 
         if ($ivaStatus === IvaStatus::EXEMPT) {
+            return false;
+        }
+
+        // Modo automático: sin método de pago no hay nada contra qué comparar.
+        if ($paymentMethod === null) {
             return false;
         }
 

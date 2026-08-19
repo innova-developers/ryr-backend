@@ -17,10 +17,12 @@ class ExpenseCategory extends Model
         'name',
         'description',
         'is_active',
+        'is_extraordinary',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_extraordinary' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',

@@ -3,6 +3,7 @@
 namespace App\Contexts\Customers\Infrastructure\Http\Requests;
 
 use App\Shared\Enums\CustomerType;
+use App\Shared\Enums\IvaStatus;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -19,9 +20,12 @@ class CreateCustomerRequest extends FormRequest
      */
     public function rules(): array
     {
+        // El estado de IVA es opcional en el alta; si no viene, el DTO cae en 'auto'.
+        $ivaStatus = ['iva_status' => ['nullable', Rule::in(IvaStatus::values())]];
+
         // Empresa se identifica por CUIT + razón social; cliente común por DNI + nombre.
         if ($this->input('type') === CustomerType::COMPANY->value) {
-            return [
+            return $ivaStatus + [
                 'type' => ['required', Rule::in(CustomerType::values())],
                 'razon_social' => ['required', 'string', 'max:255'],
                 'cuit' => ['required', 'string', 'max:13'],
@@ -30,7 +34,7 @@ class CreateCustomerRequest extends FormRequest
             ];
         }
 
-        return [
+        return $ivaStatus + [
             'type' => ['nullable', Rule::in(CustomerType::values())],
             'dni' => ['required'],
             'name' => ['required', 'string'],

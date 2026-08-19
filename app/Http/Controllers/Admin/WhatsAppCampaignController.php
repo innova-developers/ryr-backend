@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Services\CampaignService;
 use App\Shared\Enums\CampaignStatus;
+use App\Shared\Enums\CustomerType;
 use App\Shared\Enums\UserRole;
 use App\Shared\Models\Customer;
 use App\Shared\Models\WhatsAppCampaign;
@@ -11,12 +12,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class WhatsAppCampaignController extends Controller
 {
-    public function __construct(private CampaignService $campaignService)
-    {
-    }
+    public function __construct(private CampaignService $campaignService) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -183,6 +183,9 @@ class WhatsAppCampaignController extends Controller
     {
         $filters = $request->validate([
             'city' => 'nullable|string',
+            // Categoría de cliente: la misma que la ficha (individual / company).
+            'type' => 'nullable|array',
+            'type.*' => ['string', Rule::in(CustomerType::values())],
             'is_premium' => 'nullable',
             'iva_status' => 'nullable|in:auto,always,exempt',
             'has_mobile' => 'nullable',
@@ -190,6 +193,16 @@ class WhatsAppCampaignController extends Controller
             'branch_id' => 'nullable|integer',
             'internal_user_id' => 'nullable|integer',
             'min_commissions' => 'nullable|integer|min:0',
+            // Monto total facturado. Las claves *_commission_amount son las viejas y
+            // se siguen aceptando por las campañas ya guardadas.
+            'min_total_amount' => 'nullable|numeric|min:0',
+            'max_total_amount' => 'nullable|numeric|min:0',
+            'min_commission_amount' => 'nullable|numeric|min:0',
+            'max_commission_amount' => 'nullable|numeric|min:0',
+            // Saldo de cuenta corriente: se elige el lado y el monto va en positivo.
+            'balance_type' => 'nullable|in:acreedor,deudor',
+            'min_balance_amount' => 'nullable|numeric|min:0',
+            'max_balance_amount' => 'nullable|numeric|min:0',
             'min_balance' => 'nullable|numeric',
             'max_balance' => 'nullable|numeric',
             'created_after' => 'nullable|date',
@@ -223,6 +236,8 @@ class WhatsAppCampaignController extends Controller
                 'phone' => $c->phone,
                 'city' => $c->city,
                 'email' => $c->email,
+                'type' => $c->type?->value,
+                'type_label' => $c->type?->label(),
                 'is_premium' => $c->is_premium,
                 'has_phone' => ! empty($c->mobile) || ! empty($c->phone),
             ])->values(),
@@ -238,7 +253,7 @@ class WhatsAppCampaignController extends Controller
             ->where('city', '!=', '');
 
         if ($search) {
-            $query->where('city', 'LIKE', '%' . $search . '%');
+            $query->where('city', 'LIKE', '%'.$search.'%');
         }
 
         $cities = $query->select('city')

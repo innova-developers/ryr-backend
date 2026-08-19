@@ -16,6 +16,7 @@ class ExpenseCategoryEloquentRepository implements ExpenseCategoryRepository
             'name' => $dto->name,
             'description' => $dto->description,
             'is_active' => $dto->isActive,
+            'is_extraordinary' => $dto->isExtraordinary,
         ]);
     }
 
@@ -31,6 +32,7 @@ class ExpenseCategoryEloquentRepository implements ExpenseCategoryRepository
             'name' => $dto->name,
             'description' => $dto->description,
             'is_active' => $dto->isActive,
+            'is_extraordinary' => $dto->isExtraordinary,
         ]);
 
         return $category->fresh();

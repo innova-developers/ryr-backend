@@ -21,6 +21,7 @@ class UpdateCustomerDTO
     public ?string $observations;
     public bool $isPremium;
     public bool $autoCalculateIva;
+    public string $ivaStatus;
     public ?int $userId;
     public int $branchId;
     public ?int $internalUserId;
@@ -44,7 +45,8 @@ class UpdateCustomerDTO
         int $branchId,
         ?int $internalUserId = null,
         string $type = 'individual',
-        ?string $razonSocial = null
+        ?string $razonSocial = null,
+        string $ivaStatus = 'auto'
     ) {
         $this->id = $id;
         $this->dni = $dni;
@@ -63,6 +65,7 @@ class UpdateCustomerDTO
         $this->observations = $observations;
         $this->isPremium = $isPremium;
         $this->autoCalculateIva = $autoCalculateIva;
+        $this->ivaStatus = $ivaStatus;
         $this->userId = $userId;
         $this->branchId = $branchId;
         $this->internalUserId = $internalUserId;

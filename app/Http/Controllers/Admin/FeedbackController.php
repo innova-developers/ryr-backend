@@ -32,7 +32,9 @@ class FeedbackController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = FeedbackSurvey::with(['customer:id,name,last_name,mobile', 'commission:id'])
+        // phone y email hacen falta para que el reenvío (RC-507) pueda mostrar qué
+        // canales tiene disponibles el cliente antes de elegir.
+        $query = FeedbackSurvey::with(['customer:id,name,last_name,mobile,phone,email', 'commission:id'])
             ->orderByDesc('created_at');
 
         if ($user->role === UserRole::ADMIN_FRANQUICIA) {
@@ -125,6 +127,49 @@ class FeedbackController extends Controller
             'customer_name' => ($survey->customer->name ?? '') . ' ' . ($survey->customer->last_name ?? ''),
             'rating' => $survey->rating,
             'comment' => $survey->comment,
+        ]);
+    }
+
+    /**
+     * RC-507 — Reenvía una encuesta pendiente por los canales elegidos.
+     *
+     * No se regenera el token: el link que ya tenga el cliente sigue sirviendo.
+     */
+    public function resend(Request $request, int $id): JsonResponse
+    {
+        $validated = $request->validate([
+            'channels' => 'required|array|min:1',
+            'channels.*' => 'in:whatsapp,email',
+        ]);
+
+        $survey = FeedbackSurvey::with('customer')->find($id);
+
+        if (! $survey) {
+            return response()->json(['success' => false, 'message' => 'Encuesta no encontrada'], 404);
+        }
+
+        if ($survey->status !== 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'La encuesta ya fue respondida: no se puede reenviar.',
+            ], 422);
+        }
+
+        $resultado = $this->feedbackService->resendSurvey($survey, array_values(array_unique($validated['channels'])));
+
+        if (empty($resultado['enviados'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo reenviar: ' . implode('. ', $resultado['omitidos']),
+                'skipped' => $resultado['omitidos'],
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'sent' => $resultado['enviados'],
+            'skipped' => $resultado['omitidos'],
+            'resend_count' => $survey->fresh()->resend_count,
         ]);
     }
 }

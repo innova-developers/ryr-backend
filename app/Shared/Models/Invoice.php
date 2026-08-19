@@ -26,6 +26,9 @@ class Invoice extends Model
         'punto_venta',
         'numero_comprobante',
         'fecha_emision',
+        'fecha_servicio_desde',
+        'fecha_servicio_hasta',
+        'fecha_vto_pago',
         'cae',
         'cae_vencimiento',
         'importe_total',
@@ -44,6 +47,9 @@ class Invoice extends Model
 
     protected $casts = [
         'fecha_emision' => 'date',
+        'fecha_servicio_desde' => 'date',
+        'fecha_servicio_hasta' => 'date',
+        'fecha_vto_pago' => 'date',
         'importe_total' => 'decimal:2',
         'importe_neto' => 'decimal:2',
         'importe_iva' => 'decimal:2',
@@ -94,8 +100,8 @@ class Invoice extends Model
     public function getFormattedNumberAttribute(): string
     {
         return str_pad($this->punto_venta, 5, '0', STR_PAD_LEFT)
-            . '-'
-            . str_pad($this->numero_comprobante, 8, '0', STR_PAD_LEFT);
+            .'-'
+            .str_pad($this->numero_comprobante, 8, '0', STR_PAD_LEFT);
     }
 
     public function getTypeLetterAttribute(): string

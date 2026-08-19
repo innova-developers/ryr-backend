@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Commission;
 use App\Shared\Models\CommissionCadeteHistory;
+use App\Shared\Models\CommissionLog;
 
 /**
  * Centraliza la custodia de comisiones por cadete:
@@ -33,23 +35,57 @@ class CommissionCustodyService
             ->whereNull('released_at')
             ->exists();
 
-        $isFirstPickup = $commission->pickup_cadete_id === null;
+        $isFirstHand = ! CommissionCadeteHistory::where('commission_id', $commission->id)->exists();
 
         if (! $alreadyOpen) {
             CommissionCadeteHistory::create([
                 'commission_id' => $commission->id,
                 'cadete_id' => $cadeteId,
-                'action' => $isFirstPickup ? 'LEVANTO' : 'REASIGNADO',
+                'action' => $isFirstHand ? 'LEVANTO' : 'REASIGNADO',
                 'assigned_by' => $assignedBy,
                 'status_at_assignment' => $commission->status?->value,
                 'assigned_at' => now(),
             ]);
         }
 
-        // El crédito queda con el PRIMER cadete que la levantó.
-        if ($isFirstPickup) {
+        // Acreditación provisoria: si la comisión todavía no pasó por el retiro, se
+        // deja apuntando al cadete que la tiene. Se confirma (o se corrige) en
+        // confirmPickup(), que es lo que realmente define la liquidación.
+        if ($commission->pickup_cadete_id === null && ! $this->yaSeRetiro($commission)) {
             $commission->pickup_cadete_id = $cadeteId;
         }
+    }
+
+    /**
+     * ¿La comisión ya pasó por el retiro? Si sí, el crédito quedó definido y una
+     * reasignación posterior (para la entrega) no debe tocarlo.
+     */
+    private function yaSeRetiro(Commission $commission): bool
+    {
+        return CommissionLog::where('commission_id', $commission->id)
+            ->where('new_status', CommissionStatus::ENCOMIENDA_RETIRADA->value)
+            ->exists();
+    }
+
+    /**
+     * El cadete confirma que retiró la encomienda (la comisión pasa a
+     * ENCOMIENDA_RETIRADA). ESTE es el momento que define a quién se le acredita.
+     *
+     * Antes el crédito se fijaba en takeCustody(), es decir cuando el cadete se
+     * asignaba la comisión. Si A se la asignaba y nunca la retiraba, y B era quien
+     * efectivamente la levantaba, la liquidación se la pagaba igual a A. En la base
+     * de producción había 415 comisiones acreditadas al cadete equivocado.
+     *
+     * A diferencia de takeCustody(), acá se PISA el valor anterior: manda quien hizo
+     * el retiro, no quien la tomó primero.
+     */
+    public function confirmPickup(Commission $commission, int $cadeteId): void
+    {
+        if ($commission->pickup_cadete_id === $cadeteId) {
+            return;
+        }
+
+        $commission->pickup_cadete_id = $cadeteId;
     }
 
     /**
@@ -63,7 +99,11 @@ class CommissionCustodyService
 
         $this->closeOpenSegments($commission->id, null);
 
-        if ($previousCadeteId !== null && $commission->pickup_cadete_id === $previousCadeteId) {
+        // Si el retiro ya ocurrió, el crédito está definido y soltar la comisión no lo
+        // borra: el que la levantó cobra aunque después la entregue otro.
+        if ($previousCadeteId !== null
+            && $commission->pickup_cadete_id === $previousCadeteId
+            && ! $this->yaSeRetiro($commission)) {
             $commission->pickup_cadete_id = null;
         }
     }

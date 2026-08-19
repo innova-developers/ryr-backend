@@ -108,11 +108,25 @@ class CurrentAccountEloquentRepository implements CurrentAccountRepository
             $updateData['observations'] = $dto->observations;
         }
 
+        // RC-499: mover el movimiento a otro cliente (cambio de cliente en la comisión).
+        // Se guarda el cliente anterior para recalcularle el saldo: si sólo se recalcula
+        // el nuevo, el viejo queda arrastrando el débito que ya no le corresponde.
+        $previousCustomerId = $currentAccount->customer_id;
+        $customerChanged = $dto->customerId !== null && $dto->customerId !== $previousCustomerId;
+
+        if ($customerChanged) {
+            $updateData['customer_id'] = $dto->customerId;
+        }
+
         $currentAccount->update($updateData);
 
-        // Si se modificó el monto o tipo, recalcular saldos
-        if ($dto->amount !== null || $dto->type !== null) {
+        // Si se modificó el monto, el tipo o el cliente, recalcular saldos
+        if ($dto->amount !== null || $dto->type !== null || $customerChanged) {
             $this->recalculateBalances($currentAccount->customer_id);
+
+            if ($customerChanged) {
+                $this->recalculateBalances($previousCustomerId);
+            }
         }
 
         return $currentAccount->fresh();

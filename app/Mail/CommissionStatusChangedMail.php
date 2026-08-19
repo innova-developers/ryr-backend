@@ -70,7 +70,7 @@ class CommissionStatusChangedMail extends Mailable
                 'newStatus' => $this->newStatus,
                 'statusMessage' => $statusMessage,
                 'details' => $this->details,
-                'trackingUrl' => config('app.url') . "/tracking/{$this->commission->id}",
+                'trackingUrl' => rtrim(config('app.frontend_url'), '/') . "/tracking/{$this->commission->id}",
             ],
         );
     }
