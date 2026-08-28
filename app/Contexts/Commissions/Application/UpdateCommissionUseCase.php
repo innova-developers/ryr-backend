@@ -25,11 +25,10 @@ readonly class UpdateCommissionUseCase
 {
     public function __construct(
         private CommissionsRepository $commissionRepository,
-        private CustomerRepository    $customerRepository,
+        private CustomerRepository $customerRepository,
         private DestinationRepository $destinationRepository,
         private CurrentAccountRepository $currentAccountRepository
-    ) {
-    }
+    ) {}
 
     /**
      * @throws \Exception
@@ -48,7 +47,13 @@ readonly class UpdateCommissionUseCase
             $this->validateLocations($dto->originLocationId, $dto->destinationLocationId);
 
             // Recalcular precios de items si faltan valores (cuando viene desde la app de cadetes)
-            $recalculatedItems = $this->recalculateItemsPrices($dto->items, $destination, $dto->clientId);
+            // RC-510: si cambió el recorrido hay que reprecear los bultos, no sólo el
+            // precio base. Antes sólo se recalculaba cuando el precio llegaba en 0 (el
+            // caso de la app de cadetes), así que al editar el destino los ítems se
+            // quedaban con la tarifa del recorrido anterior.
+            $cambioDestino = (int) $existingCommission->destination_id !== (int) $destination->id;
+
+            $recalculatedItems = $this->recalculateItemsPrices($dto->items, $destination, $dto->clientId, $cambioDestino);
 
             // RC-484: el total sale de la tarifa resuelta para este cliente. Con precio de
             // acuerdo cerrado, ese valor manda y no se suman base ni bultos; si el cliente
@@ -90,9 +95,20 @@ readonly class UpdateCommissionUseCase
                 $this->commissionRepository->addItems($dto->id, $recalculatedItems);
             }
 
-            // Actualizar el movimiento en cuenta corriente si existe (cuando se recalcula
-            // el total, y moviéndolo al cliente correcto si la comisión cambió de cliente)
-            $this->updateCurrentAccountTransaction($dto->id, $recalculatedTotal, $dto->origin, $dto->destination, $dto->clientId);
+            // RC-512: el movimiento de cuenta corriente se actualizaba con
+            // $recalculatedTotal, que es el NETO. El repositorio aplica el IVA después,
+            // así que la comisión quedaba con el bruto y el débito con el neto. En
+            // producción quedaron 5 comisiones desfasadas (16.940 vs 14.000, 31.460 vs
+            // 26.000). Se relee el total ya persistido para que ambos coincidan.
+            //
+            // El recorrido de la descripción también sale de la comisión fresca: si se
+            // editó el destino, $dto->origin/destination pueden ser los viejos.
+            $comisionActualizada = $this->commissionRepository->findById($dto->id);
+            $totalPersistido = (float) ($comisionActualizada->total ?? $recalculatedTotal);
+            $origenFinal = $comisionActualizada->destination->origin ?? $dto->origin;
+            $destinoFinal = $comisionActualizada->destination->destination ?? $dto->destination;
+
+            $this->updateCurrentAccountTransaction($dto->id, $totalPersistido, $origenFinal, $destinoFinal, $dto->clientId);
 
             // Obtener el tipo de comisión antes de procesar el estado
             $commissionType = $existingCommission->type;
@@ -222,7 +238,7 @@ readonly class UpdateCommissionUseCase
             reference: $reference,
             transactionDate: $dto->date->format('Y-m-d'),
             paymentMethod: null,
-            observations: "Comisión registrada a cuenta corriente como saldo deudor",
+            observations: 'Comisión registrada a cuenta corriente como saldo deudor',
             userId: Auth::id(),
         );
 
@@ -267,7 +283,7 @@ readonly class UpdateCommissionUseCase
      * Recalcula los precios de los items cuando faltan valores (unit_price o subtotal = 0)
      * Esto ocurre cuando la actualización viene desde la app de cadetes que no tiene acceso a los precios
      */
-    private function recalculateItemsPrices(?array $items, \App\Shared\Models\Destination $destination, ?int $customerId = null): ?array
+    private function recalculateItemsPrices(?array $items, \App\Shared\Models\Destination $destination, ?int $customerId = null, bool $cambioDestino = false): ?array
     {
         if ($items === null || empty($items)) {
             return $items;
@@ -283,8 +299,10 @@ readonly class UpdateCommissionUseCase
             $unitPrice = $item->unitPrice;
             $subtotal = $item->subtotal;
 
-            // Si unit_price o subtotal son 0 o nulos, recalcular usando los precios del destination
-            if ($unitPrice <= 0 || $subtotal <= 0) {
+            // Se recalcula si el precio no vino (app de cadetes) o si cambió el
+            // recorrido, porque en ese caso el precio que trae el formulario es el de
+            // la tarifa vieja.
+            if ($unitPrice <= 0 || $subtotal <= 0 || $cambioDestino) {
                 // Solo recalcular si el item tiene tamaño (ORDINARIA)
                 if ($item->size !== null) {
                     // Determinar el precio unitario según el tamaño y la tarifa resuelta,
