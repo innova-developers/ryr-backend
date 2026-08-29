@@ -20,9 +20,7 @@ use Illuminate\Support\Facades\DB;
  */
 class CustomerRateController extends Controller
 {
-    public function __construct(private readonly CustomerRateResolver $resolver)
-    {
-    }
+    public function __construct(private readonly CustomerRateResolver $resolver) {}
 
     public function index(int $customerId): JsonResponse
     {
@@ -69,8 +67,8 @@ class CustomerRateController extends Controller
                 'fixed_price' => $validated['fixed_price'] ?? null,
                 'small_bulk_price' => $validated['small_bulk_price'] ?? null,
                 'large_bulk_price' => $validated['large_bulk_price'] ?? null,
-                'agreement_price' => $validated['agreement_price'] ?? null,
-                'declared_value_percentage' => $validated['declared_value_percentage'] ?? null,
+                'agreement_price' => $this->importeONull($validated['agreement_price'] ?? null),
+                'declared_value_percentage' => $this->importeONull($validated['declared_value_percentage'] ?? null),
                 'is_active' => $validated['is_active'] ?? true,
                 'notes' => $validated['notes'] ?? null,
             ]);
@@ -99,8 +97,8 @@ class CustomerRateController extends Controller
                 'fixed_price' => $validated['fixed_price'] ?? null,
                 'small_bulk_price' => $validated['small_bulk_price'] ?? null,
                 'large_bulk_price' => $validated['large_bulk_price'] ?? null,
-                'agreement_price' => $validated['agreement_price'] ?? null,
-                'declared_value_percentage' => $validated['declared_value_percentage'] ?? null,
+                'agreement_price' => $this->importeONull($validated['agreement_price'] ?? null),
+                'declared_value_percentage' => $this->importeONull($validated['declared_value_percentage'] ?? null),
                 'is_active' => $validated['is_active'] ?? true,
                 'notes' => $validated['notes'] ?? null,
             ]);
@@ -179,8 +177,19 @@ class CustomerRateController extends Controller
     }
 
     /**
-     * @param array<int, array<string, mixed>> $tiers
+     * @param  array<int, array<string, mixed>>  $tiers
      */
+    /**
+     * RC-515: el formulario manda 0 cuando el campo queda vacío, y para el precio de
+     * acuerdo y el porcentaje sobre valor declarado un 0 no es un valor cargado sino
+     * la ausencia de valor. Guardarlo como 0 hacía que el acuerdo cerrara el total de
+     * la comisión en $0.
+     */
+    private function importeONull(mixed $valor): ?float
+    {
+        return ($valor !== null && $valor !== '' && (float) $valor > 0) ? (float) $valor : null;
+    }
+
     private function syncTiers(CustomerRate $rate, array $tiers): void
     {
         $rate->tiers()->delete();

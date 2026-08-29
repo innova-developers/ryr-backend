@@ -30,10 +30,15 @@ use Illuminate\Validation\Rule;
 class CommissionController extends Controller
 {
     private CommissionsRepository $repository;
+
     private CustomerRepository $customerRepository;
+
     private DestinationRepository $destinationRepository;
+
     private CurrentAccountRepository $currentAccountRepository;
+
     private FcmNotificationService $fcmNotificationService;
+
     private WhatsAppService $whatsAppService;
 
     public function __construct()
@@ -248,10 +253,13 @@ class CommissionController extends Controller
             ], 404);
         }
     }
+
     public function destroy(int $id): JsonResponse
     {
         try {
-            $useCase = new DeleteCommissionUseCase($this->repository);
+            // Se resuelve por el contenedor: el use case necesita también el
+            // repositorio de cuenta corriente para dar de baja el débito (RC-512).
+            $useCase = app(DeleteCommissionUseCase::class);
             $useCase($id);
 
             return response()->json(['message' => 'Comisión eliminada correctamente']);
