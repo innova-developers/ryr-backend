@@ -5,6 +5,7 @@ namespace Tests\Feature\Commissions;
 use App\Shared\Enums\CommissionItemSize;
 use App\Shared\Enums\CommissionItemType;
 use App\Shared\Enums\CommissionStatus;
+use App\Shared\Enums\PaymentMethod;
 use App\Shared\Models\Branch;
 use App\Shared\Models\Commission;
 use App\Shared\Models\Customer;
@@ -19,10 +20,15 @@ class CommissionTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Customer $customer;
+
     private Destination $destination;
+
     private Branch $branch;
+
     private Location $originLocation;
+
     private Location $destinationLocation;
 
     protected function setUp(): void
@@ -460,6 +466,12 @@ class CommissionTest extends TestCase
             'origin_location_id' => $this->originLocation->id,
             'destination_location_id' => $this->destinationLocation->id,
             'notes' => 'Notas originales',
+            // El método de pago de la factory es aleatorio, y con TRANSFERENCIA el
+            // servicio de IVA agrega su propia línea a las notas (RC-491 hizo que
+            // editar recalcule el IVA). Este test compara las notas exactas, así que
+            // se fija un método que no dispara IVA en vez de depender del azar: si no,
+            // pasa o falla según qué otros tests hayan consumido el faker antes.
+            'payment_method' => PaymentMethod::EFECTIVO->value,
         ]);
 
         $updateData = [

@@ -56,12 +56,27 @@ class CustomerRateResolver
             'fixed_price' => $rate->fixed_price ?? $general['fixed_price'],
             'small_bulk_price' => $rate->small_bulk_price ?? $general['small_bulk_price'],
             'large_bulk_price' => $rate->large_bulk_price ?? $general['large_bulk_price'],
-            'agreement_price' => $rate->agreement_price,
-            'declared_value_percentage' => $rate->declared_value_percentage,
+            // RC-515: un precio de acuerdo en 0 no es un acuerdo, es el campo vacío.
+            // La pantalla lo guardaba como 0.00 en vez de NULL y, como el acuerdo cierra
+            // el total ignorando base y bultos, la comisión salía en $0. En producción
+            // pasó con 4 tarifas y 11 comisiones facturadas en cero.
+            'agreement_price' => $this->soloSiPositivo($rate->agreement_price),
+            'declared_value_percentage' => $this->soloSiPositivo($rate->declared_value_percentage),
             'source' => $rate->destination_id ? 'cliente_destino' : 'cliente_general',
             'customer_rate_id' => $rate->id,
             'tiers' => $rate->tiers,
         ];
+    }
+
+    /**
+     * Devuelve el valor sólo si es un importe cargado de verdad.
+     *
+     * El 0 y el NULL significan lo mismo acá —"no hay acuerdo", "no se cobra
+     * porcentaje"—, pero el 0 hacía que el acuerdo se considerara presente.
+     */
+    private function soloSiPositivo(mixed $valor): ?float
+    {
+        return ($valor !== null && (float) $valor > 0) ? (float) $valor : null;
     }
 
     /**
@@ -74,7 +89,7 @@ class CustomerRateResolver
             ->where('is_active', true)
             ->where(function ($q) use ($destinationId) {
                 $q->where('destination_id', $destinationId)
-                  ->orWhereNull('destination_id');
+                    ->orWhereNull('destination_id');
             })
             // destination_id no nulo primero: en MySQL y SQLite, ORDER BY sobre la
             // expresión booleana pone el 0 (no nulo) antes que el 1 (nulo).
@@ -85,7 +100,7 @@ class CustomerRateResolver
     /**
      * Precio unitario de un bulto, aplicando el escalón por cantidad si corresponde.
      *
-     * @param array<string, mixed> $resolved Resultado de resolve()
+     * @param  array<string, mixed>  $resolved  Resultado de resolve()
      */
     public function unitPriceFor(array $resolved, ?string $size, int $quantity): float
     {
@@ -118,12 +133,12 @@ class CustomerRateResolver
      * Con precio de acuerdo, ese valor cierra la comisión y no se suman ni la base ni
      * los bultos. El porcentaje sobre valor declarado siempre se agrega al final.
      *
-     * @param array<string, mixed> $resolved
-     * @param array<int, array{size: ?string, quantity: int, subtotal: float}> $items
+     * @param  array<string, mixed>  $resolved
+     * @param  array<int, array{size: ?string, quantity: int, subtotal: float}>  $items
      */
     public function totalFor(array $resolved, array $items, float $declaredValue = 0.0): float
     {
-        if ($resolved['agreement_price'] !== null) {
+        if (($resolved['agreement_price'] ?? null) !== null && (float) $resolved['agreement_price'] > 0) {
             $total = (float) $resolved['agreement_price'];
         } else {
             $itemsTotal = 0.0;

@@ -28,15 +28,14 @@ class UpdateCommissionStatusUseCase
         private readonly CommissionNotificationService $notificationService,
         private readonly NotificationService $pushNotificationService,
         private readonly FcmNotificationService $fcmNotificationService
-    ) {
-    }
+    ) {}
 
     /**
      * @throws \Exception
      */
     public function __invoke(int $id, CommissionStatus $status, ?string $details = null, bool $aCuenta = false): void
     {
-        DB::transaction(function () use ($id, $status, $details, $aCuenta) {
+        DB::transaction(function () use ($id, $status, $details) {
             try {
                 $commission = $this->commissionsRepository->findById($id);
                 $previousStatus = $commission->status;
@@ -94,6 +93,15 @@ class UpdateCommissionStatusUseCase
                         $this->createCurrentAccountTransaction($commission);
                     }
 
+                    // RC-512/RC-516: sólo había rama de alta. Al retroceder desde
+                    // PAGO_VALIDACION el débito quedaba vivo y el cliente seguía
+                    // debiendo una comisión que ya no estaba facturada. Es el mismo
+                    // agujero que el del borrado, por la otra puerta.
+                    if ($previousStatus === CommissionStatus::PAGO_VALIDACION
+                        && $status !== CommissionStatus::PAGO_VALIDACION) {
+                        $this->deleteCurrentAccountTransaction($id);
+                    }
+
                     // Crear log del cambio de estado
                     $dto = new CreateCommissionLogDTO(
                         commissionId: $id,
@@ -129,7 +137,7 @@ class UpdateCommissionStatusUseCase
                 // Si PAGO_CONFIRMADO y tiene franchise, crear receivable para matriz
                 if ($finalStatus === CommissionStatus::PAGO_CONFIRMADO && $commission->franchise_id) {
                     try {
-                        $matrixService = new MatrixCommissionService();
+                        $matrixService = new MatrixCommissionService;
                         $matrixService->createReceivableForCommission($commission);
                     } catch (\Exception $e) {
                         Log::error('Error creando receivable de matriz', [
@@ -171,6 +179,31 @@ class UpdateCommissionStatusUseCase
     }
 
     /**
+     * Da de baja el movimiento de cuenta corriente de la comisión.
+     *
+     * Va por el repositorio porque ese camino recalcula los saldos del cliente. El
+     * guard anti-duplicados de createCurrentAccountTransaction() usa exists(), que
+     * respeta el soft delete, así que si la comisión vuelve a avanzar a
+     * PAGO_VALIDACION el movimiento se crea de nuevo sin conflicto.
+     */
+    private function deleteCurrentAccountTransaction(int $commissionId): void
+    {
+        $movimiento = CurrentAccount::where('reference', "COM-{$commissionId}")->first();
+
+        if (! $movimiento) {
+            return;
+        }
+
+        $this->currentAccountRepository->delete($movimiento->id);
+
+        Log::info('Movimiento de cuenta corriente dado de baja por retroceso de estado', [
+            'commission_id' => $commissionId,
+            'current_account_id' => $movimiento->id,
+            'amount' => $movimiento->amount,
+        ]);
+    }
+
+    /**
      * Crea una transacción en cuenta corriente por el monto de la comisión como saldo deudor
      */
     private function createCurrentAccountTransaction($commission): void
@@ -202,7 +235,7 @@ class UpdateCommissionStatusUseCase
             reference: $reference,
             transactionDate: $commission->date->format('Y-m-d'),
             paymentMethod: null,
-            observations: "Comisión registrada a cuenta corriente como saldo deudor",
+            observations: 'Comisión registrada a cuenta corriente como saldo deudor',
             userId: Auth::id() ?? 1, // Usar ID 1 como fallback si no hay usuario autenticado
         );
 
@@ -241,7 +274,7 @@ class UpdateCommissionStatusUseCase
             $logDTO = new CreateCommissionLogDTO(
                 commissionId: $newCommission->id,
                 userId: Auth::id() ?? 1, // Usar ID 1 como fallback si no hay usuario autenticado
-                previousStatus: "",
+                previousStatus: '',
                 newStatus: CommissionStatus::SOLICITUD_RECIBIDA->value,
                 details: "Comisión creada automáticamente por entrega fallida de comisión #{$originalCommission->id}"
             );
@@ -250,7 +283,7 @@ class UpdateCommissionStatusUseCase
 
         } catch (\Exception $e) {
             // Log el error pero no fallar la transacción principal
-            \Log::error("Error al crear comisión por entrega fallida: " . $e->getMessage());
+            \Log::error('Error al crear comisión por entrega fallida: '.$e->getMessage());
         }
     }
 

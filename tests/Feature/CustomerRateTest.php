@@ -27,8 +27,11 @@ class CustomerRateTest extends TestCase
     use RefreshDatabase;
 
     private CustomerRateResolver $resolver;
+
     private Customer $customer;
+
     private Destination $destination;
+
     private User $admin;
 
     protected function setUp(): void
@@ -192,6 +195,55 @@ class CustomerRateTest extends TestCase
 
         // Ni la base ni los bultos se suman: el acuerdo es el precio final.
         $this->assertEquals(4200, $this->resolver->totalFor($r, [['subtotal' => 99999]]));
+    }
+
+    public function test_agreement_price_in_zero_is_not_an_agreement(): void
+    {
+        // RC-515: la pantalla guardaba 0 cuando el campo quedaba vacío y, como el
+        // acuerdo cierra el total, la comisión salía en $0. En producción salieron
+        // 11 comisiones facturadas en cero por esto.
+        CustomerRate::create([
+            'customer_id' => $this->customer->id,
+            'fixed_price' => 1000,
+            'small_bulk_price' => 2500,
+            'agreement_price' => 0,
+        ]);
+
+        $r = $this->resolver->resolve($this->customer->id, $this->destination);
+
+        $this->assertNull($r['agreement_price']);
+        $this->assertEquals(3500, $this->resolver->totalFor($r, [['subtotal' => 2500]]));
+    }
+
+    public function test_zero_declared_value_percentage_is_not_a_percentage(): void
+    {
+        CustomerRate::create([
+            'customer_id' => $this->customer->id,
+            'declared_value_percentage' => 0,
+        ]);
+
+        $r = $this->resolver->resolve($this->customer->id, $this->destination);
+
+        $this->assertNull($r['declared_value_percentage']);
+        $this->assertEquals(3500, $this->resolver->totalFor($r, [['subtotal' => 2500]], 50000));
+    }
+
+    public function test_creating_a_rate_with_zero_agreement_stores_null(): void
+    {
+        $this->actingAs($this->admin, 'sanctum');
+
+        $this->postJson("/api/admin/customers/{$this->customer->id}/rates", [
+            'fixed_price' => 1000,
+            'small_bulk_price' => 2500,
+            'large_bulk_price' => 2500,
+            'agreement_price' => 0,
+            'declared_value_percentage' => 0,
+        ])->assertStatus(201);
+
+        $rate = CustomerRate::where('customer_id', $this->customer->id)->firstOrFail();
+
+        $this->assertNull($rate->agreement_price);
+        $this->assertNull($rate->declared_value_percentage);
     }
 
     public function test_declared_value_percentage_is_added(): void
