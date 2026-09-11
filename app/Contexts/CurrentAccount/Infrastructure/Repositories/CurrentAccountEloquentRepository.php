@@ -247,19 +247,122 @@ class CurrentAccountEloquentRepository implements CurrentAccountRepository
         // Recalcular todos los balances del cliente porque ahora este crédito afecta el saldo
         $this->recalculateBalances($transaction->customer_id);
 
-        // Verificar si el saldo del cliente quedó en 0 y limpiar internal_user_id si es así
-        // También marcar todas las comisiones del cliente como PAGO_CONFIRMADO
-        $customerBalance = $this->getCustomerBalance($transaction->customer_id);
-        if ($customerBalance == 0) {
-            Customer::where('id', $transaction->customer_id)->update(['internal_user_id' => null]);
-
-            // Marcar solo las comisiones en estado PAGO_VALIDACION como PAGO_CONFIRMADO
-            Commission::where('client_id', $transaction->customer_id)
-                ->where('status', CommissionStatus::PAGO_VALIDACION->value)
-                ->update(['status' => CommissionStatus::PAGO_CONFIRMADO->value]);
-        }
+        $this->settleCustomerIfPaid($transaction->customer_id);
 
         return $transaction->fresh();
+    }
+
+    /**
+     * Cierra las comisiones que los pagos del cliente ya cubrieron.
+     *
+     * RC-522: antes esto vivía sólo dentro de confirmTransaction() y era todo o nada:
+     * exigía saldo exactamente 0 para marcar TODAS las comisiones del cliente como
+     * PAGO_CONFIRMADO. Con eso se caían tres casos reales:
+     *
+     *  - saldo a favor de centavos (0,01) o de pesos ($500): no cerraba nada;
+     *  - pago confirmado ANTES de que la comisión generara su débito —pago adelantado,
+     *    o comisión cargada después—: la regla no se volvía a mirar nunca;
+     *  - pago parcial: el cliente 417 pagó una de sus dos comisiones de $11.500 y las
+     *    dos siguieron figurando en el pool de cobranzas.
+     *
+     * Ahora la imputación es por antigüedad, que es como se cobra: cada pago cancela
+     * las comisiones más viejas que sigan impagas, y la comisión que queda cubierta al
+     * 100% pasa a PAGO_CONFIRMADO. Es el mismo criterio con el que el extracto arma la
+     * cola impaga, así que el pool y la cuenta corriente cuentan la misma historia.
+     *
+     * El pase es en un solo sentido: nunca devuelve una comisión a PAGO_VALIDACION.
+     *
+     * Devuelve cuántas comisiones pasaron a PAGO_CONFIRMADO.
+     */
+    public function settleCustomerIfPaid(int $customerId): int
+    {
+        $movimientos = CurrentAccount::where('customer_id', $customerId)
+            ->where('status', CurrentAccountStatus::OK->value)
+            ->orderBy('transaction_date', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        // Cola de débitos impagos, del más viejo al más nuevo, con lo que les falta
+        // cobrar. Cada crédito se consume contra esa cola; lo que sobra queda a favor
+        // del cliente y cancela los débitos que vengan después —el pago adelantado, o
+        // la comisión que se carga recién al otro día.
+        $pendientes = [];
+        $aFavor = 0.0;
+        $saldo = 0.0;
+
+        foreach ($movimientos as $movimiento) {
+            $monto = (float) $movimiento->amount;
+
+            if ($movimiento->type === 'debit') {
+                $saldo -= $monto;
+
+                $cubierto = min($aFavor, $monto);
+                $aFavor -= $cubierto;
+
+                $pendientes[] = [
+                    'reference' => $movimiento->reference,
+                    'resta' => $monto - $cubierto,
+                ];
+
+                continue;
+            }
+
+            if ($movimiento->type !== 'credit') {
+                continue;
+            }
+
+            $saldo += $monto;
+            $disponible = $monto;
+
+            foreach ($pendientes as $i => $pendiente) {
+                if ($disponible <= 0.005) {
+                    break;
+                }
+
+                $aplicado = min($disponible, $pendiente['resta']);
+                $disponible -= $aplicado;
+                $pendientes[$i]['resta'] -= $aplicado;
+            }
+
+            $aFavor += $disponible;
+        }
+
+        // Tolerancia de medio centavo: son decimales de base, no floats exactos.
+        $referenciasSaldadas = [];
+        foreach ($pendientes as $pendiente) {
+            if ($pendiente['resta'] <= 0.005 && $pendiente['reference']) {
+                $referenciasSaldadas[] = $pendiente['reference'];
+            }
+        }
+
+        // El cliente deja de necesitar cobrador sólo cuando no queda nada impago.
+        if ($saldo >= -0.005) {
+            Customer::where('id', $customerId)->update(['internal_user_id' => null]);
+        }
+
+        $idsSaldados = collect($referenciasSaldadas)
+            ->map(function (string $reference): ?int {
+                if (! str_starts_with($reference, 'COM-')) {
+                    return null;
+                }
+
+                $id = (int) substr($reference, 4);
+
+                return $id > 0 ? $id : null;
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($idsSaldados)) {
+            return 0;
+        }
+
+        return Commission::whereIn('id', $idsSaldados)
+            ->where('client_id', $customerId)
+            ->where('status', CommissionStatus::PAGO_VALIDACION->value)
+            ->update(['status' => CommissionStatus::PAGO_CONFIRMADO->value]);
     }
 
     private function recalculateBalances(int $customerId): void

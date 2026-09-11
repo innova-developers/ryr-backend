@@ -61,7 +61,12 @@ class CollectionPoolController
                 ->selectSub(function ($query) use ($hasStatusColumn) {
                     $subquery = $query->select('balance')
                         ->from('current_accounts')
-                        ->whereColumn('current_accounts.customer_id', 'customers.id');
+                        ->whereColumn('current_accounts.customer_id', 'customers.id')
+                        // RC-522: la subquery es query builder crudo, así que no aplica el
+                        // scope de SoftDeletes del modelo. Sin esto, un movimiento dado de
+                        // baja que quedara último por fecha imponía su balance viejo y el
+                        // cliente seguía figurando con una deuda que ya no existía.
+                        ->whereNull('deleted_at');
 
                     // Solo filtrar por status si la columna existe
                     if ($hasStatusColumn) {
@@ -381,7 +386,12 @@ class CollectionPoolController
                 ->selectSub(function ($query) use ($hasStatusColumn) {
                     $subquery = $query->select('balance')
                         ->from('current_accounts')
-                        ->whereColumn('current_accounts.customer_id', 'customers.id');
+                        ->whereColumn('current_accounts.customer_id', 'customers.id')
+                        // RC-522: la subquery es query builder crudo, así que no aplica el
+                        // scope de SoftDeletes del modelo. Sin esto, un movimiento dado de
+                        // baja que quedara último por fecha imponía su balance viejo y el
+                        // cliente seguía figurando con una deuda que ya no existía.
+                        ->whereNull('deleted_at');
 
                     // Solo filtrar por status si la columna existe
                     if ($hasStatusColumn) {
@@ -574,7 +584,12 @@ class CollectionPoolController
                 ->selectSub(function ($subquery) use ($hasStatusColumn) {
                     $subquery = $subquery->select('balance')
                         ->from('current_accounts')
-                        ->whereColumn('current_accounts.customer_id', 'customers.id');
+                        ->whereColumn('current_accounts.customer_id', 'customers.id')
+                        // RC-522: la subquery es query builder crudo, así que no aplica el
+                        // scope de SoftDeletes del modelo. Sin esto, un movimiento dado de
+                        // baja que quedara último por fecha imponía su balance viejo y el
+                        // cliente seguía figurando con una deuda que ya no existía.
+                        ->whereNull('deleted_at');
 
                     if ($hasStatusColumn) {
                         $subquery->where('status', CurrentAccountStatus::OK->value);
