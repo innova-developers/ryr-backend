@@ -45,6 +45,11 @@ class DeleteCommissionUseCase
                 $this->deleteCurrentAccountTransaction($id);
 
                 $this->commissionsRepository->delete($id);
+
+                // RC-522: sacar el débito puede dejar al cliente sin deuda. Si pasa, las
+                // comisiones que le quedan en PAGO_VALIDACION ya están cubiertas y tienen
+                // que salir del pool.
+                $this->currentAccountRepository->settleCustomerIfPaid($commission->client_id);
             });
         } catch (\Exception $e) {
             throw new \Exception($e->getMessage());

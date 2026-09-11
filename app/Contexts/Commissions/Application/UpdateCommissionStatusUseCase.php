@@ -100,6 +100,10 @@ class UpdateCommissionStatusUseCase
                     if ($previousStatus === CommissionStatus::PAGO_VALIDACION
                         && $status !== CommissionStatus::PAGO_VALIDACION) {
                         $this->deleteCurrentAccountTransaction($id);
+
+                        // RC-522: igual que en el borrado, dar de baja el débito puede dejar
+                        // al cliente saldado.
+                        $this->currentAccountRepository->settleCustomerIfPaid($commission->client_id);
                     }
 
                     // Crear log del cambio de estado
@@ -240,6 +244,11 @@ class UpdateCommissionStatusUseCase
         );
 
         $this->currentAccountRepository->create($currentAccountDTO);
+
+        // RC-522: si el cliente ya tenía saldo a favor, este débito lo consume y no queda
+        // deuda. Sin reevaluar acá, la comisión se quedaba en PAGO_VALIDACION —y en el pool
+        // de cobranzas— aunque el pago ya estuviera registrado y confirmado.
+        $this->currentAccountRepository->settleCustomerIfPaid($commission->client_id);
     }
 
     /**

@@ -175,11 +175,26 @@ class ValidateIdentifierController
                 }
             }
 
-            // Generar token de acceso (puedes usar Sanctum o JWT)
-            $token = null;
-            if ($user) {
-                $token = $user->createToken('customer-token')->plainTextToken;
+            // RC-518: "no funciona el inicio de sesión suponiendo que el código es
+            // correcto; el envío se hace pero no carga". El código llegaba y se validaba
+            // bien, pero la respuesta salía con success: true y token: null cuando el
+            // cliente no tenía usuario de portal, así que el front no tenía con qué
+            // entrar. Sólo 520 de los 3.451 clientes con email tenían usuario: el resto
+            // viene de la migración del sistema viejo, que creó el cliente y no el
+            // usuario. El código verificado ya prueba que es el dueño del identificador,
+            // así que acá se le da de alta el acceso en vez de dejarlo afuera.
+            if (! $user && $customer) {
+                $user = $this->provisionarUsuarioDePortal($customer);
             }
+
+            if (! $user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No pudimos habilitar el acceso al portal. Comunicate con R&R.',
+                ], 422);
+            }
+
+            $token = $user->createToken('customer-token')->plainTextToken;
 
             return response()->json([
                 'success' => true,
@@ -207,5 +222,56 @@ class ValidateIdentifierController
                 'message' => 'Error interno del servidor. Intente nuevamente.',
             ], 500);
         }
+    }
+
+    /**
+     * Da de alta el usuario de portal del cliente que todavía no lo tiene.
+     *
+     * Misma convención de contraseña que usa el alta de clientes desde el admin —DNI
+     * para personas, dígitos del CUIT para empresas— así que un cliente aprovisionado
+     * acá puede después entrar también por usuario y contraseña.
+     */
+    private function provisionarUsuarioDePortal(Customer $customer): ?User
+    {
+        if (! $customer->email) {
+            return null;
+        }
+
+        // Puede existir el usuario con otro rol (un empleado que además es cliente):
+        // en ese caso no se toca, porque el email es único en users.
+        $existente = User::where('email', $customer->email)->first();
+
+        if ($existente) {
+            return $existente->role === \App\Shared\Enums\UserRole::CLIENTE ? $existente : null;
+        }
+
+        $password = $customer->cuit
+            ? (preg_replace('/\D/', '', (string) $customer->cuit) ?: 'empresa')
+            : (string) ($customer->dni ?? '');
+
+        if ($password === '') {
+            $password = \Illuminate\Support\Str::random(12);
+        }
+
+        $user = User::create([
+            'name' => trim(($customer->name ?? '') . ' ' . ($customer->last_name ?? '')) ?: 'Cliente',
+            'email' => $customer->email,
+            'password' => \Illuminate\Support\Facades\Hash::make($password),
+            'role' => \App\Shared\Enums\UserRole::CLIENTE->value,
+            'branch_id' => $customer->branch_id,
+        ]);
+
+        // El portal resuelve el cliente por el email del usuario, pero dejar el vínculo
+        // explícito evita que un cambio de email lo desconecte.
+        if (! $customer->user_id) {
+            $customer->forceFill(['user_id' => $user->id])->save();
+        }
+
+        \Log::info('Usuario de portal creado al verificar el código', [
+            'customer_id' => $customer->id,
+            'user_id' => $user->id,
+        ]);
+
+        return $user;
     }
 }
