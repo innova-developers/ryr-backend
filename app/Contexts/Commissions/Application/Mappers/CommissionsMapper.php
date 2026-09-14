@@ -37,12 +37,17 @@ class CommissionsMapper
                     'created_at' => $commission->created_at,
                     'updated_at' => $commission->updated_at,
                     'client' => [
-                        'id' => $commission->client->id ?? null,
-                        'name' => $commission->client->name . ' ' . $commission->client->last_name,
-                        'email' => $commission->client->email,
+                        'id' => $commission->client?->id,
+                        'name' => trim(($commission->client?->name ?? '') . ' ' . ($commission->client?->last_name ?? '')),
+                        'email' => $commission->client?->email,
                     ],
-                    'origin' => $commission->destination->origin,
-                    'destination' => $commission->destination->destination,
+                    // La relación aplica el scope de SoftDeletes: si dieron de baja el
+                    // destino, devuelve null aunque la fila siga en la tabla. Sin el
+                    // null-safe, una sola comisión así tiraba abajo el listado entero
+                    // —la excepción sube desde adentro del map()— y /admin/sin-cotizar
+                    // respondía 500. El mapper de la ficha individual ya lo protegía.
+                    'origin' => $commission->destination?->origin,
+                    'destination' => $commission->destination?->destination,
                     'origin_location' => [
                         'id' => $commission->originLocation->id ?? null,
                         'name' => $commission->originLocation->name ?? null,
@@ -57,7 +62,9 @@ class CommissionsMapper
                         'origin' => $commission->destinationLocation->origin ?? null,
                         'phone' => $commission->destinationLocation->phone ?? null,
                     ],
-                    'current_branch' => $commission->logs->last()->user->branch->name ?? null,
+                    // `?? null` no cubre el encadenado: si la comisión no tiene logs,
+                    // last() ya devuelve null y leerle ->user vuelve a romper el map().
+                    'current_branch' => $commission->logs?->last()?->user?->branch?->name,
                     'cadete' => $commission->cadete ? [
                         'id' => $commission->cadete->id,
                         'name' => $commission->cadete->name,
@@ -82,7 +89,7 @@ class CommissionsMapper
                         'receiver_name' => $commission->deliverySignature->receiver_name,
                         'receiver_phone' => $commission->deliverySignature->receiver_phone,
                         'notes' => $commission->deliverySignature->notes,
-                        'delivery_timestamp' => $commission->deliverySignature->delivery_timestamp->toISOString(),
+                        'delivery_timestamp' => $commission->deliverySignature->delivery_timestamp?->toISOString(),
                     ] : null,
                 ];
             })->toArray();
