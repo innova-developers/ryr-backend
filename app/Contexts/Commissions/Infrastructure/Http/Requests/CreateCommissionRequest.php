@@ -37,6 +37,8 @@ class CreateCommissionRequest extends FormRequest
             'total' => ['required', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'a_cuenta' => ['nullable', 'boolean'],
+            // RC-531: valor declarado de la mercadería (decimal(14,2) en la base).
+            'declared_value' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
         ];
     }
 
@@ -69,6 +71,9 @@ class CreateCommissionRequest extends FormRequest
             'notes.string' => 'Las notas deben ser texto',
             'notes.max' => 'Las notas no pueden exceder los 1000 caracteres',
             'a_cuenta.boolean' => 'El campo a cuenta debe ser verdadero o falso',
+            'declared_value.numeric' => 'El valor declarado debe ser un número',
+            'declared_value.min' => 'El valor declarado no puede ser negativo',
+            'declared_value.max' => 'El valor declarado es demasiado grande',
         ];
     }
 }

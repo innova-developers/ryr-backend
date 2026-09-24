@@ -40,7 +40,8 @@ class UserController extends Controller
             $request->input('base_salary'),
             $request->input('income_percentage'),
             $request->input('commission_percentage'),
-            $request->input('contract_type')
+            $request->input('contract_type'),
+            $request->input('payment_per_pickup')
         );
         $newUser = $useCase($dto);
 
@@ -67,6 +68,13 @@ class UserController extends Controller
     public function update(EditUserRequest $request, int $id): JsonResponse
     {
         try {
+            // El modal de Empleados no tiene campo de % de ingresos: si el request no
+            // lo trae se conserva el guardado. Antes cada edición lo pisaba con null, y
+            // los 4 cadetes "Fijo + Comisiones" de producción tienen 10/15/50/50 cargado.
+            $incomePercentage = $request->has('income_percentage')
+                ? $request->input('income_percentage')
+                : $this->repository->findById($id)?->income_percentage;
+
             $dto = new UpdateUserDTO(
                 $id,
                 $request->input('name'),
@@ -75,9 +83,10 @@ class UserController extends Controller
                 $request->input('role'),
                 $request->input('branch_id'),
                 $request->input('base_salary'),
-                $request->input('income_percentage'),
+                $incomePercentage,
                 $request->input('commission_percentage'),
-                $request->input('contract_type')
+                $request->input('contract_type'),
+                $request->input('payment_per_pickup')
             );
             $useCase = new UpdateUserUseCase($this->repository);
             $editedUser = $useCase($dto);

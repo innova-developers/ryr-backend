@@ -10,6 +10,7 @@ use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
+use App\Services\CustomerRateResolver;
 use App\Services\FcmNotificationService;
 use App\Services\WhatsAppService;
 use App\Shared\Enums\CommissionStatus;
@@ -44,6 +45,8 @@ readonly class CreateCommissionUseCase
                 $this->validateItems($dto->items);
             }
             $this->validateLocations($dto->originLocationId, $dto->destinationLocationId);
+
+            $dto = $this->aplicarValorDeclarado($dto, $destination);
 
             $commission = $this->commissionRepository->create($dto, $destination->id);
             if ($dto->items !== null && ! empty($dto->items)) {
@@ -122,6 +125,52 @@ readonly class CreateCommissionUseCase
         if (! $destinationLocation) {
             throw new \Exception('La ubicación de destino no existe');
         }
+    }
+
+    /**
+     * RC-531: en el alta el total lo arma el formulario, que no conocía el porcentaje
+     * sobre valor declarado de la tarifa del cliente. Si la comisión declara valor y la
+     * tarifa cobra porcentaje, el total se calcula acá con la misma regla que usa la
+     * edición (CustomerRateResolver::totalFor); en cualquier otro caso se respeta el
+     * total del formulario, como hasta ahora. Con precio de acuerdo el porcentaje no
+     * corre (el acuerdo cierra el total), así que tampoco se toca. El IVA lo agrega
+     * después el repositorio.
+     */
+    private function aplicarValorDeclarado(CreateCommissionDTO $dto, Destination $destination): CreateCommissionDTO
+    {
+        if (($dto->declaredValue ?? 0) <= 0) {
+            return $dto;
+        }
+
+        $resolver = app(CustomerRateResolver::class);
+        $tarifa = $resolver->resolve($dto->clientId, $destination);
+
+        if (! $tarifa['declared_value_percentage'] || $tarifa['agreement_price'] !== null) {
+            return $dto;
+        }
+
+        $total = $resolver->totalFor(
+            $tarifa,
+            array_map(fn ($i) => ['subtotal' => (float) $i->subtotal], $dto->items ?? []),
+            (float) $dto->declaredValue
+        );
+
+        return new CreateCommissionDTO(
+            clientId: $dto->clientId,
+            date: $dto->date,
+            origin: $dto->origin,
+            destination: $dto->destination,
+            status: $dto->status,
+            items: $dto->items,
+            total: $total,
+            originLocationId: $dto->originLocationId,
+            destinationLocationId: $dto->destinationLocationId,
+            notes: $dto->notes,
+            aCuenta: $dto->aCuenta,
+            paymentMethod: $dto->paymentMethod,
+            type: $dto->type,
+            declaredValue: $dto->declaredValue
+        );
     }
 
     /**

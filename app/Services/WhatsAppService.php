@@ -50,17 +50,20 @@ class WhatsAppService
                 'message' => $message,
             ];
 
+            // RC-533: la URL lleva el token de la instancia; se logueaba entera y el
+            // laravel.log de producción quedó con el token en cada envío.
             Log::info('Attempting to send WhatsApp message via GreenAPI', [
                 'phone' => $cleanPhone,
                 'chat_id' => $chatId,
-                'url' => $url,
                 'base_url' => $this->baseUrl,
                 'instance_id' => $this->instanceId,
             ]);
 
             $response = Http::timeout(30)->post($url, $payload);
 
-            $responseData = $response->json();
+            // GreenAPI devuelve el path (con el token) en el cuerpo de los errores.
+            $body = $this->ocultarToken($response->body());
+            $responseData = json_decode($body, true);
             $statusCode = $response->status();
 
             if ($response->successful()) {
@@ -73,23 +76,24 @@ class WhatsAppService
 
                 return true;
             } else {
-                $this->lastError = "HTTP {$statusCode}: " . ($responseData['message'] ?? $response->body());
+                $this->lastError = "HTTP {$statusCode}: " . ($responseData['message'] ?? $body);
                 Log::error('Failed to send WhatsApp message via GreenAPI', [
                     'phone' => $cleanPhone,
                     'chat_id' => $chatId,
                     'response' => $responseData,
                     'status' => $statusCode,
-                    'body' => $response->body(),
+                    'body' => $body,
                 ]);
 
                 return false;
             }
         } catch (\Exception $e) {
-            $this->lastError = $e->getMessage();
+            // Los errores de conexión (cURL 28) incluyen la URL completa en el mensaje.
+            $this->lastError = $this->ocultarToken($e->getMessage());
             Log::error('Exception while sending WhatsApp message via GreenAPI', [
                 'phone' => $phone,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error' => $this->lastError,
+                'trace' => $this->ocultarToken($e->getTraceAsString()),
             ]);
 
             return false;
@@ -128,13 +132,14 @@ class WhatsAppService
                 return true;
             }
 
-            $this->lastError = "HTTP {$response->status()}: " . ($response->json()['message'] ?? $response->body());
-            Log::error('Failed to send WhatsApp file', ['phone' => $cleanPhone, 'response' => $response->json()]);
+            $body = $this->ocultarToken($response->body());
+            $this->lastError = "HTTP {$response->status()}: " . (json_decode($body, true)['message'] ?? $body);
+            Log::error('Failed to send WhatsApp file', ['phone' => $cleanPhone, 'response' => json_decode($body, true)]);
 
             return false;
         } catch (\Exception $e) {
-            $this->lastError = $e->getMessage();
-            Log::error('Exception sending WhatsApp file', ['phone' => $phone, 'error' => $e->getMessage()]);
+            $this->lastError = $this->ocultarToken($e->getMessage());
+            Log::error('Exception sending WhatsApp file', ['phone' => $phone, 'error' => $this->lastError]);
 
             return false;
         }
@@ -168,34 +173,169 @@ class WhatsAppService
                 return true;
             }
 
-            $this->lastError = "HTTP {$response->status()}: " . ($response->json()['message'] ?? $response->body());
-            Log::error('Failed to upload WhatsApp file', ['phone' => $cleanPhone, 'response' => $response->json()]);
+            $body = $this->ocultarToken($response->body());
+            $this->lastError = "HTTP {$response->status()}: " . (json_decode($body, true)['message'] ?? $body);
+            Log::error('Failed to upload WhatsApp file', ['phone' => $cleanPhone, 'response' => json_decode($body, true)]);
 
             return false;
         } catch (\Exception $e) {
-            $this->lastError = $e->getMessage();
-            Log::error('Exception uploading WhatsApp file', ['phone' => $phone, 'error' => $e->getMessage()]);
+            $this->lastError = $this->ocultarToken($e->getMessage());
+            Log::error('Exception uploading WhatsApp file', ['phone' => $phone, 'error' => $this->lastError]);
 
             return false;
         }
     }
 
+    /**
+     * El token va en el path de todas las URLs de GreenAPI. getLastError() termina
+     * guardado en whatsapp_campaign_messages.error_message, así que tampoco puede llevarlo.
+     */
+    private function ocultarToken(string $texto): string
+    {
+        return empty($this->token) ? $texto : str_replace($this->token, '***', $texto);
+    }
+
+    /**
+     * RC-533: arma el celular argentino (549 + 10 dígitos) que GreenAPI espera en el chatId.
+     *
+     * Lo que ya salía así se devuelve igual que siempre, para que ningún número que hoy
+     * sale bien pueda cambiar. Sólo se toca lo que GreenAPI rechazaba con 400: del 15 al
+     * 23/09/2026 fueron 14 envíos, por el 0 de larga distancia ("03401448230" quedaba
+     * 54903401448230) o por dos números en el mismo campo ("03401448659  448756" quedaba
+     * 54903401448659448756).
+     */
     private function cleanPhoneNumber(string $phone): string
     {
-        $cleanPhone = preg_replace('/[^0-9]/', '', $phone);
+        $digitos = preg_replace('/[^0-9]/', '', $phone);
+        $chatId = $this->normalizacionOriginal($digitos);
+        $corregido = ! preg_match('/^549\d{10}$/', $chatId);
+        $marcadoFijo = stripos($phone, 'fijo') !== false;
 
+        if (! $corregido && ! $marcadoFijo) {
+            return $chatId;
+        }
+
+        $numeros = $this->numerosDelCampo($phone);
+
+        if ($corregido) {
+            // Si el cliente marcó alguno como fijo, se usa el que no lo es.
+            $elegido = collect($numeros)->firstWhere('fijo', false) ?? ($numeros[0] ?? null);
+            $chatId = '549' . ($elegido['numero'] ?? $this->numeroNacional($digitos));
+        }
+
+        // Un fijo con formato válido GreenAPI lo acepta (200 e idMessage, como el
+        // 5493401493294 del cliente 3546 en agosto), pero el mensaje no le llega a nadie y
+        // en el log queda como enviado. Antes el 400 era la única pista de estas fichas;
+        // ahora es este aviso, para pedirle un celular al cliente.
+        Log::warning('Teléfono de WhatsApp a revisar en la ficha del cliente', [
+            'telefono_cargado' => $phone,
+            'chat_id' => $chatId . '@c.us',
+            'numeros_completos' => count($numeros),
+            'elegido_marcado_fijo' => (bool) (collect($numeros)->firstWhere('numero', substr($chatId, 3))['fijo'] ?? $marcadoFijo),
+        ]);
+
+        return $chatId;
+    }
+
+    /**
+     * Normalización de siempre, sin cambios: sólo agrega el código de país.
+     */
+    private function normalizacionOriginal(string $digitos): string
+    {
         // Si ya tiene el formato completo 549XXXXXXXXX, devolverlo tal como está
-        if (str_starts_with($cleanPhone, '549')) {
-            return $cleanPhone;
+        if (str_starts_with($digitos, '549')) {
+            return $digitos;
         }
 
         // Si tiene formato 54XXXXXXXXX, agregar el 9 después del 54
-        if (str_starts_with($cleanPhone, '54')) {
-            return '54' . '9' . substr($cleanPhone, 2);
+        if (str_starts_with($digitos, '54')) {
+            return '54' . '9' . substr($digitos, 2);
         }
 
         // Si no tiene código de país, agregar 549 al principio
-        return '549' . $cleanPhone;
+        return '549' . $digitos;
+    }
+
+    /**
+     * Números completos (característica + número) escritos en el campo, en orden, con los
+     * que el cliente etiquetó como fijo. La etiqueta va después del número, como está
+     * cargada en producción: "03401-498809(fijo) 3401-414063 (cel)",
+     * "03401448870fijo//3401408679".
+     *
+     * Los tramos de dígitos se juntan hasta completar un número ("03401 493250 493199"). Si
+     * se pasan de largo, lo anterior era un número sin característica y se descarta
+     * ("448057/3401405160").
+     *
+     * @return list<array{numero: string, fijo: bool}>
+     */
+    private function numerosDelCampo(string $phone): array
+    {
+        // Sin /u: los dígitos son ASCII y así no falla con el UTF-8 inválido de la migración.
+        preg_match_all('/\d+/', $phone, $coincidencias, PREG_OFFSET_CAPTURE);
+        $tramos = $coincidencias[0];
+
+        $numeros = [];
+        $digitos = '';
+        $etiqueta = '';
+
+        foreach ($tramos as $i => [$tramo, $inicio]) {
+            $fin = $inicio + strlen($tramo);
+            $texto = substr($phone, $fin, ($tramos[$i + 1][1] ?? strlen($phone)) - $fin);
+
+            if (strlen($this->numeroNacional($digitos . $tramo)) > 10) {
+                $digitos = '';
+                $etiqueta = '';
+            }
+
+            $digitos .= $tramo;
+            $etiqueta .= $texto;
+            $nacional = $this->numeroNacional($digitos);
+
+            if (strlen($nacional) === 10) {
+                $numeros[] = ['numero' => $nacional, 'fijo' => stripos($etiqueta, 'fijo') !== false];
+            }
+
+            if (strlen($nacional) >= 10) {
+                $digitos = '';
+                $etiqueta = '';
+            }
+        }
+
+        return $numeros;
+    }
+
+    /**
+     * Número nacional (característica + número, 10 dígitos) a partir de cómo lo escribe la
+     * gente: sin el 00 internacional ni el 0 de larga distancia, sin el 54 ni el 9 de
+     * celular, y sin el 15 metido entre la característica y el número ("0342 155099070").
+     * Si no llega a 10 dígitos devuelve lo que quede.
+     */
+    private function numeroNacional(string $digitos): string
+    {
+        $numero = ltrim($digitos, '0');
+
+        if (str_starts_with($numero, '54')) {
+            $numero = substr($numero, 2);
+            if (str_starts_with($numero, '9')) {
+                $numero = substr($numero, 1);
+            }
+            $numero = ltrim($numero, '0');
+        } elseif (strlen($numero) === 11 && str_starts_with($numero, '9')) {
+            // Las características empiezan con 1, 2 o 3: un 9 adelante es el de celular.
+            $numero = substr($numero, 1);
+        }
+
+        // La característica es 11, o de 3 o 4 dígitos que empiezan con 2 o 3.
+        if (strlen($numero) === 12) {
+            $largos = str_starts_with($numero, '11') ? [2] : (preg_match('/^[23]/', $numero) ? [3, 4] : []);
+            foreach ($largos as $largo) {
+                if (substr($numero, $largo, 2) === '15') {
+                    return substr($numero, 0, $largo) . substr($numero, $largo + 2);
+                }
+            }
+        }
+
+        return $numero;
     }
 
 

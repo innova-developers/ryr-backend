@@ -166,6 +166,96 @@ class CurrentAccountStatementTest extends TestCase
         $this->assertSame(2, $detalle['bultos_grandes']);
     }
 
+    /**
+     * RC-521: la comisión #55564 (Nicolás Rodríguez) guarda la descripción de cada
+     * bulto en ítems ORDINARIA: "ES UNA ESCALERA" en 1 grande y "CAJA DE 40X40  + BOLSA"
+     * en 2 chicos. Los PDF de cuenta corriente (scope full) y de resumen de cobranza del
+     * pool (scope pending) arman esos renglones desde este payload, así que el detail
+     * tiene que viajar también en los ítems ordinarios, no sólo en los adicionales.
+     */
+    public function test_el_detail_de_los_items_ordinarios_viaja_en_el_extracto_de_los_dos_pdf(): void
+    {
+        $commission = Commission::factory()->create([
+            'client_id' => $this->customer->id,
+            'destination_id' => Destination::factory()->create()->id,
+            'branch_id' => Branch::factory()->create()->id,
+            'user_id' => $this->admin->id,
+            'type' => 'EXTRAORDINARIA',
+            'notes' => "RETIRAR PEDIDO\nIVA (21%) aplicado automáticamente: \$2310.00\nIVA (21%) aplicado automáticamente: \$3570.00",
+            'total' => 20570,
+            'date' => '2026-09-15',
+        ]);
+        CommissionItem::factory()->create([
+            'commission_id' => $commission->id,
+            'type' => 'ORDINARIA',
+            'size' => 'GRANDE',
+            'quantity' => 1,
+            'unit_price' => 6000,
+            'subtotal' => 6000,
+            'detail' => 'ES UNA ESCALERA',
+        ]);
+        CommissionItem::factory()->create([
+            'commission_id' => $commission->id,
+            'type' => 'ORDINARIA',
+            'size' => 'CHICO',
+            'quantity' => 2,
+            'unit_price' => 3000,
+            'subtotal' => 6000,
+            'detail' => 'CAJA DE 40X40  + BOLSA',
+        ]);
+
+        $this->movimiento('debit', 20570, '2026-09-15', "COM-{$commission->id}");
+
+        foreach (['full', 'pending'] as $scope) {
+            $detalle = $this->statement(['scope' => $scope])['movements'][0]['commission'];
+
+            $this->assertSame($commission->id, $detalle['id'], "scope={$scope}");
+            $this->assertSame(1, $detalle['bultos_grandes'], "scope={$scope}");
+            $this->assertSame(2, $detalle['bultos_chicos'], "scope={$scope}");
+            $this->assertStringStartsWith('RETIRAR PEDIDO', $detalle['notes'], "scope={$scope}");
+            $this->assertEquals([
+                ['type' => 'ORDINARIA', 'size' => 'GRANDE', 'quantity' => 1, 'detail' => 'ES UNA ESCALERA', 'subtotal' => 6000],
+                ['type' => 'ORDINARIA', 'size' => 'CHICO', 'quantity' => 2, 'detail' => 'CAJA DE 40X40  + BOLSA', 'subtotal' => 6000],
+            ], $detalle['items'], "scope={$scope}");
+        }
+    }
+
+    /**
+     * Regresión RC-521: el adicional sin tamaño sigue viajando con su detail e importe,
+     * que es lo que el PDF imprime como "+ SE ENTREGO UN FREEZER: $ 30.000,00" (#44869).
+     */
+    public function test_el_item_extraordinario_sigue_viajando_con_detail_e_importe(): void
+    {
+        $commission = Commission::factory()->create([
+            'client_id' => $this->customer->id,
+            'destination_id' => Destination::factory()->create()->id,
+            'branch_id' => Branch::factory()->create()->id,
+            'user_id' => $this->admin->id,
+            'total' => 30000,
+            'date' => '2026-08-01',
+        ]);
+        CommissionItem::factory()->create([
+            'commission_id' => $commission->id,
+            'type' => 'EXTRAORDINARIA',
+            'size' => null,
+            'quantity' => 1,
+            'unit_price' => 30000,
+            'subtotal' => 30000,
+            'detail' => 'SE ENTREGO UN FREEZER',
+        ]);
+
+        $this->movimiento('debit', 30000, '2026-08-01', "COM-{$commission->id}");
+
+        $detalle = $this->statement()['movements'][0]['commission'];
+
+        $this->assertEquals([
+            ['type' => 'EXTRAORDINARIA', 'size' => null, 'quantity' => 1, 'detail' => 'SE ENTREGO UN FREEZER', 'subtotal' => 30000],
+        ], $detalle['items']);
+        // Sin tamaño no suma a las columnas G/C del PDF.
+        $this->assertSame(0, $detalle['bultos_grandes']);
+        $this->assertSame(0, $detalle['bultos_chicos']);
+    }
+
     public function test_movement_without_commission_has_null_detail(): void
     {
         $this->movimiento('credit', 5000, '2026-08-01', 'PAGO-123');

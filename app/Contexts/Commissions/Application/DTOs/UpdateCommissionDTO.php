@@ -23,7 +23,10 @@ class UpdateCommissionDTO
         public readonly ?string $notes = null,
         public readonly bool $aCuenta = false,
         public readonly ?PaymentMethod $paymentMethod = null,
-        public readonly ?CommissionType $type = null
+        public readonly ?CommissionType $type = null,
+        // RC-531: valor declarado de la mercadería. Sólo mueve el total si la tarifa
+        // del cliente tiene porcentaje sobre valor declarado.
+        public readonly ?float $declaredValue = null
     ) {
     }
 
@@ -46,7 +49,8 @@ class UpdateCommissionDTO
             notes: $data['notes'] ?? null,
             aCuenta: $data['a_cuenta'] ?? false,
             paymentMethod: isset($data['payment_method']) ? PaymentMethod::from($data['payment_method']) : null,
-            type: isset($data['type']) ? CommissionType::from($data['type']) : null
+            type: isset($data['type']) ? CommissionType::from($data['type']) : null,
+            declaredValue: isset($data['declared_value']) && $data['declared_value'] !== '' ? (float) $data['declared_value'] : null
         );
     }
 
@@ -67,6 +71,7 @@ class UpdateCommissionDTO
             'a_cuenta' => $this->aCuenta,
             'payment_method' => $this->paymentMethod?->value,
             'type' => $this->type?->value,
+            'declared_value' => $this->declaredValue,
         ];
     }
 }

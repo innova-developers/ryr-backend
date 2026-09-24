@@ -23,7 +23,11 @@ class CommissionFactory extends Factory
             'destination_location_id' => Location::factory(),
             'date' => $this->faker->dateTimeBetween('-1 year', 'now')->format('Y-m-d'),
             'status' => $this->faker->randomElement([CommissionStatus::SOLICITUD_RECIBIDA->value, CommissionStatus::ENTREGADO->value, CommissionStatus::EN_PROCESO_ENTREGA->value]),
-            'payment_method' => $this->faker->optional(0.7)->randomElement(PaymentMethod::cases()),
+            // Fijo y no al azar: con TRANSFERENCIA, el cliente de CustomerFactory (IVA "auto")
+            // suma el 21% y cualquier test que compare un total exacto fallaba 1 de cada 4
+            // o 5 corridas. Hubo que parchar tests de a uno (sprint-3 y sprint-5) hasta
+            // encontrar la raíz. El test que necesite otro método lo pasa explícito.
+            'payment_method' => PaymentMethod::EFECTIVO,
             'total' => $this->faker->randomFloat(2, 100, 10000),
             'cadete_id' => null, // Por defecto sin cadete asignado
             'created_at' => now(),

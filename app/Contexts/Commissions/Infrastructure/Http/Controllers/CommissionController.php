@@ -127,6 +127,11 @@ class CommissionController extends Controller
                 'notes' => $validatedData['notes'] ?? $existingCommission->notes,
                 'a_cuenta' => $validatedData['a_cuenta'] ?? false,
                 'type' => $validatedData['type'] ?? $existingCommission->type->value,
+                // RC-531: la app de cadetes edita los ítems sin mandar el valor declarado.
+                // Si no viene la clave se conserva el guardado; si viene vacía, se borra.
+                'declared_value' => array_key_exists('declared_value', $validatedData)
+                    ? $validatedData['declared_value']
+                    : $existingCommission->declared_value,
             ];
 
             $dto = UpdateCommissionDTO::fromArray($data);

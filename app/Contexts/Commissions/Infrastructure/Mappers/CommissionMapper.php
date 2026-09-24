@@ -21,6 +21,7 @@ class CommissionMapper
             'total' => $commission->total,
             'iva_amount' => $commission->iva_amount,
             'iva_applied' => $commission->iva_applied,
+            'declared_value' => $commission->declared_value,
             'notes' => $commission->notes,
             'origin_location_id' => $commission->origin_location_id,
             'destination_location_id' => $commission->destination_location_id,

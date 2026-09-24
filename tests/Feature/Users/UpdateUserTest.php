@@ -76,7 +76,9 @@ class UpdateUserTest extends TestCase
             'base_salary' => 4000.00,
             'income_percentage' => 12.50,
             'commission_percentage' => 10.00,
-            'contract_type' => 'commission_based',
+            // commission_based ya no existe desde la migración 2026_05_11_124500 y ahora
+            // la validación lo rechaza con 422 antes de llegar a buscar el usuario (RC-532).
+            'contract_type' => 'fixed_plus_commission',
         ]);
 
         $response->assertStatus(404)

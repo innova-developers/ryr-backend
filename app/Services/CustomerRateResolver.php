@@ -131,7 +131,14 @@ class CustomerRateResolver
      * Total de la comisión según la tarifa resuelta.
      *
      * Con precio de acuerdo, ese valor cierra la comisión y no se suman ni la base ni
-     * los bultos. El porcentaje sobre valor declarado siempre se agrega al final.
+     * los bultos, ni tampoco el porcentaje sobre valor declarado.
+     *
+     * RC-531: hasta esta card el valor declarado nunca llegaba acá (siempre 0), así que
+     * en la práctica el acuerdo cerraba el total también frente al porcentaje, y es lo
+     * que dice la pantalla de tarifas ("cierra el total de la comisión"). Se mantiene
+     * así. Sin acuerdo, el porcentaje se SUMA a base + bultos (no los reemplaza): una
+     * tarifa que quiere cobrar sólo el porcentaje carga base y bultos en 0, como VETARO;
+     * si los deja vacíos, caen a la tabla general y se suman.
      *
      * @param  array<string, mixed>  $resolved
      * @param  array<int, array{size: ?string, quantity: int, subtotal: float}>  $items
@@ -139,14 +146,14 @@ class CustomerRateResolver
     public function totalFor(array $resolved, array $items, float $declaredValue = 0.0): float
     {
         if (($resolved['agreement_price'] ?? null) !== null && (float) $resolved['agreement_price'] > 0) {
-            $total = (float) $resolved['agreement_price'];
-        } else {
-            $itemsTotal = 0.0;
-            foreach ($items as $item) {
-                $itemsTotal += (float) ($item['subtotal'] ?? 0);
-            }
-            $total = (float) $resolved['fixed_price'] + $itemsTotal;
+            return round((float) $resolved['agreement_price'], 2);
         }
+
+        $itemsTotal = 0.0;
+        foreach ($items as $item) {
+            $itemsTotal += (float) ($item['subtotal'] ?? 0);
+        }
+        $total = (float) $resolved['fixed_price'] + $itemsTotal;
 
         if ($resolved['declared_value_percentage'] && $declaredValue > 0) {
             $total += round($declaredValue * ((float) $resolved['declared_value_percentage'] / 100), 2);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Services\CustomerPortalUserService;
 use App\Services\VerificationCodeService;
 use App\Shared\Models\Customer;
 use App\Shared\Models\User;
@@ -12,11 +13,23 @@ use Illuminate\Support\Facades\Validator;
 class ValidateIdentifierController
 {
     private VerificationCodeService $verificationService;
+    private CustomerPortalUserService $portalUsers;
 
-    public function __construct(VerificationCodeService $verificationService)
+    public function __construct(VerificationCodeService $verificationService, CustomerPortalUserService $portalUsers)
     {
         $this->verificationService = $verificationService;
+        $this->portalUsers = $portalUsers;
     }
+
+    /**
+     * RC-518 (devuelta por QA el 16/09): NICOLAS RODRIGUEZ entraba con su email real,
+     * nicolasrg27@gmail.com, y el portal "no cargaba". Ese email era de "test nico",
+     * un usuario de prueba cuyo cliente se borró en febrero: verify-code respondía
+     * success con customer: null, el front guardaba webCustomer = "null" y el
+     * dashboard lo rebotaba a la landing como sesión inválida. Un usuario de portal
+     * sin cliente vivo no tiene nada que ver, así que se lo frena con un mensaje.
+     */
+    private const SIN_CLIENTE_ACTIVO = 'Este email no está asociado a ningún cliente activo de R&R. Comunicate con nosotros para actualizar tus datos.';
 
     public function validateIdentifier(Request $request): JsonResponse
     {
@@ -61,6 +74,20 @@ class ValidateIdentifierController
                     'exists' => false,
                     'message' => 'Cliente no encontrado. Debe registrarse.',
                     'requires_registration' => true,
+                ], 200);
+            }
+
+            if (! $customer && $user) {
+                $customer = $this->portalUsers->customerOf($user);
+            }
+
+            // No mandar un código que después no lleva a ningún lado.
+            if (! $customer) {
+                return response()->json([
+                    'success' => false,
+                    'exists' => true,
+                    'requires_registration' => false,
+                    'message' => self::SIN_CLIENTE_ACTIVO,
                 ], 200);
             }
 
@@ -168,11 +195,20 @@ class ValidateIdentifierController
                 $user = User::where('email', $identifier)->where('role', 'cliente')->first();
             } else {
                 $customer = Customer::where('phone', $identifier)->first();
-                // Para teléfono, buscar usuario por el email del cliente
-                $user = null;
-                if ($customer && $customer->email) {
-                    $user = User::where('email', $customer->email)->where('role', 'cliente')->first();
-                }
+                // Para teléfono, el usuario de portal del cliente: por su email o, si no,
+                // por customers.user_id.
+                $user = $customer ? $this->portalUsers->portalUserOf($customer) : null;
+            }
+
+            if (! $customer && $user) {
+                $customer = $this->portalUsers->customerOf($user);
+            }
+
+            if (! $customer) {
+                return response()->json([
+                    'success' => false,
+                    'message' => self::SIN_CLIENTE_ACTIVO,
+                ], 422);
             }
 
             // RC-518: "no funciona el inicio de sesión suponiendo que el código es
@@ -183,7 +219,7 @@ class ValidateIdentifierController
             // viene de la migración del sistema viejo, que creó el cliente y no el
             // usuario. El código verificado ya prueba que es el dueño del identificador,
             // así que acá se le da de alta el acceso en vez de dejarlo afuera.
-            if (! $user && $customer) {
+            if (! $user) {
                 $user = $this->provisionarUsuarioDePortal($customer);
             }
 
@@ -254,7 +290,7 @@ class ValidateIdentifierController
         }
 
         $user = User::create([
-            'name' => trim(($customer->name ?? '') . ' ' . ($customer->last_name ?? '')) ?: 'Cliente',
+            'name' => $this->portalUsers->portalName($customer),
             'email' => $customer->email,
             'password' => \Illuminate\Support\Facades\Hash::make($password),
             'role' => \App\Shared\Enums\UserRole::CLIENTE->value,
@@ -262,10 +298,11 @@ class ValidateIdentifierController
         ]);
 
         // El portal resuelve el cliente por el email del usuario, pero dejar el vínculo
-        // explícito evita que un cambio de email lo desconecte.
-        if (! $customer->user_id) {
-            $customer->forceFill(['user_id' => $user->id])->save();
-        }
+        // explícito evita que un cambio de email lo desconecte. Antes sólo se vinculaba
+        // si user_id estaba vacío, y en los clientes migrados apunta al administrador
+        // (así quedó AGROSUM, customer 107, al aprovisionarse el 11/09): se vincula
+        // siempre, porque acá se llega sólo si el cliente no tenía usuario de portal.
+        $this->portalUsers->link($customer, $user);
 
         \Log::info('Usuario de portal creado al verificar el código', [
             'customer_id' => $customer->id,

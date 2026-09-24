@@ -147,34 +147,50 @@ class CustomerController extends Controller
             }
 
             $useCase = new UpdateCustomerUseCase($this->repository, $this->locationsRepository, $this->destinationRepository);
-            // Si el usuario no tiene branch_id (super admin), establecer en 1
-            $branchId = $user->branch_id ?? 1;
+
+            // RC-543: el update trataba todo campo ausente como si lo hubieran vaciado. El
+            // Pool de Cobranzas asigna el cobrador mandando sólo los datos básicos, y cada
+            // asignación le apagaba el premium al cliente, le prendía el IVA automático, lo
+            // movía a la sucursal del cobrador y le borraba CUIT, mapa, horarios y
+            // observaciones. El formulario de Clientes tampoco manda premium, mapa, horarios
+            // ni sucursal, así que cualquier edición hacía lo mismo. Ahora un campo que no
+            // viene conserva su valor; uno que viene, aunque sea vacío, se guarda.
+            $campo = fn (string $clave, $actual) => $request->has($clave) ? $request->input($clave) : $actual;
+            $booleano = fn (string $clave, $actual) => $request->has($clave) ? $request->boolean($clave) : (bool) $actual;
+
+            // La sucursal sólo cambia si se manda. La de quien edita queda como respaldo
+            // para el cliente que no tenía ninguna, que era lo que se buscaba al ponerla.
+            $branchId = (int) ($request->filled('branch_id')
+                ? $request->input('branch_id')
+                : ($currentCustomer->branch_id ?? $user->branch_id ?? 1));
 
             // Empresa: se identifica por razón social + CUIT (sin DNI obligatorio).
             $type = $request->input('type', $currentCustomer->type?->value ?? CustomerType::INDIVIDUAL->value);
             $isCompany = $type === CustomerType::COMPANY->value;
             $razonSocial = $request->input('razon_social', $currentCustomer->razon_social);
-            $name = $isCompany ? $razonSocial : $request->input('name');
-            $lastName = $isCompany ? '' : ($request->input('last_name') ?? '');
-            $dniRaw = $request->input('dni');
+            $name = (string) ($isCompany ? $razonSocial : $campo('name', $currentCustomer->name));
+            $lastName = $isCompany ? '' : ($campo('last_name', $currentCustomer->last_name) ?? '');
+            $dniRaw = $campo('dni', $currentCustomer->dni);
             $dni = ($dniRaw !== null && $dniRaw !== '') ? (int) $dniRaw : null;
 
             $dto = new UpdateCustomerDTO(
                 $id,
                 $dni,
-                $request->input('cuit'),
+                $campo('cuit', $currentCustomer->cuit),
                 $name,
                 $lastName,
-                $request->input('mobile'),
-                $request->input('email'),
-                $request->input('address'),
-                $request->input('city'),
-                $request->input('phone'),
-                $request->input('maps_url'),
-                $request->input('business_hours'),
-                $request->input('observations'),
-                $request->boolean('is_premium', false),
-                $request->boolean('auto_calculate_iva', true),
+                $campo('mobile', $currentCustomer->mobile),
+                // customers.email es NOT NULL: un email vacío o en null conserva el actual
+                // en vez de terminar en un 500.
+                filled($request->input('email')) ? $request->input('email') : $currentCustomer->email,
+                $campo('address', $currentCustomer->address),
+                $campo('city', $currentCustomer->city),
+                $campo('phone', $currentCustomer->phone),
+                $campo('maps_url', $currentCustomer->maps_url),
+                $campo('business_hours', $currentCustomer->business_hours),
+                $campo('observations', $currentCustomer->observations),
+                $booleano('is_premium', $currentCustomer->is_premium),
+                $booleano('auto_calculate_iva', $currentCustomer->auto_calculate_iva),
                 $request->input('user_id', $currentCustomer->user_id), // Preservar user_id existente si no se proporciona
                 $branchId,
                 $request->input('internal_user_id', $currentCustomer->internal_user_id), // Preservar internal_user_id existente si no se proporciona

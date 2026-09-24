@@ -33,6 +33,8 @@ class CommissionsMapper
                     'total' => $commission->total,
                     'iva_amount' => $commission->iva_amount ?? 0.00,
                     'iva_applied' => $commission->iva_applied ?? false,
+                    // RC-531: lo precarga el modal de edición.
+                    'declared_value' => $commission->declared_value ?? null,
                     'notes' => $commission->notes,
                     'created_at' => $commission->created_at,
                     'updated_at' => $commission->updated_at,
@@ -160,6 +162,7 @@ class CommissionsMapper
                 'total' => $commission->total ?? null,
                 'iva_amount' => $commission->iva_amount ?? 0.00,
                 'iva_applied' => $commission->iva_applied ?? false,
+                'declared_value' => $commission->declared_value ?? null,
                 'items' => optional($commission->items)->map(function ($item) {
                     return [
                         'id' => $item->id ?? null,

@@ -30,6 +30,7 @@ class Commission extends Model
         'total',
         'iva_amount',
         'iva_applied',
+        'declared_value',
         'notes',
         'user_id',
         'origin_location_id',
@@ -48,6 +49,7 @@ class Commission extends Model
         'total' => 'decimal:2',
         'iva_amount' => 'decimal:2',
         'iva_applied' => 'boolean',
+        'declared_value' => 'decimal:2',
     ];
 
     public function client(): BelongsTo

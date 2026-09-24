@@ -24,11 +24,12 @@ class UserEloquentRepository implements UserRepository
             'income_percentage' => $dto->income_percentage,
             'commission_percentage' => $dto->commission_percentage,
             'contract_type' => $dto->contract_type,
+            'payment_per_pickup' => $dto->payment_per_pickup,
         ]);
     }
     public function get(?GetUsersFiltersDTO $filters = null): array
     {
-        $query = User::select('id', 'name', 'email', 'role', 'created_at', 'branch_id', 'base_salary', 'income_percentage', 'commission_percentage', 'contract_type')
+        $query = User::select('id', 'name', 'email', 'role', 'created_at', 'branch_id', 'base_salary', 'income_percentage', 'commission_percentage', 'contract_type', 'payment_per_pickup')
             ->with(['branch:id,name'])
             ->where('role', '!=', 'cliente');
 
@@ -78,6 +79,7 @@ class UserEloquentRepository implements UserRepository
                     'income_percentage' => $user->income_percentage,
                     'commission_percentage' => $user->commission_percentage,
                     'contract_type' => $user->contract_type,
+                    'payment_per_pickup' => $user->payment_per_pickup,
                 ];
             })->toArray();
 
@@ -109,6 +111,7 @@ class UserEloquentRepository implements UserRepository
                     'income_percentage' => $user->income_percentage,
                     'commission_percentage' => $user->commission_percentage,
                     'contract_type' => $user->contract_type,
+                    'payment_per_pickup' => $user->payment_per_pickup,
                 ];
             })
             ->toArray();
@@ -139,6 +142,7 @@ class UserEloquentRepository implements UserRepository
             $user->income_percentage = $dto->income_percentage;
             $user->commission_percentage = $dto->commission_percentage;
             $user->contract_type = $dto->contract_type;
+            $user->payment_per_pickup = $dto->payment_per_pickup;
             $user->save();
 
             return $user;

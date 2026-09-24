@@ -6,12 +6,14 @@ use App\Contexts\Customers\Application\DTO\CreateCustomerDTO;
 use App\Contexts\Customers\Application\DTO\GetCustomersFiltersDTO;
 use App\Contexts\Customers\Application\DTO\UpdateCustomerDTO;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
+use App\Services\CustomerPortalUserService;
 use App\Shared\Enums\CurrentAccountStatus;
 use App\Shared\Enums\UserRole;
 use App\Shared\Models\Customer;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CustomerEloquentRepository implements CustomerRepository
 {
@@ -210,6 +212,8 @@ class CustomerEloquentRepository implements CustomerRepository
 
             // Guardar el email anterior para comparar
             $oldEmail = $customer->email;
+            $emailCambio = strcasecmp((string) $oldEmail, (string) $dto->email) !== 0;
+            $portalUsers = app(CustomerPortalUserService::class);
 
             $customer->dni = $dto->dni;
             $customer->cuit = $dto->cuit;
@@ -231,16 +235,24 @@ class CustomerEloquentRepository implements CustomerRepository
             $customer->user_id = $dto->userId;
             $customer->branch_id = $dto->branchId;
             $customer->internal_user_id = $dto->internalUserId;
-            $customer->save();
 
-            // Si el email cambió, actualizar también el usuario asociado
-            if ($oldEmail !== $dto->email && $customer->user_id) {
-                $user = \App\Shared\Models\User::find($customer->user_id);
-                if ($user && $user->role === \App\Shared\Enums\UserRole::CLIENTE) {
-                    $user->email = $dto->email;
-                    $user->save();
+            // RC-518: cliente y usuario de portal se guardan juntos. Antes el cliente
+            // quedaba grabado con el email nuevo aunque el usuario fallara después por el
+            // índice único de users.email, y el portal quedaba apuntando al email viejo.
+            // Además el usuario sólo se buscaba por user_id, que en los clientes migrados
+            // apunta al administrador: su usuario de portal nunca se enteraba del cambio.
+            DB::transaction(function () use ($customer, $oldEmail, $emailCambio, $portalUsers) {
+                // Si el email se vació no hay nada que liberar ni a quién mover.
+                if ($emailCambio && $customer->email) {
+                    $portalUsers->releaseFromDeleted($customer->email, $customer);
                 }
-            }
+
+                $customer->save();
+
+                if ($emailCambio && $oldEmail && $customer->email) {
+                    $portalUsers->syncAfterEmailChange($customer, $oldEmail);
+                }
+            });
 
             return $customer;
         } catch (ModelNotFoundException $exception) {
@@ -252,6 +264,9 @@ class CustomerEloquentRepository implements CustomerRepository
                 }
                 if (str_contains($exception->getMessage(), 'customers_email_unique')) {
                     throw new \RuntimeException('El email ingresado ya está registrado en otro cliente.');
+                }
+                if (str_contains($exception->getMessage(), 'users_email_unique')) {
+                    throw new \RuntimeException('El email ingresado ya lo usa otro usuario del sistema.');
                 }
 
                 throw new \RuntimeException('Ya existe un cliente con esos datos.');

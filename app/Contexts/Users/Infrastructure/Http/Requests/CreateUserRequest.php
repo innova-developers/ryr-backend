@@ -2,6 +2,7 @@
 
 namespace App\Contexts\Users\Infrastructure\Http\Requests;
 
+use App\Contexts\Users\Infrastructure\Http\Requests\Concerns\ValidatesCompensation;
 use App\Shared\Enums\UserRole;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -10,6 +11,8 @@ use Illuminate\Validation\Rules\Enum;
 
 class CreateUserRequest extends FormRequest
 {
+    use ValidatesCompensation;
+
     public function authorize(): bool
     {
         return true;
@@ -25,11 +28,13 @@ class CreateUserRequest extends FormRequest
             'password' => ['required', 'string', 'min:8'],
             'role' => ['required', new Enum(UserRole::class)],
             'branch_id' => ['required', 'exists:branches,id'],
-            'base_salary' => ['nullable', 'numeric', 'min:0', 'max:9999999.99'],
-            'income_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'commission_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'contract_type' => ['required', 'in:fixed_salary,commission_based'],
+            ...$this->compensationRules(),
         ];
+    }
+
+    public function messages(): array
+    {
+        return $this->compensationMessages();
     }
 
     protected function failedValidation(Validator $validator)
@@ -37,6 +42,8 @@ class CreateUserRequest extends FormRequest
         throw new HttpResponseException(
             response()->json([
                 'message' => 'Datos inválidos: ' . implode(', ', $validator->errors()->all()),
+                // Detalle por campo para que el modal de Empleados marque cada input.
+                'errors' => $validator->errors(),
             ], 422)
         );
     }

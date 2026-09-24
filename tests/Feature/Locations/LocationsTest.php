@@ -3,12 +3,21 @@
 namespace Tests\Feature\Locations;
 
 use App\Shared\Models\Location;
+use App\Shared\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class LocationsTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Alta, edición y baja de locaciones ahora exigen sesión de personal del sistema.
+        $this->actingAs(User::factory()->create(['role' => 'administrador']), 'sanctum');
+    }
 
     public function test_can_list_locations(): void
     {

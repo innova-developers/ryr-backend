@@ -32,15 +32,25 @@ Route::post('/validate-identifier', [App\Http\Controllers\Auth\ValidateIdentifie
 Route::post('/verify-code', [App\Http\Controllers\Auth\ValidateIdentifierController::class, 'verifyCode']);
 
 // Rutas de destinos
+// Las lecturas quedan públicas: el cotizador de la landing (LandingQuoteForm) consulta
+// orígenes, destinos y tarifas sin sesión.
 Route::get('destinations', [DestinationController::class, 'index']);
-Route::post('destinations', [DestinationController::class, 'store']);
 Route::get('destinations/rates/{origin}/{destination}', [DestinationController::class, 'rates']);
 Route::middleware(['auth:sanctum', 'isAdmin'])->post('destinations/bulk-price-adjust', [DestinationController::class, 'bulkAdjustPrices']);
 Route::get('/origins', [DestinationController::class, 'origins']);
 Route::get('/destinations/origin/{origin}', [DestinationController::class, 'destinations']);
 Route::get('destinations/{id}', [DestinationController::class, 'show']);
-Route::put('destinations/{id}', [DestinationController::class, 'update']);
-Route::delete('destinations/{id}', [DestinationController::class, 'destroy']);
+
+// Las escrituras no tenían ningún middleware: cualquiera, sin loguearse, podía crear,
+// cambiar precios o borrar destinos. Se cierran al personal del sistema —el mismo grupo
+// que ya usa el resto del admin—, así mostradores y cobradores siguen cargando destinos
+// desde Nueva Comisión y Nuevo Presupuesto, y quedan afuera los anónimos y los clientes
+// del portal, que también tienen token de Sanctum.
+Route::middleware(['auth:sanctum', 'adminOrCadete'])->group(function () {
+    Route::post('destinations', [DestinationController::class, 'store']);
+    Route::put('destinations/{id}', [DestinationController::class, 'update']);
+    Route::delete('destinations/{id}', [DestinationController::class, 'destroy']);
+});
 
 // Rutas de comisiones extraordinarias
 Route::apiResource('extraordinary-commissions', ExtraordinaryCommissionController::class);
@@ -189,11 +199,16 @@ Route::get('/users/{userId}/salary', [UserController::class, 'calculateSalary'])
 Route::apiResource('branches', BranchController::class);
 
 Route::prefix('locations')->group(function () {
+    // Lecturas públicas: la landing busca locaciones por ciudad para cotizar.
     Route::get('/', [LocationsController::class, 'index']);
-    Route::post('/', [LocationsController::class, 'store']);
     Route::get('/origin/{origin}', [LocationsController::class, 'getByOrigin']);
-    Route::put('/{id}', [LocationsController::class, 'update']);
-    Route::delete('/{id}', [LocationsController::class, 'destroy']);
+
+    // Mismo agujero que en destinos: alta, edición y baja estaban abiertas a cualquiera.
+    Route::middleware(['auth:sanctum', 'adminOrCadete'])->group(function () {
+        Route::post('/', [LocationsController::class, 'store']);
+        Route::put('/{id}', [LocationsController::class, 'update']);
+        Route::delete('/{id}', [LocationsController::class, 'destroy']);
+    });
 });
 
 Route::prefix('transports')->group(function () {
@@ -294,10 +309,16 @@ Route::middleware(['auth:sanctum', 'isAdmin'])->prefix('admin/chatbot/faqs')->gr
 Route::middleware(['auth:sanctum', 'isAdmin'])->prefix('admin/customers/{customerId}/rates')->group(function () {
     Route::get('/', [App\Http\Controllers\Admin\CustomerRateController::class, 'index']);
     Route::post('/', [App\Http\Controllers\Admin\CustomerRateController::class, 'store']);
-    Route::get('/preview', [App\Http\Controllers\Admin\CustomerRateController::class, 'preview']);
     Route::put('/{rateId}', [App\Http\Controllers\Admin\CustomerRateController::class, 'update']);
     Route::delete('/{rateId}', [App\Http\Controllers\Admin\CustomerRateController::class, 'destroy']);
 });
+
+// RC-531: la cotización con la tarifa del cliente (sólo lectura) la usa el modal de
+// edición de comisiones, que también abren los cobradores desde el Pool de Cobranza.
+// Detrás de isAdmin les daba 403 y el modal cotizaba con la tabla general, mostrando
+// un total distinto del que después guarda el backend.
+Route::middleware(['auth:sanctum', 'adminOrCadete'])
+    ->get('admin/customers/{customerId}/rates/preview', [App\Http\Controllers\Admin\CustomerRateController::class, 'preview']);
 
 // Localidades que atiende cada sucursal (RC-483): define el alcance operativo del
 // pool de cadetes, no la propiedad de la comisión.

@@ -58,11 +58,17 @@ readonly class UpdateCommissionUseCase
             // RC-484: el total sale de la tarifa resuelta para este cliente. Con precio de
             // acuerdo cerrado, ese valor manda y no se suman base ni bultos; si el cliente
             // no tiene tarifa especial, la resolución devuelve la tabla general del destino.
+            //
+            // RC-531: el valor declarado nunca llegaba acá, así que el "% sobre valor
+            // declarado" de la tarifa no se cobraba. VETARO (3%) cargaba el valor en el
+            // precio unitario y la comisión #55711 salió en $4.022.872,71 en vez de
+            // $120.686,18 + IVA. Si la tarifa no tiene porcentaje, el valor se ignora.
             $rateResolver = app(\App\Services\CustomerRateResolver::class);
             $resolvedRate = $rateResolver->resolve($dto->clientId, $destination);
             $recalculatedTotal = $rateResolver->totalFor(
                 $resolvedRate,
-                array_map(fn ($i) => ['subtotal' => (float) $i->subtotal], $recalculatedItems ?? [])
+                array_map(fn ($i) => ['subtotal' => (float) $i->subtotal], $recalculatedItems ?? []),
+                (float) ($dto->declaredValue ?? 0)
             );
 
             // Crear un nuevo DTO con el total recalculado y los items con precios recalculados
@@ -83,7 +89,8 @@ readonly class UpdateCommissionUseCase
                 // del repositorio dependía de él, editar una comisión nunca recalculaba
                 // el IVA ni persistía un cambio de método de pago.
                 paymentMethod: $dto->paymentMethod,
-                type: $dto->type
+                type: $dto->type,
+                declaredValue: $dto->declaredValue
             );
 
             // Actualizar la comisión con el total recalculado

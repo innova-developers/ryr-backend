@@ -42,6 +42,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission->user_id = $userId;
             $commission->branch_id = $user?->branch_id ?? 1; // Usar branch_id 1 como fallback
             $commission->total = $dto->total;
+            $commission->declared_value = $dto->declaredValue;
             $commission->notes = $dto->notes;
             $commission->origin_location_id = $dto->originLocationId;
             $commission->destination_location_id = $dto->destinationLocationId;
@@ -111,6 +112,7 @@ class CommissionsEloquentRepository implements CommissionsRepository
             $commission->date = $dto->date;
             $commission->status = $dto->status;
             $commission->total = $dto->total;
+            $commission->declared_value = $dto->declaredValue;
             $commission->notes = $dto->notes;
             $commission->origin_location_id = $dto->originLocationId;
             $commission->destination_location_id = $dto->destinationLocationId;

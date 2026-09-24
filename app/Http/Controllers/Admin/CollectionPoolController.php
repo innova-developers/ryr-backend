@@ -247,7 +247,7 @@ class CollectionPoolController
                 ->orderBy('date', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->get()
-                ->map(function ($commission) {
+                ->map(function ($commission) use ($customer) {
                     return [
                         'id' => $commission->id,
                         'client_id' => $commission->client_id,
@@ -293,6 +293,16 @@ class CollectionPoolController
                             'name' => $commission->branch->name,
                         ] : null,
                         'notes' => $commission->notes,
+                        // RC-531: el modal de edición se abre con este payload. Sin el cliente
+                        // no podía pedir la tarifa especial y cotizaba con la tabla general
+                        // (a VETARO le sumaba $11.000 de base que no paga); sin el valor
+                        // declarado lo mostraba vacío aunque hubiera uno guardado.
+                        'client' => [
+                            'id' => $customer->id,
+                            'name' => trim(($customer->name ?? '') . ' ' . ($customer->last_name ?? '')),
+                            'dni' => $customer->dni,
+                        ],
+                        'declared_value' => $commission->declared_value ?? null,
                         'created_at' => $commission->created_at->toISOString(),
                         'updated_at' => $commission->updated_at->toISOString(),
                     ];
@@ -460,7 +470,7 @@ class CollectionPoolController
                 ->orderBy('date', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->get()
-                ->map(function ($commission) {
+                ->map(function ($commission) use ($customer) {
                     return [
                         'id' => $commission->id,
                         'client_id' => $commission->client_id,
@@ -506,6 +516,13 @@ class CollectionPoolController
                             'name' => $commission->branch->name,
                         ] : null,
                         'notes' => $commission->notes,
+                        // RC-531: igual que en index(), para el modal de edición.
+                        'client' => [
+                            'id' => $customer->id,
+                            'name' => trim(($customer->name ?? '') . ' ' . ($customer->last_name ?? '')),
+                            'dni' => $customer->dni,
+                        ],
+                        'declared_value' => $commission->declared_value ?? null,
                         'created_at' => $commission->created_at->toISOString(),
                         'updated_at' => $commission->updated_at->toISOString(),
                     ];
