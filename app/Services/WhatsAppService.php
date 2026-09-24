@@ -43,6 +43,13 @@ class WhatsAppService
             $cleanPhone = $this->cleanPhoneNumber($phone);
             $chatId = $cleanPhone . '@c.us';
 
+            if (! SandboxEnvios::permiteTelefono($cleanPhone)) {
+                SandboxEnvios::bloquear('whatsapp', $cleanPhone);
+                $this->lastError = 'Bloqueado por sandbox: fuera de producción sólo se envía a teléfonos de prueba';
+
+                return false;
+            }
+
             // URL de GreenAPI: https://api.green-api.com/waInstance{instanceId}/sendMessage/{token}
             $url = "{$this->baseUrl}/waInstance{$this->instanceId}/sendMessage/{$this->token}";
             $payload = [
@@ -113,6 +120,13 @@ class WhatsAppService
 
             $cleanPhone = $this->cleanPhoneNumber($phone);
             $chatId = $cleanPhone . '@c.us';
+
+            if (! SandboxEnvios::permiteTelefono($cleanPhone)) {
+                SandboxEnvios::bloquear('whatsapp', $cleanPhone);
+                $this->lastError = 'Bloqueado por sandbox: fuera de producción sólo se envía a teléfonos de prueba';
+
+                return false;
+            }
             $url = "{$this->baseUrl}/waInstance{$this->instanceId}/sendFileByUrl/{$this->token}";
 
             $payload = [
@@ -158,6 +172,13 @@ class WhatsAppService
 
             $cleanPhone = $this->cleanPhoneNumber($phone);
             $chatId = $cleanPhone . '@c.us';
+
+            if (! SandboxEnvios::permiteTelefono($cleanPhone)) {
+                SandboxEnvios::bloquear('whatsapp', $cleanPhone);
+                $this->lastError = 'Bloqueado por sandbox: fuera de producción sólo se envía a teléfonos de prueba';
+
+                return false;
+            }
             $url = "{$this->baseUrl}/waInstance{$this->instanceId}/sendFileByUpload/{$this->token}";
 
             $response = Http::timeout(60)

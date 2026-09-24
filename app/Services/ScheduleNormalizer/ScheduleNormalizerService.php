@@ -458,6 +458,39 @@ class ScheduleNormalizerService
     }
 
     /**
+     * Minutos que faltan para el cierre más próximo, si cae dentro de la ventana; null si no.
+     *
+     * Mismo criterio que closesSoon(). Existe para que el aviso al cadete diga cuánto falta de
+     * verdad: antes el texto decía siempre "cerrará en aproximadamente 30 minutos", aunque
+     * faltaran 5.
+     */
+    public function minutesUntilClose(array $ranges, int $minutes = 15): ?int
+    {
+        $now = Carbon::now();
+        $threshold = $now->copy()->addMinutes($minutes);
+        $masProximo = null;
+
+        foreach ($ranges as $range) {
+            $cierre = $this->parseTimeToCarbon($range['end'] ?? '', $now);
+
+            if ($cierre === null) {
+                continue;
+            }
+
+            if ($cierre->isBefore($now) && $threshold->isTomorrow()) {
+                $cierre = $cierre->copy()->addDay();
+            }
+
+            if ($cierre->isAfter($now) && $cierre->lte($threshold)) {
+                $faltan = (int) ceil($now->diffInSeconds($cierre, true) / 60);
+                $masProximo = $masProximo === null ? $faltan : min($masProximo, $faltan);
+            }
+        }
+
+        return $masProximo;
+    }
+
+    /**
      * Verifica si algún rango cierra en los próximos minutos
      *
      * @param array $ranges Rangos horarios normalizados

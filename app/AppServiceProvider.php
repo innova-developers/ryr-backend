@@ -28,6 +28,9 @@ use App\Contexts\Transports\Domain\Repositories\TransportRepository;
 use App\Contexts\Transports\Infrastructure\Repositories\TransportEloquentRepository;
 use App\Contexts\Users\Domain\Repositories\UserRepository;
 use App\Contexts\Users\Infrastructure\Repositories\UserEloquentRepository;
+use App\Services\SandboxEnvios;
+use Illuminate\Mail\Events\MessageSending;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -103,6 +106,27 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Los mails salen desde seis lugares distintos (verificación, encuesta, factura...):
+        // el sandbox se aplica en el evento de envío, que los cubre a todos. Devolver false
+        // cancela el envío; null deja seguir a los demás listeners.
+        Event::listen(MessageSending::class, function (MessageSending $evento) {
+            if (! SandboxEnvios::activo()) {
+                return null;
+            }
+
+            $mensaje = $evento->message;
+            $destinos = array_merge($mensaje->getTo(), $mensaje->getCc(), $mensaje->getBcc());
+            $bloqueados = array_filter($destinos, fn ($direccion) => ! SandboxEnvios::permiteMail($direccion->getAddress()));
+
+            if ($bloqueados === []) {
+                return null;
+            }
+
+            foreach ($bloqueados as $direccion) {
+                SandboxEnvios::bloquear('mail', $direccion->getAddress(), ['asunto' => $mensaje->getSubject()]);
+            }
+
+            return false;
+        });
     }
 }

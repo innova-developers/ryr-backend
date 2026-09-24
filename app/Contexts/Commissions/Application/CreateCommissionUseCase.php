@@ -11,6 +11,7 @@ use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Contexts\Customers\Domain\Repositories\CustomerRepository;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
 use App\Services\CustomerRateResolver;
+use App\Services\EnviosExternos;
 use App\Services\FcmNotificationService;
 use App\Services\WhatsAppService;
 use App\Shared\Enums\CommissionStatus;
@@ -70,13 +71,25 @@ readonly class CreateCommissionUseCase
 
             $this->commissionRepository->createLog($logDto);
 
-            // Enviar WhatsApp al cliente cuando se crea la comisión
-            $this->sendWhatsAppOnCommissionCreated($commission->id);
+            // Enviar WhatsApp al cliente cuando se crea la comisión. RC-551: sale después del
+            // commit y de responder, no dentro de esta transacción (GreenAPI tiene timeout de
+            // 30 s y en prod llegó a 22 s). Si el alta se revierte, no se manda. Ver EnviosExternos.
+            $commissionId = $commission->id;
+            EnviosExternos::despuesDeResponder(
+                'WhatsApp de alta de comisión',
+                fn () => $this->sendWhatsAppOnCommissionCreated($commissionId),
+                ['commission_id' => $commissionId]
+            );
 
             // Si el estado es BUSCANDO_CADETE, notificar a todos los cadetes de la sucursal
+            // (RC-551: también después de responder, a continuación del WhatsApp)
             if ($commissionStatus === CommissionStatus::BUSCANDO_CADETE) {
                 $commissionWithRelations = $this->commissionRepository->findById($commission->id);
-                $this->notifyAllCadetesNewCommission($commissionWithRelations);
+                EnviosExternos::despuesDeResponder(
+                    'push de nueva comisión disponible (alta)',
+                    fn () => $this->notifyAllCadetesNewCommission($commissionWithRelations),
+                    ['commission_id' => $commissionId]
+                );
             }
 
             return CommissionMapper::fromEntityToArray($this->commissionRepository->findById($commission->id));

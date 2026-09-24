@@ -7,6 +7,7 @@ use App\Services\ScheduleNormalizer\ScheduleNormalizerService;
 use App\Shared\Enums\CommissionStatus;
 use App\Shared\Models\Commission;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -82,6 +83,8 @@ class NotifyCadetesLocationClosing extends Command
 
                 $originClosesSoon = false;
                 $destinationClosesSoon = false;
+                $originMinutos = null;
+                $destinationMinutos = null;
                 $originName = null;
                 $destinationName = null;
 
@@ -95,7 +98,8 @@ class NotifyCadetesLocationClosing extends Command
                     }
 
                     if (! empty($normalizedOrigin['ranges'])) {
-                        $originClosesSoon = $this->scheduleNormalizer->closesSoon($normalizedOrigin['ranges'], $minutes);
+                        $originMinutos = $this->scheduleNormalizer->minutesUntilClose($normalizedOrigin['ranges'], $minutes);
+                        $originClosesSoon = $originMinutos !== null;
 
                         if ($originClosesSoon) {
                             $originName = $commission->originLocation->name;
@@ -120,7 +124,8 @@ class NotifyCadetesLocationClosing extends Command
                     }
 
                     if (! empty($normalizedDestination['ranges'])) {
-                        $destinationClosesSoon = $this->scheduleNormalizer->closesSoon($normalizedDestination['ranges'], $minutes);
+                        $destinationMinutos = $this->scheduleNormalizer->minutesUntilClose($normalizedDestination['ranges'], $minutes);
+                        $destinationClosesSoon = $destinationMinutos !== null;
 
                         if ($destinationClosesSoon) {
                             $destinationName = $commission->destinationLocation->name;
@@ -147,15 +152,17 @@ class NotifyCadetesLocationClosing extends Command
 
                 // Notificar sobre origen si está por cerrar
                 if ($originClosesSoon && $originName) {
-                    $this->sendNotification($commission, $originName, 'origen', $minutes);
-                    $notificationsSent++;
+                    if ($this->sendNotification($commission, $originName, 'origen', $originMinutos ?? $minutes)) {
+                        $notificationsSent++;
+                    }
                     $hasNotifications = true;
                 }
 
                 // Notificar sobre destino si está por cerrar
                 if ($destinationClosesSoon && $destinationName) {
-                    $this->sendNotification($commission, $destinationName, 'destino', $minutes);
-                    $notificationsSent++;
+                    if ($this->sendNotification($commission, $destinationName, 'destino', $destinationMinutos ?? $minutes)) {
+                        $notificationsSent++;
+                    }
                     $hasNotifications = true;
                 }
 
@@ -195,12 +202,25 @@ class NotifyCadetesLocationClosing extends Command
         string $locationName,
         string $locationType,
         int $minutes
-    ): void {
+    ): bool {
         try {
             $cadeteId = $commission->cadete_id;
 
             if (! $cadeteId) {
-                return;
+                return false;
+            }
+
+            // El comando corre cada 5 minutos con una ventana de 30: sin esto, cada comercio
+            // que cierra le llegaba al cadete unas 6 veces seguidas. Se avisa una vez por día
+            // por comisión y lugar, y se marca sólo si el push salió, así un fallo de FCM se
+            // reintenta en la corrida siguiente.
+            $locationId = $locationType === 'origen' ? $commission->origin_location_id : $commission->destination_location_id;
+            $claveAviso = "aviso-cierre:{$commission->id}:{$locationType}:{$locationId}:" . now()->toDateString();
+
+            if (Cache::has($claveAviso)) {
+                $this->line("  - Ya se avisó hoy del cierre de {$locationName} ({$locationType})");
+
+                return false;
             }
 
             $locationTypeLabel = $locationType === 'origen' ? 'origen' : 'destino';
@@ -224,6 +244,8 @@ class NotifyCadetesLocationClosing extends Command
             $result = $this->fcmService->sendPushToUser($cadeteId, $payload);
 
             if ($result['sent'] > 0) {
+                Cache::put($claveAviso, true, now()->endOfDay());
+
                 Log::info('Notificación de cierre enviada a cadete', [
                     'cadete_id' => $cadeteId,
                     'commission_id' => $commission->id,
@@ -242,6 +264,8 @@ class NotifyCadetesLocationClosing extends Command
 
                 $this->warn("  ✗ No se pudo enviar notificación a cadete #{$cadeteId}");
             }
+
+            return $result['sent'] > 0;
         } catch (\Exception $e) {
             Log::error('Error al enviar notificación de cierre', [
                 'cadete_id' => $commission->cadete_id,
@@ -250,6 +274,8 @@ class NotifyCadetesLocationClosing extends Command
             ]);
 
             $this->error("  ✗ Error enviando notificación: {$e->getMessage()}");
+
+            return false;
         }
     }
 }

@@ -496,7 +496,7 @@ class CommissionCadeteController extends Controller
             $commission->save();
 
             // Crear notificación para el cadete
-            $this->notificationService->createCommissionAssignedNotification($commission);
+            $this->notificationService->createCommissionAssignedNotification($commission, conPush: false);
 
             // Cargar relaciones para la respuesta
             $commission->load(['client', 'destination', 'branch', 'originLocation', 'destinationLocation', 'items']);

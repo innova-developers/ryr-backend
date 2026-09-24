@@ -133,8 +133,10 @@ class NotificationController
         $userId = Auth::id();
 
         try {
-            $unreadNotifications = $this->notificationService->getUnreadNotifications($userId);
-            $count = count($unreadNotifications);
+            // Se cuenta en la base y no con count() sobre getUnreadNotifications(): la app
+            // lo pide cada 60 s y hidratar todas las no leídas costaba 4,9-9 s y 57-112 MB
+            // en prod (31% del tráfico de la app). Con COUNT(*) son 2 ms (RC-548).
+            $count = $this->notificationService->countUnreadNotifications($userId);
 
             return response()->json([
                 'success' => true,

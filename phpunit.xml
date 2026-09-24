@@ -33,5 +33,14 @@
              de comisión de los tests le escribe por WhatsApp a un teléfono de faker. -->
         <env name="WHATSAPP_API_INSTANCE" value=""/>
         <env name="WHATSAPP_API_TOKEN" value=""/>
+        <!-- Los tests trabajan con fakes; el sandbox de envíos se prueba aparte (SandboxEnviosTest).
+             "0" y no "false": PHPUnit convierte "false" en booleano y la variable llega vacía,
+             que SandboxEnvios toma como "no configurado" y prende el sandbox. -->
+        <env name="SANDBOX_ENVIOS" value="0"/>
+        <!-- Sin credenciales de Firebase, como en la CI: el .env local puede tener las reales. -->
+        <env name="FIREBASE_CREDENTIALS_PATH" value="/tmp/sin-firebase-en-tests.json"/>
+        <!-- RC-549: cada Location::factory() geocodificaba contra Nominatim real (1.751 llamadas,
+             todas 429, en las corridas del 24/09). Los tests que lo necesitan lo prenden y usan Http::fake. -->
+        <env name="NOMINATIM_GEOCODE_ON_SAVE" value="false"/>
     </php>
 </phpunit>

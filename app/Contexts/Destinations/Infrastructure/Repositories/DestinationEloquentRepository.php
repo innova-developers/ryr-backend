@@ -18,6 +18,69 @@ class DestinationEloquentRepository implements DestinationRepository
     }
 
     /**
+     * RC-550: el filtro "Destino" del listado de comisiones y del panel de cobradores
+     * bajaba el listado completo (25.899 filas, 6 MB, 3,8 s y 71 MB en prod) para
+     * armar un <select>. Esto devuelve sólo lo que el select muestra, filtrado en la
+     * base y con tope de filas.
+     *
+     * Cada palabra del texto tiene que aparecer en el origen o en el destino, así
+     * "rosario funes" o "ROSARIO - FUNES" encuentran la ruta en cualquiera de los
+     * dos sentidos. Los destinos dados de baja quedan afuera, igual que en get().
+     * Se toman hasta 5 palabras: alcanza para cualquier ruta y acota la consulta.
+     *
+     * Primero van las rutas cuyo origen empieza con la primera palabra y después las
+     * que la tienen al principio del destino: con "rosario" hay más de 50 coincidencias
+     * (p. ej. "BARRIO FISHERTON ROSARIO") y sin este orden las de ROSARIO quedaban afuera.
+     *
+     * Lo que escribe el usuario se busca como texto literal: "%" y "_" no son comodines
+     * (sin escaparlos, "%" devolvía 50 rutas cualesquiera, como "- - ---").
+     */
+    public function search(string $term, int $limit): array
+    {
+        $words = array_slice(
+            array_values(array_filter(preg_split('/[\s\-]+/u', trim($term)) ?: [], 'strlen')),
+            0,
+            5
+        );
+
+        $query = Destination::query()->select(['id', 'origin', 'destination']);
+
+        foreach ($words as $word) {
+            $like = '%' . $this->escapeLike($word) . '%';
+            $query->where(function ($q) use ($like) {
+                $q->whereRaw("origin LIKE ? ESCAPE '!'", [$like])
+                    ->orWhereRaw("destination LIKE ? ESCAPE '!'", [$like]);
+            });
+        }
+
+        if ($words !== []) {
+            $prefix = $this->escapeLike($words[0]) . '%';
+            $query->orderByRaw(
+                "CASE WHEN origin LIKE ? ESCAPE '!' THEN 0 WHEN destination LIKE ? ESCAPE '!' THEN 1 ELSE 2 END",
+                [$prefix, $prefix]
+            );
+        }
+
+        return $query
+            ->orderBy('origin')
+            ->orderBy('destination')
+            ->orderBy('id')
+            ->limit($limit)
+            ->get()
+            ->toArray();
+    }
+
+    /**
+     * Escapa los comodines de LIKE con "!" y no con la barra invertida: MySQL y sqlite
+     * (tests) no tratan igual la barra en los literales, "!" no tiene ese problema y
+     * con ESCAPE explícito se comporta igual en los dos.
+     */
+    private function escapeLike(string $text): string
+    {
+        return str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $text);
+    }
+
+    /**
      * @throws \Exception
      */
     public function create(CreateDestinationDTO $dto): Destination

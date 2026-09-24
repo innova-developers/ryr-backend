@@ -80,9 +80,16 @@ class NotificationService
                 'data' => $data,
             ]);
 
-            // Enviar notificación push FCM si el estado lo requiere
+            // Enviar notificación push FCM si el estado lo requiere. RC-551: el registro de
+            // arriba queda en la transacción del cambio de estado; el push (de a un token,
+            // 1-4 s en prod) sale después del commit y de responder. Ver EnviosExternos.
             if (in_array($newStatus, self::FCM_PUSH_STATUSES)) {
-                $this->sendFcmPushNotification($commission->cadete_id, $title, $message, $data);
+                $cadeteId = $commission->cadete_id;
+                EnviosExternos::despuesDeResponder(
+                    'push FCM de cambio de estado',
+                    fn () => $this->sendFcmPushNotification($cadeteId, $title, $message, $data),
+                    ['commission_id' => $commission->id, 'user_id' => $cadeteId]
+                );
             }
 
             return $notification;
@@ -102,7 +109,7 @@ class NotificationService
     /**
      * Crear notificación cuando se asigna un cadete a una comisión
      */
-    public function createCommissionAssignedNotification(Commission $commission): ?Notification
+    public function createCommissionAssignedNotification(Commission $commission, bool $conPush = true): ?Notification
     {
         if (! $commission->cadete_id) {
             return null;
@@ -120,7 +127,7 @@ class NotificationService
                 'destination' => $commission->destinationLocation->name ?? 'Destino',
             ];
 
-            return Notification::create([
+            $notification = Notification::create([
                 'user_id' => $commission->cadete_id,
                 'commission_id' => $commission->id,
                 'type' => 'commission_assigned',
@@ -128,6 +135,23 @@ class NotificationService
                 'message' => $message,
                 'data' => $data,
             ]);
+
+            // RC-553: la asignación desde el mostrador sólo quedaba en la base, sin push. En
+            // Android el cadete se enteraba porque la app consultaba el contador cada 60 s
+            // aunque estuviera en segundo plano; en iPhone, nunca. En septiembre fueron 163
+            // asignaciones y sólo 4 tuvieron un push cerca. La app deja de consultar en
+            // segundo plano (tormentas y tráfico nocturno), así que el aviso pasa a ser un
+            // push real. Si se asigna él mismo desde el pool, no hace falta avisarle.
+            if ($conPush) {
+                $cadeteId = $commission->cadete_id;
+                EnviosExternos::despuesDeResponder(
+                    'push FCM de comisión asignada',
+                    fn () => $this->sendFcmPushNotification($cadeteId, $title, $message, $data + ['type' => 'commission_assigned']),
+                    ['commission_id' => $commission->id, 'user_id' => $cadeteId]
+                );
+            }
+
+            return $notification;
 
         } catch (\Exception $e) {
             Log::error('Error creando notificación de comisión asignada', [
@@ -145,9 +169,15 @@ class NotificationService
      */
     public function getUserNotifications(int $userId, int $limit = 50, int $offset = 0): array
     {
+        // Lo resuelve el índice (user_id, created_at) leyendo hacia atrás, sin filesort
+        // (RC-548). El id desempata las creadas en el mismo segundo (282 grupos sólo en el
+        // cadete 16) con el mismo orden que ya da ese índice. Sin desempate cada página
+        // las ordenaba a su manera: recorriendo las 539 páginas del cadete 16 en ryr_qa,
+        // una notificación salía repetida y otra no salía nunca.
         return Notification::where('user_id', $userId)
             ->with(['commission.client', 'commission.originLocation', 'commission.destinationLocation'])
             ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
             ->limit($limit)
             ->offset($offset)
             ->get()
@@ -165,6 +195,21 @@ class NotificationService
             ->orderBy('created_at', 'desc')
             ->get()
             ->toArray();
+    }
+
+    /**
+     * Contar las notificaciones no leídas de un usuario.
+     *
+     * Para el badge sólo hace falta el número: un COUNT(*) que resuelve el índice
+     * (user_id, is_read) sin leer la tabla. Contar con getUnreadNotifications() traía
+     * todas las filas con 3 relaciones y las pasaba a array: en prod, con 10.769 no
+     * leídas del cadete 16, eran 9 s y 112 MB por llamada, cada 60 s por teléfono (RC-548).
+     */
+    public function countUnreadNotifications(int $userId): int
+    {
+        return Notification::where('user_id', $userId)
+            ->where('is_read', false)
+            ->count();
     }
 
     /**

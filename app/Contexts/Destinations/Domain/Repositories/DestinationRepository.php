@@ -11,6 +11,15 @@ use App\Shared\Models\Destination;
 interface DestinationRepository
 {
     public function get(): array;
+
+    /**
+     * Versión liviana y acotada del listado para selects con búsqueda:
+     * sólo id, origin y destination, como mucho $limit filas.
+     *
+     * @return array<int, array{id: int, origin: string, destination: string}>
+     */
+    public function search(string $term, int $limit): array;
+
     public function create(CreateDestinationDTO $dto): Destination;
     public function findById(int $id): Destination;
     public function update(UpdateDestinationDTO $dto): Destination;

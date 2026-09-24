@@ -45,6 +45,25 @@ return [
         'api_key' => env('GOOGLE_MAPS_API_KEY'),
     ],
 
+    // RC-549: geocoding de locaciones con Nominatim (OpenStreetMap).
+    'nominatim' => [
+        // Su política exige un User-Agent que identifique a la app. Si no se define, se arma
+        // con APP_NAME, APP_URL y MAIL_FROM_ADDRESS.
+        'user_agent' => env('NOMINATIM_USER_AGENT'),
+        // Geocodificar al guardar una locación (después de responder). Los tests lo apagan
+        // para no salir a internet con cada Location::factory().
+        'geocode_on_save' => (bool) env('NOMINATIM_GEOCODE_ON_SAVE', true),
+    ],
+
+    // Fuera de producción los envíos reales sólo salen a estos destinatarios de prueba
+    // (listas separadas por coma). Ver App\Services\SandboxEnvios.
+    'sandbox' => [
+        'activo' => env('SANDBOX_ENVIOS'),
+        'telefonos' => env('SANDBOX_TELEFONOS', ''),
+        'usuarios_push' => env('SANDBOX_USUARIOS_PUSH', ''),
+        'mails' => env('SANDBOX_MAILS', ''),
+    ],
+
     'firebase' => [
         'credentials_path' => env('FIREBASE_CREDENTIALS_PATH', storage_path('app/firebase-credentials.json')),
     ],

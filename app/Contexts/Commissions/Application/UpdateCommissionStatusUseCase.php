@@ -9,6 +9,7 @@ use App\Contexts\CurrentAccount\Application\DTO\CreateCurrentAccountDTO;
 use App\Contexts\CurrentAccount\Domain\Repositories\CurrentAccountRepository;
 use App\Services\CommissionCustodyService;
 use App\Services\CommissionNotificationService;
+use App\Services\EnviosExternos;
 use App\Services\FcmNotificationService;
 use App\Services\FeedbackService;
 use App\Services\MatrixCommissionService;
@@ -151,11 +152,13 @@ class UpdateCommissionStatusUseCase
                     }
                 }
 
-                // Si ENTREGADO, crear encuesta de feedback
+                // Si ENTREGADO, crear encuesta de feedback. RC-551: la encuesta se crea acá,
+                // dentro de la transacción; el WhatsApp y el mail salen después del commit y
+                // de responder (en prod eran p50 3 s y hasta 23 s de este request).
                 if ($finalStatus === CommissionStatus::ENTREGADO) {
                     try {
                         $feedbackService = app(FeedbackService::class);
-                        $feedbackService->createSurveyForCommission($commission);
+                        $feedbackService->createSurveyForCommission($commission, enviarDespuesDeResponder: true);
                     } catch (\Exception $e) {
                         Log::error('Error creando encuesta de feedback', [
                             'commission_id' => $commission->id,
@@ -172,9 +175,15 @@ class UpdateCommissionStatusUseCase
                     $details
                 );
 
-                // Si el estado cambió a BUSCANDO_CADETE, notificar a todos los cadetes
+                // Si el estado cambió a BUSCANDO_CADETE, notificar a todos los cadetes.
+                // RC-551: es un push por cadete de la sucursal, en secuencia; sale después
+                // del commit y de responder. Ver EnviosExternos.
                 if ($finalStatus === CommissionStatus::BUSCANDO_CADETE) {
-                    $this->notifyAllCadetesNewCommission($commission);
+                    EnviosExternos::despuesDeResponder(
+                        'push de nueva comisión disponible',
+                        fn () => $this->notifyAllCadetesNewCommission($commission),
+                        ['commission_id' => $commission->id]
+                    );
                 }
             } catch (\Exception $e) {
                 throw new \Exception($e->getMessage());

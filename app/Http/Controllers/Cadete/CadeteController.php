@@ -1848,8 +1848,15 @@ class CadeteController extends Controller
     }
 
     /**
-     * Obtiene las coordenadas de una ubicación
-     * Primero intenta desde la base de datos, si no están disponibles usa Google Maps API
+     * Obtiene las coordenadas de una ubicación: las guardadas en la locación o, si no hay, las
+     * que Nominatim ya haya devuelto alguna vez (cache de éxitos). Nunca sale a la red.
+     *
+     * RC-549: antes, por cada ubicación sin coordenadas de la página (el 70% de las 13.382), se
+     * llamaba a Nominatim en el medio del GET: ~12.000 llamadas por día hábil, 99,5% fallidas,
+     * +0,5-1,5 s por request (hasta 10 s con timeout) y el 85% del laravel.log. Ahora se
+     * geocodifica al guardar la locación (GeocodeLocationJob) o con `php artisan locations:geocode`.
+     * La app sólo usa estas coordenadas para mostrar la distancia; con null muestra "Sin GPS",
+     * que es lo que ya veía en el 99,5% de los casos.
      */
     private function getLocationCoordinates($location): ?array
     {
@@ -1862,52 +1869,25 @@ class CadeteController extends Controller
             return $location->getCoordinates();
         }
 
-        // Si no tiene coordenadas, las calculamos con Nominatim (OpenStreetMap) - Gratuito
-        try {
-            $nominatimService = new \App\Services\NominatimService();
-            $coordinates = $nominatimService->getCoordinates(
-                $location->address,
-                $location->origin
-            );
+        // Coordenadas que se consiguieron al vuelo antes de RC-549 y quedaron en la cache.
+        $coordinates = app(\App\Services\NominatimService::class)
+            ->getCachedCoordinates($location->address ?? '', $location->origin);
 
-            // Si obtuvimos coordenadas, las guardamos en la base de datos para futuras consultas
-            if ($coordinates) {
-                $location->update([
-                    'latitude' => $coordinates['latitude'],
-                    'longitude' => $coordinates['longitude'],
-                ]);
-
-                // Refrescar el modelo para que tenga las coordenadas actualizadas
-                $location->refresh();
-
-                \Log::info('Coordenadas calculadas y guardadas para ubicación', [
-                    'location_id' => $location->id,
-                    'address' => $location->address,
-                    'origin' => $location->origin,
-                    'latitude' => $coordinates['latitude'],
-                    'longitude' => $coordinates['longitude'],
-                ]);
-
-                return $coordinates;
-            } else {
-                \Log::warning('No se pudieron calcular coordenadas para ubicación', [
-                    'location_id' => $location->id,
-                    'address' => $location->address,
-                    'origin' => $location->origin,
-                ]);
-
-                return null;
-            }
-        } catch (\Exception $e) {
-            \Log::error('Error al calcular coordenadas para ubicación', [
-                'location_id' => $location->id,
-                'address' => $location->address,
-                'origin' => $location->origin,
-                'error' => $e->getMessage(),
+        // Se guardan en la locación, igual que hacía el geocoding al vuelo: así no dependen de la
+        // cache (vence a los 30 días) y quedan cargadas en el modelo. Ese modelo es compartido por
+        // todas las comisiones de la página que usan la misma locación, así que las siguientes
+        // apariciones salen por hasCoordinates() con el cast decimal:8 ("-33.01880000"), como
+        // antes. Vale también para shipments, que no selecciona latitude/longitude: sin este
+        // update, las apariciones repetidas cambiaban de string a float.
+        // Ya no se hace el refresh() de antes: era una consulta más y no cambia la respuesta.
+        if ($coordinates) {
+            $location->update([
+                'latitude' => $coordinates['latitude'],
+                'longitude' => $coordinates['longitude'],
             ]);
-
-            return null;
         }
+
+        return $coordinates;
     }
 
     /**

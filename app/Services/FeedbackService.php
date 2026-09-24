@@ -15,7 +15,15 @@ class FeedbackService
     {
     }
 
-    public function createSurveyForCommission(Commission $commission): ?FeedbackSurvey
+    /**
+     * Crea la encuesta de la comisión entregada y la manda por WhatsApp y por mail.
+     *
+     * @param  bool  $enviarDespuesDeResponder  RC-551: el cambio a ENTREGADO la crea dentro
+     *                                          de su transacción y la manda después del commit
+     *                                          y de responder (ver EnviosExternos). Sin el
+     *                                          flag se manda en el momento, como siempre.
+     */
+    public function createSurveyForCommission(Commission $commission, bool $enviarDespuesDeResponder = false): ?FeedbackSurvey
     {
         $customer = $commission->client;
         if (! $customer) {
@@ -40,7 +48,16 @@ class FeedbackService
 
         // Al entregar se manda por los dos canales disponibles: si el cliente no
         // tiene alguno, sendSurvey() lo omite sin romper.
-        $this->sendSurvey($survey, ['whatsapp', 'email']);
+        $enviar = fn () => $this->sendSurvey($survey, ['whatsapp', 'email']);
+
+        if ($enviarDespuesDeResponder) {
+            EnviosExternos::despuesDeResponder('encuesta de feedback', $enviar, [
+                'commission_id' => $commission->id,
+                'survey_id' => $survey->id,
+            ]);
+        } else {
+            $enviar();
+        }
 
         return $survey;
     }

@@ -441,9 +441,12 @@ class CommissionDeclaredValueTest extends TestCase
         $this->assertSame('VETARO (emanuel)', $enFicha['client']['name']);
         $this->assertSame('4022872.71', $enFicha['declared_value']);
 
-        // El listado (/admin/collection-pool) arma el mismo payload, pero su consulta usa
-        // HAVING sin GROUP BY, que SQLite no acepta: se verificó contra la copia de
-        // producción (MySQL).
+        // El listado (/admin/collection-pool) arma el mismo payload. Desde RC-541 su consulta
+        // ya no usa HAVING sin GROUP BY y corre en SQLite. Se ordena por nombre porque el
+        // orden por saldo usa FIELD(), que es de MySQL.
+        $listado = collect($this->getJson('/api/admin/collection-pool?per_page=9999&sort_by=name')->assertOk()->json('data'));
+        $enListado = collect($listado->firstWhere('id', $this->vetaro->id)['commissions'] ?? [])->firstWhere('id', $commission->id);
+        $this->assertSame($enFicha, $enListado);
     }
 
     public function test_un_cobrador_puede_ver_la_cotizacion_de_la_tarifa_del_cliente(): void

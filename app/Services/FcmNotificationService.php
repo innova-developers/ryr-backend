@@ -54,6 +54,19 @@ class FcmNotificationService
      */
     public function sendPushToUser(int $userId, array $payload): array
     {
+        // Todos los pushes pasan por acá (sendPushToUsers y sendPushToAllCadetes también).
+        if (! SandboxEnvios::permiteUsuario($userId)) {
+            SandboxEnvios::bloquear('push', (string) $userId, ['titulo' => $payload['title'] ?? null]);
+
+            return [
+                'success' => false,
+                'message' => 'Bloqueado por sandbox: fuera de producción sólo se envía a usuarios de prueba',
+                'sent' => 0,
+                'failed' => 0,
+                'invalid_tokens' => [],
+            ];
+        }
+
         if (! $this->messaging) {
             Log::warning('Firebase Messaging no está configurado, no se puede enviar notificación', [
                 'user_id' => $userId,

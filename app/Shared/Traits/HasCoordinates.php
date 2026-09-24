@@ -2,70 +2,46 @@
 
 namespace App\Shared\Traits;
 
-use App\Services\NominatimService;
-use Illuminate\Support\Facades\Log;
+use App\Jobs\GeocodeLocationJob;
 
 trait HasCoordinates
 {
     /**
      * Boot the trait and set up event listeners
+     *
+     * RC-549: antes se geocodificaba en `saving`, síncrono: el alta o edición de una locación
+     * esperaba a Nominatim (hasta 2 llamadas con timeout de 10 s, y en prod el 99,5% fallaba).
+     * Ahora se guarda primero y la geocodificación corre después de enviar la respuesta.
      */
     protected static function bootHasCoordinates()
     {
-        static::saving(function ($model) {
-            $model->updateCoordinatesIfNeeded();
+        static::saved(function ($model) {
+            $model->queueGeocodingIfNeeded();
         });
     }
 
     /**
-     * Update coordinates if address or origin has changed
+     * Programa la geocodificación si cambió la dirección o la ciudad.
+     *
+     * Se llama desde `saved`, antes de que Eloquent sincronice el original, así que isDirty()
+     * todavía refleja lo que cambió en este guardado (igual que el `saving` de antes).
      */
-    public function updateCoordinatesIfNeeded()
+    public function queueGeocodingIfNeeded(): void
     {
-        // Check if address or origin fields have changed
-        if ($this->isDirty(['address', 'origin'])) {
-            $this->calculateAndSetCoordinates();
+        if (! config('services.nominatim.geocode_on_save', true)) {
+            return;
         }
-    }
 
-    /**
-     * Calculate and set coordinates using Nominatim (OpenStreetMap) - Gratuito
-     */
-    public function calculateAndSetCoordinates()
-    {
-        try {
-            $nominatimService = new NominatimService();
-            $coordinates = $nominatimService->getCoordinates(
-                $this->address ?? '',
-                $this->origin ?? null
-            );
-
-            if ($coordinates) {
-                $this->latitude = $coordinates['latitude'];
-                $this->longitude = $coordinates['longitude'];
-
-                Log::info('Coordinates calculated for location', [
-                    'location_id' => $this->id,
-                    'address' => $this->address,
-                    'origin' => $this->origin,
-                    'latitude' => $this->latitude,
-                    'longitude' => $this->longitude,
-                ]);
-            } else {
-                Log::warning('Could not calculate coordinates for location', [
-                    'location_id' => $this->id,
-                    'address' => $this->address,
-                    'origin' => $this->origin,
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::error('Error calculating coordinates for location', [
-                'location_id' => $this->id,
-                'address' => $this->address,
-                'origin' => $this->origin,
-                'error' => $e->getMessage(),
-            ]);
+        if (! $this->isDirty(['address', 'origin'])) {
+            return;
         }
+
+        // Si quien guarda ya trae las coordenadas (seeders, backfill), no se pisan.
+        if ($this->isDirty(['latitude', 'longitude']) && $this->hasCoordinates()) {
+            return;
+        }
+
+        GeocodeLocationJob::dispatchAfterResponse($this->getKey());
     }
 
     /**

@@ -12,6 +12,7 @@ use App\Shared\Models\Customer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class CollectionPoolController
@@ -57,7 +58,17 @@ class CollectionPoolController
             // Verificar si la columna status existe antes de filtrar
             $hasStatusColumn = \Schema::hasColumn('current_accounts', 'status');
 
-            $customersWithBalance = Customer::select('customers.*')
+            // RC-541: el saldo viene como pool_balance y no como current_balance porque
+            // Customer::getCurrentBalanceAttribute() pisa esa columna y hace su propia query
+            // cada vez que se lee. El orden por saldo, los filtros de monto y el total de las
+            // estadísticas terminaban haciendo una query por deudor: 2.338 queries y 1,6 s en
+            // prod con per_page=9999. El accessor no se toca porque lo usan otros endpoints.
+            //
+            // Va como tabla derivada en vez de HAVING sin GROUP BY (que SQLite rechaza) para
+            // que el listado se pueda testear. Se traen sólo las columnas que se usan, y el
+            // orden por id es el mismo en que MySQL devolvía las filas con el HAVING: define
+            // el desempate entre clientes con el mismo saldo y el orden de la suma del total.
+            $balancesQuery = Customer::select('customers.id', 'customers.internal_user_id')
                 ->selectSub(function ($query) use ($hasStatusColumn) {
                     $subquery = $query->select('balance')
                         ->from('current_accounts')
@@ -76,9 +87,20 @@ class CollectionPoolController
                     $subquery->orderBy('transaction_date', 'desc')
                         ->orderBy('id', 'desc')
                         ->limit(1);
-                }, 'current_balance')
-                ->havingRaw('COALESCE(current_balance, 0) < 0')
-                ->get();
+                }, 'pool_balance');
+
+            $customersWithBalance = DB::query()
+                ->fromSub($balancesQuery, 'customers_with_balance')
+                ->whereRaw('COALESCE(pool_balance, 0) < 0')
+                ->orderBy('id')
+                ->get()
+                ->map(function ($row) {
+                    // Mismos tipos que devolvía el accessor: el saldo como float.
+                    $row->id = (int) $row->id;
+                    $row->pool_balance = (float) $row->pool_balance;
+
+                    return $row;
+                });
 
             // Obtener IDs de clientes con deuda
             $customerIds = $customersWithBalance->pluck('id')->toArray();
@@ -143,7 +165,7 @@ class CollectionPoolController
             if ($minDebtAmount !== null) {
                 $filteredCustomerIds = $customersWithBalance
                     ->filter(function ($customer) use ($minDebtAmount) {
-                        return abs($customer->current_balance) >= abs($minDebtAmount);
+                        return abs($customer->pool_balance) >= abs($minDebtAmount);
                     })
                     ->pluck('id')
                     ->toArray();
@@ -154,7 +176,7 @@ class CollectionPoolController
             if ($maxDebtAmount !== null) {
                 $filteredCustomerIds = $customersWithBalance
                     ->filter(function ($customer) use ($maxDebtAmount) {
-                        return abs($customer->current_balance) <= abs($maxDebtAmount);
+                        return abs($customer->pool_balance) <= abs($maxDebtAmount);
                     })
                     ->pluck('id')
                     ->toArray();
@@ -182,7 +204,7 @@ class CollectionPoolController
                 default:
                     // Ordenar por balance usando los datos de customersWithBalance
                     $sortedIds = $customersWithBalance
-                        ->sortBy('current_balance', SORT_REGULAR, $sortDirection === 'desc')
+                        ->sortBy('pool_balance', SORT_REGULAR, $sortDirection === 'desc')
                         ->pluck('id')
                         ->toArray();
                     if (! empty($sortedIds)) {
@@ -198,35 +220,40 @@ class CollectionPoolController
             // Crear un mapa de balances para acceso rápido
             $balanceMap = $customersWithBalance->keyBy('id');
 
-            // Calcular estadísticas antes de transformar
-            $allCustomersWithBalance = Customer::whereIn('id', $customerIds)
-                ->select('id', 'internal_user_id')
-                ->get();
-
-            $totalAssigned = $allCustomersWithBalance->whereNotNull('internal_user_id')->count();
-            $totalUnassigned = $allCustomersWithBalance->whereNull('internal_user_id')->count();
+            // Calcular estadísticas antes de transformar. RC-541: los deudores ya vienen con
+            // internal_user_id, así que no hace falta volver a pedirlos con un whereIn.
+            $totalAssigned = $customersWithBalance->whereNotNull('internal_user_id')->count();
+            $totalUnassigned = $customersWithBalance->whereNull('internal_user_id')->count();
             $totalDebtAmount = $customersWithBalance->sum(function ($customer) {
-                return abs($customer->current_balance ?? 0);
+                return abs($customer->pool_balance ?? 0);
             });
 
             // Verificar si la columna type existe en la tabla commissions
             $hasTypeColumn = Schema::hasColumn('commissions', 'type');
 
-            // Cargar comisiones históricas para cada cliente
-            $customers->getCollection()->transform(function ($customer) use ($balanceMap, $hasStatusColumn, $hasTypeColumn) {
-                $balance = $balanceMap->get($customer->id)?->current_balance ?? 0;
+            // RC-541: pendientes y comisiones de toda la página en lote. Antes cada cliente
+            // de la página hacía su propia suma de pendientes y su carga de comisiones con 5
+            // eager loads (hasta 8 queries por cliente); ahora son 2 queries más los 5 eager
+            // loads, sin importar cuántos clientes tenga la página.
+            $pageCustomerIds = $customers->getCollection()->pluck('id')->all();
 
-                // Calcular total de movimientos pendientes de confirmar
-                $pendingAmount = 0;
-                if ($hasStatusColumn) {
-                    $pendingTransactions = CurrentAccount::where('customer_id', $customer->id)
-                        ->where('status', CurrentAccountStatus::PENDIENTE->value)
-                        ->where('type', 'credit') // Solo créditos pendientes
-                        ->sum('amount');
-                    $pendingAmount = (float) $pendingTransactions;
-                }
+            // Calcular total de movimientos pendientes de confirmar
+            $pendingByCustomer = [];
+            if ($hasStatusColumn && ! empty($pageCustomerIds)) {
+                $pendingByCustomer = CurrentAccount::whereIn('customer_id', $pageCustomerIds)
+                    ->where('status', CurrentAccountStatus::PENDIENTE->value)
+                    ->where('type', 'credit') // Solo créditos pendientes
+                    ->groupBy('customer_id')
+                    ->selectRaw('customer_id, SUM(amount) as pending_amount')
+                    ->pluck('pending_amount', 'customer_id')
+                    ->all();
+            }
 
-                // Obtener solo comisiones ORDINARIAS o EXTRAORDINARIAS con total > 0 y estado PAGO_VALIDACION
+            // Obtener solo comisiones ORDINARIAS o EXTRAORDINARIAS con total > 0 y estado PAGO_VALIDACION.
+            // El orden es el mismo que cuando se pedían de a un cliente: groupBy lo respeta
+            // dentro de cada cliente.
+            $commissionsByCustomer = collect();
+            if (! empty($pageCustomerIds)) {
                 $commissionsQuery = Commission::with([
                     'items:id,commission_id,type,size,quantity,detail,unit_price,subtotal',
                     'destination:id,origin,destination,fixed_price',
@@ -234,7 +261,7 @@ class CollectionPoolController
                     'destinationLocation:id,name,address,origin,phone',
                     'branch:id,name',
                 ])
-                ->where('client_id', $customer->id)
+                ->whereIn('client_id', $pageCustomerIds)
                 ->where('status', CommissionStatus::PAGO_VALIDACION->value)
                 ->where('total', '>', 0);
 
@@ -243,10 +270,23 @@ class CollectionPoolController
                     $commissionsQuery->whereIn('type', [CommissionType::ORDINARIA->value, CommissionType::EXTRAORDINARIA->value]);
                 }
 
-                $commissions = $commissionsQuery
-                ->orderBy('date', 'desc')
-                ->orderBy('created_at', 'desc')
-                ->get()
+                $commissionsByCustomer = $commissionsQuery
+                    ->orderBy('date', 'desc')
+                    ->orderBy('created_at', 'desc')
+                    ->get()
+                    ->groupBy('client_id');
+            }
+
+            // Armar el payload de cada cliente con lo que ya está en memoria
+            $customers->getCollection()->transform(function ($customer) use ($balanceMap, $hasStatusColumn, $pendingByCustomer, $commissionsByCustomer) {
+                $balance = $balanceMap->get($customer->id)?->pool_balance ?? 0;
+
+                $pendingAmount = 0;
+                if ($hasStatusColumn) {
+                    $pendingAmount = (float) ($pendingByCustomer[$customer->id] ?? 0);
+                }
+
+                $commissions = ($commissionsByCustomer->get($customer->id) ?? collect())
                 ->map(function ($commission) use ($customer) {
                     return [
                         'id' => $commission->id,
@@ -411,7 +451,9 @@ class CollectionPoolController
                     $subquery->orderBy('transaction_date', 'desc')
                         ->orderBy('id', 'desc')
                         ->limit(1);
-                }, 'current_balance')
+                    // RC-541: pool_balance y no current_balance, para que no lo pise el
+                    // accessor de Customer (que hacía otra query). Ver index().
+                }, 'pool_balance')
                 ->where('customers.id', $id)
                 ->first();
 
@@ -423,18 +465,11 @@ class CollectionPoolController
             }
 
             // Verificar si tiene deuda (aunque el endpoint puede devolver el cliente aunque no tenga deuda)
-            $balance = $customerWithBalance->current_balance ?? 0;
+            $balance = $customerWithBalance->pool_balance ?? 0;
 
-            // Cargar relaciones necesarias
-            $customer = Customer::with(['branch:id,name', 'internalUser:id,name,email'])
-                ->find($id);
-
-            if (! $customer) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Cliente no encontrado',
-                ], 404);
-            }
+            // Cargar relaciones necesarias. RC-541: sobre el mismo modelo, en vez de volver
+            // a buscar el cliente con find().
+            $customer = $customerWithBalance->load(['branch:id,name', 'internalUser:id,name,email']);
 
             // Calcular total de movimientos pendientes de confirmar
             $pendingAmount = 0;
@@ -615,8 +650,10 @@ class CollectionPoolController
                     $subquery->orderBy('transaction_date', 'desc')
                         ->orderBy('id', 'desc')
                         ->limit(1);
-                }, 'current_balance')
-                ->havingRaw('COALESCE(current_balance, 0) < 0')
+                    // RC-541: mismo alias que en index() y show(), para que no choque con
+                    // el accessor current_balance de Customer.
+                }, 'pool_balance')
+                ->havingRaw('COALESCE(pool_balance, 0) < 0')
                 ->whereNotNull('internal_user_id'); // Solo asignados
 
             // Aplicar filtro de usuario si está especificado

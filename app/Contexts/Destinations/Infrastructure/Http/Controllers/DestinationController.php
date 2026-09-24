@@ -14,12 +14,14 @@ use App\Contexts\Destinations\Application\GetDestinationsByOriginUseCase;
 use App\Contexts\Destinations\Application\GetDestinationsUseCase;
 use App\Contexts\Destinations\Application\GetDestinationUseCase;
 use App\Contexts\Destinations\Application\GetOriginsUseCase;
+use App\Contexts\Destinations\Application\SearchDestinationsUseCase;
 use App\Contexts\Destinations\Application\UpdateDestinationUseCase;
 use App\Contexts\Destinations\Domain\Repositories\DestinationRepository;
 use App\Contexts\Destinations\Infrastructure\Http\Requests\BulkAdjustPricesRequest;
 use App\Contexts\Destinations\Infrastructure\Http\Requests\CreateDestinationRequest;
 use App\Contexts\Destinations\Infrastructure\Http\Requests\UpdateDestinationRequest;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 class DestinationController extends Controller
@@ -29,8 +31,20 @@ class DestinationController extends Controller
     ) {
     }
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
+        // RC-550: con ?search= responde el modo liviano (id, origin, destination; 50 filas
+        // por defecto, 100 como máximo) para los filtros con búsqueda del admin. Sin ese
+        // parámetro la respuesta es la de siempre, completa: la usan la pantalla de Destinos
+        // y TarifasEspecialesModal (que manda ?per_page=1000 y el backend lo ignora).
+        if ($request->has('search')) {
+            $useCase = new SearchDestinationsUseCase($this->repository);
+            $search = $request->query('search');
+            $limit = $request->filled('limit') ? (int) $request->query('limit') : null;
+
+            return response()->json($useCase(is_string($search) ? $search : '', $limit));
+        }
+
         $useCase = new GetDestinationsUseCase($this->repository);
         $destinations = $useCase();
 

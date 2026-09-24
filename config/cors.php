@@ -32,6 +32,13 @@ return [
     'allowed_origins_patterns' => [],
     'allowed_headers' => ['*'],
     'exposed_headers' => ['*'],
-    'max_age' => 0,
+    // RC-552: con 0 el navegador no guarda el preflight y cada llamada del admin
+    // (www.ryrcomisiones.com -> ryrcomisiones.com, cross-origin con Authorization)
+    // iba precedida de un OPTIONS: 78.136 en 24 días, el 48% del tráfico del admin,
+    // cada uno con su boot de Laravel y un RTT extra (~0,1-0,15 s medido en prod).
+    // Con 86400 lo reutiliza por URL+método; Chrome lo topea en 2 h, Firefox en 24 h
+    // y Safari en 10 min. Simulado sobre el access log, evita ~62% de esos OPTIONS
+    // (el resto son URLs que no se repiten: paginación y búsquedas).
+    'max_age' => 86400,
     'supports_credentials' => true,
 ]; 
